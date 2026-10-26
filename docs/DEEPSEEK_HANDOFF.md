@@ -1,0 +1,45 @@
+# DeepSeek接手這份Prototype的指令
+
+## 2026-10-22 報價前成交流程補充（不得退化）
+
+- 客戶工程地址由「地區、街道、屋苑／大廈、座數、樓層、單位」自動組合；完整地址不可另行手填。
+- 報價折扣保存三個資料：折扣模式、Sales輸入值及最後計價係數。模式為原價、自訂折扣或自訂扣減；自訂扣減必須在Quote、Invoice快照及文件上保留港幣扣減意義，不可只轉寫成難讀的折數。
+- 「儲存草稿」只儲存並留於編輯；「前往預覽及成交」儲存後進入報價詳情，絕不等於交Office。
+- 在客戶簽署確認前，付款登記與提交Office必須是清楚鎖定的不可操作控制，而不是容許按下後才拋出錯誤。
+- 正式報價流程是：準備列印時選日期及當日主管 → 生成唯一 `Q + 主管碼 + Sales碼 + 年月 + 四位月流水` → 預覽／列印 → 客人紙本簽署 → 上載同一紙本 → 確認簽署。一次版本只能有一個正式Q號；想改日期／主管必須修改報價建立新版本，不能覆寫既有Q號或舊紙本。
+- Invoice號使用獨立全公司月流水，且只可在已簽、已交Office及會計核足適用首期後由開單員產生。
+- 「現場特別注意事項」、「Sales備註」及「客戶附件」是選填，不得阻擋列印、簽署或提交Office；其他PRD指定的客戶、地址及工程資料仍維持驗證。
+- 客戶是共用主檔，不是只藏在Quote snapshot：Sales可獨立新增客戶及住宅資料，之後報價的「選擇現有客戶」讀取同一主檔；電話公司內唯一。Sales只看自己的客戶；B Team主管按既有範圍，阿頭／Admin按既有廣泛範圍。Quote、Invoice、WorkOrder仍必須保留當時客戶快照。
+- 主檔更新一律先用永久`customerId`定位，再檢查改後電話不可撞另一主檔；不可只憑電話建立／合併。遮罩身份證號只是只讀投影，絕不可寫回主檔。Sales可讀取及編輯自己客戶的完整資料；非擁有人只可讀遮罩資料，且其投影不可直接作回寫DTO。
+- 只有未交Office、未登記付款且未出Invoice的來源可封存；封存需要原因，移入封存tab，且不可再修改、上載、簽署、記款、交Office或開Invoice。已交接／付款／出單的取消必須走日後正式的人工或變更流程。
+- 正式客戶版報價必須有公司標誌、文件類型、正式Q號、版本／日期、客戶與工程地址、工程明細／實際範圍／出街單價／金額、折扣、成交額、適用首期、確認條款與簽署欄；不得出現成本、佣金、判頭資料或未設定的真實銀行資料。
+
+請先運行這份程式，不要重新生成一套逐頁Demo。PRD v0.13是業務依據；這份程式已實作首條串連主鏈及新UI方向，但不是所有Module已完成。
+
+理解`src/domain/types.ts`的永久IDs及QuoteVersion／Submission／Payment／Invoice／WorkOrder／Assignment關係。`src/domain/engine.ts`是一份共享業務來源，所有角色的頁面都由同一來源取得投影。`src/context.tsx`目前的browser-local存取只是Prototype替身，不能作生產安全邊界。
+
+首要保留：上載簽檔與指定版簽署明確分開但同頁可完成；Sales只記款，Finance／開單員才核有效；付款計劃不再按成交額自動決定。開單員先將已交Office來源分類為團購（100%）、8萬資助（30%／20%／50%）或自費（30%／20%／30%／20%）；未分類或沒有任何已核對有效收款，不能開Invoice。分類後只要已有一筆有效首訂即可開Invoice；若第一期未足，開單員在Invoice詳情補登第一期餘額，首訂及其證明仍歸入第一期並可開啟。Invoice必須凍結分類及付款計劃快照。每筆有效付款可發一張唯一Receipt（綁Payment ID、期數、金額）；不是將所有付款合併成一張首期收據。累計有效收款達成交額50%才唯一建立工程單／Group、留audit並通知CS。CS交接只安全摘要，原Q、付款明細、證明及收據仍不可讀。Invoice為SHMM2610xxxx等四位當月流水，不額外加I。
+
+保留大字體黑白灰UI、48px主要操作、stable shell及統一間距；PRD是規則，不是每頁必須展示的説明文案。所有必填／前置必須有可發現的UI滿足途徑，error不可藏在modal背後。
+
+## 後端化
+
+## 2026-10-23 開單員／會計流程補充（已由下列最新規則覆蓋；不得退化）
+
+- 開單員側欄只可有「提交報價、單據管理、客戶」。不可再將待核款、待開單及已開Invoice塞在同一頁，亦不可保留「工程查閱」入口。
+- 「提交報價」列出所有目前已交Office、未開Invoice的來源，並可按Team A／B及Sales篩選。每行可看Sales登記付款、付款證明、有效核對狀態及分類；未選分類或沒有有效收款時「已核對並開單」必須disabled，分類後有有效首訂即可操作，不能透過預設分類或直接action繞過。
+- 最新分類key為`group-buy`（團購）、`grant-80k`（8萬資助）、`self-pay`（自費）。分類、各期百分比及按分位計算的期款金額必須保存到Invoice快照，日後政策改動不能改歷史Invoice。
+- Invoice後的付款必須帶`invoiceId`及`installment`。開單員可在Invoice詳情新增第一期餘額或下一個合法期款、上載選填圖片證明；保存後是pending，Finance／開單員核實後才valid。第一期原有首訂付款的證明須在第一期付款列保留並可開啟。支票未兌現、FPS／轉帳未核實、rejected或其他Invoice／Version的款項一律不可計入門檻。
+- 收據必須以`paymentId`冪等：每筆valid付款最多一張`R-YYYYMM-SSSS`，金額等於該筆付款、保留期數／標籤／百分比，重按返回同一張。不可再只以Invoice發「唯一首期收據」。
+- 開Invoice時不再要求30%已收足；分類後有一筆valid付款即可建立Invoice，第一期30%是付款計劃門檻而不是開Invoice門檻。團購核足100%可即時符合50%門檻。累計valid付款恰好或超過Invoice成交額50%時才由冪等release動作建立唯一WorkOrder、audit及CS通知。CS的handoff、list／get order及assign都要拒絕未release工程。
+- 本輪仍未把完整公司收入／支出、MYOB／ABSS連接、付款分配／多筆超額付款、完成摘要及正式後端transaction宣稱為已完成。
+
+可以更換repository，不可以讓每個角色擁有獨立seed或每頁私有資料。新增正式API及transaction，用Customer／Property／Quote／Version／Payment Allocation／Invoice／WorkOrder Group等真正表。避免把當前Quote內customer snapshot當完整主檔已完成。簽版鎖價、四位流水、冪等鍵及支付核對都由server正式驗證；敏感資料不用前端getState當ACL。角色切換要換成真正員工ID登入及session／role grants，按PRD實作。
+
+每輪先保留並運行domain測試及`tests/e2e/golden-path.spec.ts`，後者必須真點UI，用同一新Q由Sales走到會計、開單及CS。不要直接插Invoice／已簽flag令測試看似通過。PRD其餘Module逐條垂直加功能及可達操作，不用靜態頁或大量測試數字宣稱全部完成。
+
+## 原型尚未完成
+
+完整Catalog與圖片資料／SEL、Template／分享、變更主補Group、採購／供應商帳單／扣料、超額／拆分付款分配、工程進度與完成證據、結算／日工、名冊管理、帳號設定及可配置Grant、天書匯入、真API／Auth／存儲／備份。以PRD待決及Phase1排除規則為準，不自行猜政策。
+
+在報告中分開：實跑同一UI主鏈、domain測試、未做功能、已知Prototype限制。不承諾零bug或對應94項需求全已驗證。

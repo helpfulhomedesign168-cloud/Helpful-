@@ -1,0 +1,20 @@
+{
+  "routes": [
+    { "path": "/", "title": "工作入口" },
+    { "path": "/quotes", "title": "報價管理" },
+    { "path": "/quotes/new", "title": "建立報價" },
+    { "path": "/quotes/:id", "title": "報價詳情" },
+    { "path": "/quotes/:id/edit", "title": "修改報價" },
+    { "path": "/finance", "title": "收款核對" },
+    { "path": "/submissions", "title": "提交報價" },
+    { "path": "/invoices", "title": "單據管理" },
+    { "path": "/invoices/:id", "title": "Invoice收款詳情" },
+    { "path": "/handoff", "title": "CS接單跟進" },
+    { "path": "/orders", "title": "工程管理" },
+    { "path": "/orders/:id", "title": "工程安排" },
+    { "path": "/customers", "title": "客戶" },
+    { "path": "/services", "title": "工程目錄" },
+    { "path": "/performance", "title": "我的業績" },
+    { "path": "/documents/:kind/:id", "title": "Demo單據预覽" }
+  ]
+}

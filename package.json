@@ -1,0 +1,32 @@
+{
+  "name": "homeflow-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "4.7.0",
+    "decimal.js": "10.6.0",
+    "lucide-react": "0.468.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-router-dom": "7.9.4",
+    "typescript": "5.9.3",
+    "vite": "6.4.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@types/node": "22.18.12",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "prettier": "3.6.2",
+    "vitest": "3.2.4"
+  }
+}
