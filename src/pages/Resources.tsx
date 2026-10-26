@@ -56,7 +56,7 @@ export function Services() {
     <>
       <PageHead
         eyebrow={admin ? "主檔管理" : "只讀參考"}
-        title="工程目錄"
+        title="工程價目"
         actions={
           admin && (
             <Button variant="primary" onClick={newItem}>

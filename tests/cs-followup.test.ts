@@ -52,6 +52,14 @@ describe("CS跟進同事安排", () => {
         .listHandoffs(lead)
         .find((item) => item.workOrderId === row.workOrderId)?.csOwnerName,
     ).toBe("Nicole");
+
+    const admin = actor(engine, "admin");
+    engine.assignCsOwner(admin, row.workOrderId!, "cs-fandy");
+    expect(
+      engine
+        .listHandoffs(lead)
+        .find((item) => item.workOrderId === row.workOrderId)?.csOwnerName,
+    ).toBe("Fandy");
   });
 });
 
