@@ -39,9 +39,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
     .filter({ hasText: "Demo 草稿客戶" })
     .first()
     .click();
-  await page
-    .getByRole("button", { name: "客戶資料、附件及現場備註", exact: true })
-    .click();
+  // Customer fields are always visible now; no expand button.
   await page.getByLabel("客戶姓名", { exact: false }).fill("UI測試新客戶");
   await page.getByLabel(/^聯絡電話/).fill("91238800");
   await page.getByLabel("WhatsApp電話", { exact: false }).fill("91238800");

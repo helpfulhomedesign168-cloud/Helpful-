@@ -4,8 +4,6 @@ import {
   Plus,
   ArrowRight,
   ArrowUpRight,
-  ChevronDown,
-  ChevronUp,
   Trash2,
   Check,
   Printer,
@@ -192,13 +190,10 @@ export function Quotes() {
 export function CustomerForm({
   value,
   onChange,
-  defaultExpanded = false,
 }: {
   value: Customer;
   onChange: (v: Customer) => void;
-  defaultExpanded?: boolean;
 }) {
-  const [more, setMore] = useState(defaultExpanded);
   const address = [
     value.district,
     value.street,
@@ -226,16 +221,7 @@ export function CustomerForm({
     onChange({ ...next, address: nextAddress });
   };
   function name(val: string) {
-    onChange({
-      ...value,
-      name: val,
-      idName: !value.idName || value.idName === value.name ? val : value.idName,
-      ownerName:
-        !value.ownerName || value.ownerName === value.name
-          ? val
-          : value.ownerName,
-      address,
-    });
+    onChange({ ...value, name: val });
   }
   const text = (key: keyof Customer, label: string, required = true) => (
     <Field label={label} required={required}>
@@ -302,16 +288,16 @@ export function CustomerForm({
             ))}
           </select>
         </Field>
-        {text("street", "街道")}
+        {text("street", "街道", false)}
         {text("estate", "屋苑／大廈")}
       </div>
       <div className="form-grid three">
-        {text("block", "座數")}
+        {text("block", "座數", false)}
         {text("floor", "樓層")}
         {text("unit", "單位")}
       </div>
       <Field
-        label="完整工程地址"
+        label="完整地址"
         required
         hint="由上方地區、街道、屋苑／大廈、座數、樓層及單位自動組合"
       >
@@ -319,70 +305,58 @@ export function CustomerForm({
           {address || "請先填寫上方地址資料"}
         </output>
       </Field>
-      <Button
-        variant="ghost"
-        className="expand-fields"
-        onClick={() => setMore(!more)}
-      >
-        {more ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        {more ? "收起客戶補充資料" : "客戶資料、附件及現場備註"}
-      </Button>
-      {more && (
-        <div className="expanded-form">
-          <div className="form-grid three">
-            {text("idName", "身份證明姓名")}
-            {text("idNumber", "身份證號碼（Demo佔位）")}
-            {text("ownerName", "業主姓名")}
-            <Field label="是否長者" required>
-              <select
-                value={value.isElderly}
-                onChange={(e) => set("isElderly", e.target.value)}
-              >
-                <option value="">選擇</option>
-                <option value="yes">是</option>
-                <option value="no">否</option>
-              </select>
-            </Field>
-            <Field label="客戶來源" required>
-              <select
-                value={value.source}
-                onChange={(e) => set("source", e.target.value)}
-              >
-                <option value="">選擇來源</option>
-                {["Facebook", "街站", "朋友介紹", "舊客", "其他"].map(
-                  (source) => (
-                    <option key={source}>{source}</option>
-                  ),
-                )}
-              </select>
-            </Field>
-            {text("email", "電郵", false)}
-            {text("emergencyName", "緊急聯絡人")}
-            {text("emergencyPhone", "緊急聯絡電話")}
-            {text("managementPhone", "管理處電話", false)}
-          </div>
-          <div className="form-grid two">
-            {text("parking", "停車／上落貨資料", false)}
-            {text("precautions", "現場特別注意事項", false)}
-            <Field label="Sales備註">
-              <textarea
-                value={value.notes}
-                onChange={(e) => set("notes", e.target.value)}
-              />
-            </Field>
-            <Field label="客戶附件">
-              <UploadField
-                attachment={value.attachment}
-                label="上載客戶文件"
-                sample
-                onSave={(attachment) =>
-                  onChange({ ...value, attachment, address })
-                }
-              />
-            </Field>
-          </div>
+      <div className="expanded-form">
+        <div className="form-grid three">
+          {text("idNumber", "身份證號碼（Demo佔位）", false)}
+          <Field label="是否長者">
+            <select
+              value={value.isElderly}
+              onChange={(e) => set("isElderly", e.target.value)}
+            >
+              <option value="">選擇</option>
+              <option value="yes">是</option>
+              <option value="no">否</option>
+            </select>
+          </Field>
+          <Field label="客戶來源">
+            <select
+              value={value.source}
+              onChange={(e) => set("source", e.target.value)}
+            >
+              <option value="">選擇來源</option>
+              {["Facebook", "街站", "朋友介紹", "舊客", "其他"].map(
+                (source) => (
+                  <option key={source}>{source}</option>
+                ),
+              )}
+            </select>
+          </Field>
+          {text("email", "電郵", false)}
+          {text("emergencyName", "緊急聯絡人", false)}
+          {text("emergencyPhone", "緊急聯絡電話", false)}
+          {text("managementPhone", "管理處電話", false)}
         </div>
-      )}
+        <div className="form-grid two">
+          {text("parking", "停車／上落貨資料", false)}
+          {text("precautions", "現場特別注意事項", false)}
+          <Field label="Sales備註">
+            <textarea
+              value={value.notes}
+              onChange={(e) => set("notes", e.target.value)}
+            />
+          </Field>
+          <Field label="客戶附件">
+            <UploadField
+              attachment={value.attachment}
+              label="上載客戶文件"
+              sample
+              onSave={(attachment) =>
+                onChange({ ...value, attachment, address })
+              }
+            />
+          </Field>
+        </div>
+      </div>
     </>
   );
 }
@@ -547,7 +521,7 @@ export function QuoteEditor() {
         <div className="editor-main">
           <Section
             number="01"
-            title="客戶與工程地址"
+            title="客戶資料"
             action={
               <Button onClick={() => setCustomers(true)}>選擇現有客戶</Button>
             }

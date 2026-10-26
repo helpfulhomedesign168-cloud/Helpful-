@@ -536,3 +536,32 @@ describe("Engine 安全投影、負面資格與計價", () => {
     expect(salesProjection.lineAmounts[0].billedQty).toBe(20);
   });
 });
+
+describe("Sales 客戶表單簡化", () => {
+  it("只要求核心聯絡及地址欄位；街道、座數及身份／緊急資料可留空", () => {
+    const engine = new Engine(undefined, createSeedState());
+    const sales = actor(engine, "sales-mm");
+    const minimal = fullCustomer("91237777");
+    minimal.street = "";
+    minimal.block = "";
+    minimal.idName = "";
+    minimal.idNumber = "";
+    minimal.source = "";
+    minimal.isElderly = "";
+    minimal.emergencyName = "";
+    minimal.emergencyPhone = "";
+    minimal.ownerName = "";
+    const profile = engine.createCustomer(sales, minimal);
+    expect(profile.customer.name).toBe("測試 Demo 客戶");
+    expect(profile.customer.address).toBe("九龍 Demo 花園 12樓 A室");
+    expect(() =>
+      engine.createCustomer(sales, {
+        ...minimal,
+        name: "另一位客戶",
+        phone: "91237778",
+        whatsapp: "91237778",
+        district: "",
+      }),
+    ).toThrow("地區");
+  });
+});

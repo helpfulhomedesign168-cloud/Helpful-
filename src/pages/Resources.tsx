@@ -521,7 +521,6 @@ export function Customers() {
           <CustomerForm
             value={creating}
             onChange={setCreating}
-            defaultExpanded
           />
           <div className="dialog-actions">
             <Button onClick={() => setCreating(null)}>取消</Button>
