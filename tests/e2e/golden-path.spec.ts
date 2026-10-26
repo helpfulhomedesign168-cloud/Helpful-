@@ -212,8 +212,14 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
 
   await role(page, "工程CS");
   row = page.locator("tbody tr").filter({ hasText: qNumber });
-  await expect(row).toContainText("已交工程部");
-  await row.getByRole("button", { name: "安排工程", exact: false }).click();
+  await expect(row).toBeVisible();
+  // CS follow-up assignment and contractor Assignment are separate workflows.
+  await page.getByRole("link", { name: "工程管理", exact: true }).click();
+  await page
+    .locator("tbody tr")
+    .filter({ hasText: "UI測試新客戶" })
+    .getByRole("button", { name: "查看工程", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "UI測試新客戶的工程", exact: true }),
   ).toBeVisible();

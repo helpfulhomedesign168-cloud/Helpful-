@@ -2433,3 +2433,11 @@ textarea {
     margin-right: 0;
   }
 }
+
+/* CS follow-up handoff list */
+.handoff-table {
+  min-width: 1000px;
+}
+.handoff-table td:last-child .btn {
+  min-width: 150px;
+}

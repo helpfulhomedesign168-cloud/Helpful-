@@ -135,7 +135,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/handoff"
               element={
-                <Guard roles={["cs", "admin"]}>
+                <Guard roles={["cs", "cs_supervisor", "admin"]}>
                   <Handoff />
                 </Guard>
               }
@@ -143,7 +143,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/orders"
               element={
-                <Guard roles={["cs", "admin", "finance"]}>
+                <Guard roles={["cs", "cs_supervisor", "admin", "finance"]}>
                   <Orders />
                 </Guard>
               }
@@ -151,7 +151,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/orders/:id"
               element={
-                <Guard roles={["cs", "admin", "finance"]}>
+                <Guard roles={["cs", "cs_supervisor", "admin", "finance"]}>
                   <OrderDetail />
                 </Guard>
               }
