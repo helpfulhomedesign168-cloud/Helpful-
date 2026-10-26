@@ -90,3 +90,33 @@ it("舊LocalStorage會補CS帳戶及WorkOrder sequence，不重寫舊工程單�
   expect(engine.getState().workOrderSequences).toBeDefined();
   expect(engine.getState().orders[0].number).toBe("SHMM26100001D");
 });
+
+it("普通CS只看自己被分派的工程；主管及Admin看全部；現場圖片屬整張工程", () => {
+  const engine = new Engine(undefined, createSeedState());
+  const lead = actor(engine, "cs-lead-ahfa");
+  const joe = actor(engine, "cs-joe");
+  const nicole = actor(engine, "cs-nicole");
+  const admin = actor(engine, "admin");
+  const orderId = "workorder-issued";
+  engine.assignCsOwner(lead, orderId, "cs-joe");
+
+  expect(engine.listOrders(joe).map((order) => order.id)).toContain(orderId);
+  expect(engine.listOrders(nicole)).toHaveLength(0);
+  expect(engine.listOrders(lead).map((order) => order.id)).toContain(orderId);
+  expect(engine.listOrders(admin).map((order) => order.id)).toContain(orderId);
+  expect(() => engine.getOrder(nicole, orderId)).toThrow("權限");
+  expect(() => engine.getInvoice(nicole, "invoice-issued")).toThrow("權限");
+  expect(engine.getInvoice(joe, "invoice-issued").number).toBe("SHMM26100001");
+
+  const photo = {
+    id: "site-photo-1",
+    name: "環境.jpg",
+    mime: "image/jpeg",
+    size: 1024,
+    createdAt: "2026-10-22T12:00:00+08:00",
+  };
+  const updated = engine.addSitePhotos(joe, orderId, [photo]);
+  expect(updated.sitePhotos?.[0].id).toBe("site-photo-1");
+  expect(engine.getOrder(admin, orderId).sitePhotos?.[0].name).toBe("環境.jpg");
+  expect(() => engine.addSitePhotos(nicole, orderId, [photo])).toThrow("權限");
+});

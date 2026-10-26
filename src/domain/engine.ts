@@ -859,6 +859,29 @@ export class Engine {
   private canInvoice(actor: Actor): boolean {
     return actor.role === "clerk" || actor.grants.includes("invoice.write");
   }
+  /** CS普通同事只可讀自己的工程；CS主管／Admin可讀全部已釋放工程。 */
+  private orderReadable(actor: Actor, order: WorkOrder): boolean {
+    if (actor.role === "admin") return true;
+    if (isCsActor(actor)) {
+      if (!order.csReleasedAt) return false;
+      return actor.role === "cs_supervisor" || order.csOwnerId === actor.id;
+    }
+    return (
+      actor.role === "clerk" ||
+      this.has(actor, "order.read") ||
+      this.findQuote(order.quoteId).ownerId === actor.id
+    );
+  }
+  private csInvoiceReadable(actor: Actor, invoice: Invoice): boolean {
+    if (actor.role === "admin") return true;
+    const order = this.state.orders.find(
+      (item) => item.invoiceId === invoice.id,
+    );
+    return Boolean(
+      order?.csReleasedAt &&
+        (actor.role === "cs_supervisor" || order.csOwnerId === actor.id),
+    );
+  }
   private syncCustomerProfile(
     state: AppState,
     actor: Actor,
@@ -1563,12 +1586,7 @@ export class Engine {
     const actor = this.actor(actorInput);
     const readable = (invoice: Invoice) =>
       actor.role === "admin" ||
-      (isCsActor(actor) &&
-        Boolean(
-          this.state.orders.find(
-            (order) => order.invoiceId === invoice.id && order.csReleasedAt,
-          ),
-        )) ||
+      (isCsActor(actor) && this.csInvoiceReadable(actor, invoice)) ||
       actor.role === "clerk" ||
       actor.role === "finance" ||
       this.has(actor, "invoice.read") ||
@@ -1620,15 +1638,10 @@ export class Engine {
     const invoice =
       this.state.invoices.find((item) => item.id === id) ??
       fail("找不到 Invoice。");
-    const releasedToCs = Boolean(
-      this.state.orders.find(
-        (order) => order.invoiceId === invoice.id && order.csReleasedAt,
-      ),
-    );
     if (
       !(
         actor.role === "admin" ||
-        (isCsActor(actor) && releasedToCs) ||
+        (isCsActor(actor) && this.csInvoiceReadable(actor, invoice)) ||
         actor.role === "clerk" ||
         actor.role === "finance" ||
         this.has(actor, "invoice.read") ||
@@ -1658,14 +1671,7 @@ export class Engine {
   listOrders(actorInput: Actor): WorkOrder[] {
     const actor = this.actor(actorInput);
     return this.state.orders
-      .filter(
-        (order) =>
-          actor.role === "admin" ||
-          (isCsActor(actor) && Boolean(order.csReleasedAt)) ||
-          actor.role === "clerk" ||
-          this.has(actor, "order.read") ||
-          this.findQuote(order.quoteId).ownerId === actor.id,
-      )
+      .filter((order) => this.orderReadable(actor, order))
       .map((order) => sanitiseOrder(order, actor.role === "admin"));
   }
   getOrder(actorInput: Actor, id: string): WorkOrder {
@@ -1673,15 +1679,7 @@ export class Engine {
     const order =
       this.state.orders.find((item) => item.id === id) ??
       fail("找不到工程單。");
-    if (
-      !(
-        actor.role === "admin" ||
-        (isCsActor(actor) && Boolean(order.csReleasedAt)) ||
-        actor.role === "clerk" ||
-        this.has(actor, "order.read") ||
-        this.findQuote(order.quoteId).ownerId === actor.id
-      )
-    )
+    if (!this.orderReadable(actor, order))
       fail("你沒有查看此工程單的權限。");
     return sanitiseOrder(order, actor.role === "admin");
   }
@@ -1690,15 +1688,7 @@ export class Engine {
     const order =
       this.state.orders.find((item) => item.id === workOrderId) ??
       fail("找不到工程單。");
-    if (
-      !(
-        actor.role === "admin" ||
-        (isCsActor(actor) && Boolean(order.csReleasedAt)) ||
-        actor.role === "clerk" ||
-        this.has(actor, "order.read") ||
-        this.findQuote(order.quoteId).ownerId === actor.id
-      )
-    )
+    if (!this.orderReadable(actor, order))
       fail("你沒有查看此工程安排的權限。");
     return deepCopy(
       this.state.assignments.filter(
@@ -2554,6 +2544,8 @@ export class Engine {
         fail("找不到工程單。");
       if (isCsActor(actor) && !order.csReleasedAt)
         fail("此工程尚未收足50%，未可安排工程。 ");
+      if (!this.orderReadable(actor, order))
+        fail("你沒有安排此工程的權限。");
       const resource =
         state.resources.find((item) => item.id === input.resourceId) ??
         fail("找不到合作資源。");
@@ -2615,6 +2607,50 @@ export class Engine {
       });
     });
     return deepCopy(output);
+  }
+  addSitePhotos(
+    actorInput: Actor,
+    workOrderId: string,
+    attachments: Attachment[],
+  ): WorkOrder {
+    const actor = this.actor(actorInput);
+    if (!(isCsActor(actor) || actor.role === "admin"))
+      fail("你沒有上載現場環境圖片的權限。");
+    if (!attachments.length) fail("請選擇現場環境圖片。");
+    let output!: WorkOrder;
+    this.mutate((state) => {
+      const order =
+        state.orders.find((item) => item.id === workOrderId) ??
+        fail("找不到工程單。");
+      if (!order.csReleasedAt) fail("此工程尚未發到CS。");
+      if (!this.orderReadable(actor, order))
+        fail("你沒有上載此工程圖片的權限。");
+      const fresh = attachments.filter(
+        (attachment) =>
+          attachment?.id &&
+          attachment.name &&
+          !(order.sitePhotos ?? []).some(
+            (item) => item.id === attachment.id,
+          ),
+      );
+      if (!fresh.length) {
+        output = deepCopy(order);
+        return;
+      }
+      order.sitePhotos = [
+        ...(order.sitePhotos ?? []),
+        ...fresh.map((attachment) => deepCopy(attachment)),
+      ];
+      this.audit(state, {
+        quoteId: order.quoteId,
+        workOrderId: order.id,
+        actorId: actor.id,
+        action: "site_photos_uploaded",
+        detail: `上載現場環境圖片 ${fresh.length} 張`,
+      });
+      output = deepCopy(order);
+    });
+    return sanitiseOrder(output, actor.role === "admin");
   }
   archiveQuote(
     actorInput: Actor,
@@ -2695,6 +2731,8 @@ export class Engine {
     this.mutate((state) => {
       const order =
         state.orders.find((item) => item.id === woId) ?? fail("找不到工程單。");
+      if (!this.orderReadable(actor, order))
+        fail("你沒有修改此工程日期的權限。");
       if (!input.start || !input.end || input.start > input.end)
         fail("請填寫合理的開工及完工日期。");
       if (!input.reason?.trim()) fail("修改工程日期必須填寫原因。");

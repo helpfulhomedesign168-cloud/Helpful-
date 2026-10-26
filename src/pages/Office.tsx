@@ -5,12 +5,19 @@ import {
   ArrowUpRight,
   Check,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   Plus,
   Hammer,
   Printer,
 } from "lucide-react";
-import { useApp, showAttachment, getAttachmentBlob } from "../context";
+import {
+  useApp,
+  showAttachment,
+  getAttachmentBlob,
+  saveAttachment,
+} from "../context";
 import {
   Badge,
   Button,
@@ -35,6 +42,7 @@ import {
   InvoiceCategory,
   INVOICE_CATEGORY_NAMES,
   ROLE_NAMES,
+  Assignment,
 } from "../domain/types";
 
 type ProofPreview =
@@ -1277,333 +1285,524 @@ export function Handoff() {
     </>
   );
 }
-export function Orders() {
+function formatMonthLabel(month: string) {
+  const [year, value] = month.split("-");
+  return `${year}年${Number(value)}月`;
+}
+
+function WorkOrderRail({ selectedId }: { selectedId?: string }) {
   const { actor, engine } = useApp();
-  const [search, setSearch] = useState("");
-  const nav = useNavigate();
-  const orders = engine
-    .listOrders(actor)
-    .filter((o) =>
-      `${o.number}${o.customer.name}${o.customer.address}`.includes(search),
-    );
+  const [month, setMonth] = useState(DEMO_TODAY.slice(0, 7));
+  const [csFilter, setCsFilter] = useState("all");
+  const manager =
+    actor.role === "cs_supervisor" || actor.role === "admin";
+  let team = [] as ReturnType<typeof engine.listCsTeam>;
+  try {
+    if (manager) team = engine.listCsTeam(actor);
+  } catch {}
+  const orders = engine.listOrders(actor).filter((order) => {
+    const arrived = order.csReleasedAt ?? order.createdAt;
+    if (month && !arrived.startsWith(month)) return false;
+    if (manager && csFilter !== "all" && order.csOwnerId !== csFilter)
+      return false;
+    return true;
+  });
   return (
-    <>
-      <PageHead eyebrow="施工接力" title="工程管理" />
-      <div className="list-panel">
-        <div className="list-toolbar">
-          <Search
-            value={search}
-            onChange={setSearch}
-            placeholder="搜尋工程編號、客戶或地址"
-          />
+    <aside className="order-rail">
+      <div className="order-rail-head">
+        <div>
+          <span>工程單</span>
+          <strong>{month ? formatMonthLabel(month) : "全部月份"}</strong>
         </div>
-        {orders.length === 0 ? (
-          <Empty
-            title="暫無正式工程"
-            description="開單後累計有效收款達成交額50%，工程單才會自動出現在這裏。"
-          />
-        ) : (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>工程／Invoice</th>
-                  <th>客戶／地址</th>
-                  <th>預計開工</th>
-                  <th>預計完工</th>
-                  <th>安排狀態</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id}>
-                    <td>
-                      <Link className="source-link" to={"/orders/" + o.id}>
-                        {o.number}
-                      </Link>
-                      <small>
-                        {engine.getInvoice(actor, o.invoiceId).number}
-                      </small>
-                    </td>
-                    <td>
-                      <strong>{o.customer.name}</strong>
-                      <small>
-                        {o.customer.district} · {o.customer.estate}
-                      </small>
-                    </td>
-                    <td>{o.startDate}</td>
-                    <td>{o.endDate}</td>
-                    <td>
-                      <Badge strong={o.status === "arranged"}>
-                        {o.status === "arranged" ? "已安排" : "待安排"}
-                      </Badge>
-                    </td>
-                    <td>
-                      <Button onClick={() => nav("/orders/" + o.id)}>
-                        查看工程 <ArrowRight size={18} />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <small>{orders.length} 張</small>
+      </div>
+      <div className="order-rail-filters">
+        <input
+          type="month"
+          aria-label="工程單月份"
+          value={month}
+          onChange={(event) => setMonth(event.target.value)}
+        />
+        <button className="text-button" onClick={() => setMonth("")}>
+          全部
+        </button>
+        {manager && (
+          <select
+            aria-label="跟進同事"
+            value={csFilter}
+            onChange={(event) => setCsFilter(event.target.value)}
+          >
+            <option value="all">全部同事</option>
+            {team.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.name}
+              </option>
+            ))}
+          </select>
         )}
       </div>
-    </>
+      <div className="order-rail-list">
+        {orders.length === 0 ? (
+          <p className="section-empty">此月份沒有工程單。</p>
+        ) : (
+          orders.map((order) => {
+            let invoiceNumber = "";
+            try {
+              invoiceNumber = engine.getInvoice(actor, order.invoiceId).number;
+            } catch {}
+            const arrived = (order.csReleasedAt ?? order.createdAt).slice(0, 10);
+            return (
+              <Link
+                key={order.id}
+                to={"/orders/" + order.id}
+                className={`order-rail-row ${selectedId === order.id ? "selected" : ""}`}
+              >
+                <strong>{order.number}</strong>
+                <small>Invoice {invoiceNumber || "—"}</small>
+                <span>
+                  {arrived} · {order.customer.name}
+                </span>
+                <span>{order.csOwnerId ? "已安排跟進" : "未安排跟進"}</span>
+              </Link>
+            );
+          })
+        )}
+      </div>
+    </aside>
   );
 }
-export function OrderDetail() {
-  const { id = "" } = useParams();
+
+function WorkOrderCalendar({
+  order,
+  assignments,
+}: {
+  order: WorkOrder;
+  assignments: Assignment[];
+}) {
+  const [month, setMonth] = useState(order.startDate.slice(0, 7));
+  useEffect(() => {
+    setMonth(order.startDate.slice(0, 7));
+  }, [order.id, order.startDate]);
+  const year = Number(month.slice(0, 4));
+  const monthIndex = Number(month.slice(5, 7)) - 1;
+  const days = new Date(year, monthIndex + 1, 0).getDate();
+  const offset = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
+  const events = new Map<string, string[]>();
+  assignments.forEach((assignment) => {
+    const line = order.lines.find((item) => assignment.lineIds.includes(item.id));
+    const label = line?.itemSnapshot.name ?? "施工";
+    const list = events.get(assignment.date) ?? [];
+    list.push(`${label} · ${assignment.time}`);
+    events.set(assignment.date, list);
+  });
+  const cells: Array<string | null> = [
+    ...Array.from({ length: offset }, () => null),
+    ...Array.from(
+      { length: days },
+      (_, index) =>
+        `${month}-${String(index + 1).padStart(2, "0")}`,
+    ),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  const moveMonth = (delta: number) => {
+    const next = new Date(year, monthIndex + delta, 1);
+    setMonth(
+      `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`,
+    );
+  };
+  return (
+    <section className="calendar-card" aria-label="工程日曆">
+      <header className="calendar-head">
+        <div>
+          <span>工程期 {order.startDate} 至 {order.endDate}</span>
+          <strong>{formatMonthLabel(month)}</strong>
+        </div>
+        <div className="calendar-nav">
+          <button type="button" onClick={() => moveMonth(-1)} aria-label="上一個月">
+            <ChevronLeft size={20} />
+          </button>
+          <button type="button" onClick={() => moveMonth(1)} aria-label="下一個月">
+            <ChevronRight size={20} />
+          </button>
+        </div>
+      </header>
+      <div className="calendar-weekdays">
+        {["一", "二", "三", "四", "五", "六", "日"].map((day) => (
+          <span key={day}>{day}</span>
+        ))}
+      </div>
+      <div className="calendar-grid">
+        {cells.map((date, index) => {
+          if (!date) return <div className="calendar-empty" key={`empty-${index}`} />;
+          const day = Number(date.slice(-2));
+          const inPeriod = date >= order.startDate && date <= order.endDate;
+          const dayEvents = events.get(date) ?? [];
+          return (
+            <div
+              className={`calendar-cell ${inPeriod ? "in-period" : ""} ${date === DEMO_TODAY ? "today" : ""} ${dayEvents.length ? "has-events" : ""}`}
+              key={date}
+            >
+              <span>{day}</span>
+              {dayEvents.slice(0, 2).map((label, eventIndex) => (
+                <small key={`${date}-${eventIndex}`}>{label}</small>
+              ))}
+              {dayEvents.length > 2 && <small>+{dayEvents.length - 2}</small>}
+            </div>
+          );
+        })}
+      </div>
+      <div className="calendar-legend">
+        <span><i className="legend-period" />工程期</span>
+        <span><i className="legend-event" />已安排施工</span>
+      </div>
+    </section>
+  );
+}
+
+function PhotoImage({
+  attachment,
+  className = "",
+}: {
+  attachment: Attachment;
+  className?: string;
+}) {
+  const [url, setUrl] = useState<string>();
+  const [missing, setMissing] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | undefined;
+    setUrl(undefined);
+    setMissing(false);
+    getAttachmentBlob(attachment)
+      .then((blob) => {
+        if (cancelled) return;
+        if (!blob) {
+          setMissing(true);
+          return;
+        }
+        objectUrl = URL.createObjectURL(blob);
+        setUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setMissing(true);
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [attachment.id]);
+  if (missing)
+    return (
+      <span className={`photo-missing ${className}`}>
+        <FileText size={24} />
+        未附原件
+      </span>
+    );
+  if (!url) return <span className={`photo-loading ${className}`} />;
+  return <img className={className} src={url} alt={attachment.name} />;
+}
+
+function SitePhotos({
+  order,
+  canEdit,
+}: {
+  order: WorkOrder;
+  canEdit: boolean;
+}) {
+  const { actor, engine, run } = useApp();
+  const photos = order.sitePhotos ?? [];
+  const [selectedId, setSelectedId] = useState(photos[0]?.id ?? "");
+  const [busy, setBusy] = useState(false);
+  const selected = photos.find((photo) => photo.id === selectedId) ?? photos[0];
+  useEffect(() => {
+    if (!photos.some((photo) => photo.id === selectedId))
+      setSelectedId(photos[0]?.id ?? "");
+  }, [photos, selectedId]);
+  async function upload(files: File[]) {
+    setBusy(true);
+    try {
+      const attachments = await Promise.all(
+        files.map((file) => saveAttachment(file)),
+      );
+      run(
+        () => engine.addSitePhotos(actor, order.id, attachments),
+        "現場環境圖片已上載。",
+      );
+    } catch (error) {
+      run(() => {
+        throw error;
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Section title="現場環境">
+      {canEdit && (
+        <label className="site-photo-upload">
+          <Plus size={20} />
+          {busy ? "上載中…" : "上載現場圖片"}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            disabled={busy}
+            onChange={(event) => {
+              const files = Array.from(event.currentTarget.files ?? []);
+              event.currentTarget.value = "";
+              if (files.length) void upload(files);
+            }}
+          />
+        </label>
+      )}
+      {photos.length === 0 ? (
+        <p className="section-empty">尚未上載現場環境圖片。</p>
+      ) : (
+        <>
+          <button
+            type="button"
+            className="site-photo-large"
+            onClick={() =>
+              showAttachment(selected).catch((error) =>
+                run(() => {
+                  throw error;
+                }),
+              )
+            }
+            aria-label={`開啟 ${selected.name}`}
+          >
+            <PhotoImage attachment={selected} className="site-photo-image" />
+          </button>
+          <div className="site-photo-grid">
+            {photos.map((photo) => (
+              <button
+                type="button"
+                key={photo.id}
+                className={`site-photo-thumb ${photo.id === selected.id ? "selected" : ""}`}
+                onClick={() => setSelectedId(photo.id)}
+                aria-label={`預覽 ${photo.name}`}
+              >
+                <PhotoImage attachment={photo} />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </Section>
+  );
+}
+
+function OrderPanel({ order }: { order: WorkOrder }) {
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
-  const [tab, setTab] = useState("arrange");
+  const [selectedLineId, setSelectedLineId] = useState("");
   const [resourceId, setResource] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(order.startDate);
   const [time, setTime] = useState("未定");
   const [notes, setNotes] = useState("");
   const [dates, setDates] = useState(false);
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  const [start, setStart] = useState(order.startDate);
+  const [end, setEnd] = useState(order.endDate);
   const [reason, setReason] = useState("");
-  let order: WorkOrder | undefined;
-  try {
-    order = engine.getOrder(actor, id);
-  } catch {}
-  if (!order)
-    return (
-      <Empty
-        title="沒有這個工程的查看權限"
-        action={<Button onClick={() => nav("/orders")}>返回</Button>}
-      />
-    );
-  const invoice = engine.getInvoice(actor, order.invoiceId),
-    assignments = engine.listAssignments(actor, id);
+  useEffect(() => {
+    setSelectedLineId("");
+    setResource("");
+    setNotes("");
+  }, [order.id]);
+  const invoice = engine.getInvoice(actor, order.invoiceId);
+  const assignments = engine.listAssignments(actor, order.id);
   let resources = [] as ReturnType<typeof engine.listResources>;
   try {
     resources = engine.listResources(actor);
   } catch {}
-  const resource = resources.find((r) => r.id === resourceId);
-  const canEdit =
-    actor.role === "cs" ||
-    actor.role === "cs_supervisor" ||
-    actor.role === "admin";
-  const assigned = new Set(assignments.flatMap((a) => a.lineIds));
-  function compatible(execution: string) {
-    return resource?.type === "contractor"
+  const canEdit = ["cs", "cs_supervisor", "admin"].includes(actor.role);
+  const selectedLine = order.lines.find((line) => line.id === selectedLineId);
+  const assigned = new Map(
+    assignments.flatMap((assignment) =>
+      assignment.lineIds.map((lineId) => [lineId, assignment] as const),
+    ),
+  );
+  const compatible = resources.filter((resource) => {
+    if (!selectedLine) return false;
+    const execution = selectedLine.itemSnapshot.execution;
+    return resource.type === "contractor"
       ? execution === "contractor"
-      : resource?.type === "staff"
+      : resource.type === "staff"
         ? execution === "self"
-        : resource?.type === "service"
-          ? execution !== "contractor"
-          : true;
-  }
+        : execution === "self" || execution === "service";
+  });
+  const chooseLine = (lineId: string) => {
+    setSelectedLineId(lineId);
+    setResource("");
+    setDate(order.startDate);
+    setTime("未定");
+    setNotes("");
+  };
   return (
     <>
       <PageHead
-        eyebrow={order.number}
-        title={`${order.customer.name}的工程`}
+        eyebrow="工程管理"
+        title={order.number}
         actions={
-          <>
-            <Button onClick={() => nav("/orders")}>返回工程</Button>
-            <Button onClick={() => nav("/documents/invoice/" + invoice.id)}>
-              <Printer size={20} />
-              Invoice
-            </Button>
-          </>
+          <Button onClick={() => nav("/documents/invoice/" + invoice.id)}>
+            <Printer size={20} />
+            Invoice
+          </Button>
         }
       />
-      <div className="order-banner">
+      <div className="order-banner order-banner-with-dates">
         <div>
           <span>工程地址</span>
           <strong>{order.customer.address}</strong>
+          <small>
+            {order.customer.name} · {order.customer.phone}
+          </small>
         </div>
-        <Badge strong={order.status === "arranged"}>
-          {order.status === "arranged" ? "已安排" : "待安排"}
-        </Badge>
-      </div>
-      <div className="order-meta">
-        <span>
-          <CalendarDays size={20} />
-          預計開工 {order.startDate}
-        </span>
-        <span>預計完工 {order.endDate}</span>
-        {canEdit && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setStart(order!.startDate);
-              setEnd(order!.endDate);
-              setDates(true);
-            }}
-          >
-            修改日期
-          </Button>
-        )}
-      </div>
-      <div className="tabs page-tabs">
-        <button
-          className={tab === "arrange" ? "selected" : ""}
-          onClick={() => setTab("arrange")}
-        >
-          工程安排
-        </button>
-        <button
-          className={tab === "overview" ? "selected" : ""}
-          onClick={() => setTab("overview")}
-        >
-          工程內容
-        </button>
-        <button
-          className={tab === "documents" ? "selected" : ""}
-          onClick={() => setTab("documents")}
-        >
-          來源單據
-        </button>
-      </div>
-      {tab === "arrange" ? (
-        <div className="detail-layout">
+        <div className="order-period">
           <div>
-            <Section title="已安排項目">
-              {assignments.length === 0 ? (
-                <p className="section-empty">未安排判頭或公司師傅。</p>
-              ) : (
-                assignments.map((a) => (
-                  <article className="assignment-card" key={a.id}>
+            <span>預計開工</span>
+            <strong>{order.startDate}</strong>
+          </div>
+          <div>
+            <span>預計完工</span>
+            <strong>{order.endDate}</strong>
+          </div>
+          {canEdit && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setStart(order.startDate);
+                setEnd(order.endDate);
+                setDates(true);
+              }}
+            >
+              修改日期
+            </Button>
+          )}
+        </div>
+      </div>
+      <WorkOrderCalendar order={order} assignments={assignments} />
+      <div className="order-workbench">
+        <Section title="工程內容">
+          <div className="engineering-lines">
+            {order.lines.map((line) => {
+              const assignment = assigned.get(line.id);
+              const resource = resources.find(
+                (item) => item.id === assignment?.resourceId,
+              );
+              return (
+                <article
+                  className={`engineering-line ${selectedLineId === line.id ? "selected" : ""}`}
+                  key={line.id}
+                >
+                  <div className="engineering-line-head">
                     <div>
-                      <span className="assignment-icon">
-                        <Hammer size={24} />
-                      </span>
-                      <h3>
-                        {resources.find((r) => r.id === a.resourceId)?.name ||
-                          "已分派執行對象"}
-                      </h3>
-                      <Badge>已安排</Badge>
+                      <strong>{line.itemSnapshot.name}</strong>
+                      <small>
+                        {line.position}
+                        {line.style ? ` · ${line.style}` : ""}
+                      </small>
                     </div>
-                    <p>
-                      {a.lineIds
-                        .map(
-                          (l) =>
-                            order!.lines.find((x) => x.id === l)?.itemSnapshot
-                              .name,
-                        )
-                        .join("、")}
-                    </p>
-                    <span>
-                      {a.date} · {a.time}
-                    </span>
-                    {a.notes && <p>{a.notes}</p>}
-                  </article>
-                ))
-              )}
-            </Section>
-            {canEdit && (
-              <Section title="安排判頭／公司師傅">
+                    {assignment ? (
+                      <Badge strong>已安排</Badge>
+                    ) : canEdit ? (
+                      <Button onClick={() => chooseLine(line.id)}>
+                        安排 <ArrowRight size={16} />
+                      </Button>
+                    ) : null}
+                  </div>
+                  <p className="engineering-line-scope">
+                    {line.itemSnapshot.measure === "area"
+                      ? `${line.length} × ${line.width} ${line.dimensionUnit}`
+                      : line.itemSnapshot.measure === "length"
+                        ? `${line.length} ${line.dimensionUnit}`
+                        : line.itemSnapshot.measure === "fixed"
+                          ? "一式"
+                          : `${line.quantity} ${line.itemSnapshot.unit}`}
+                    {line.notes ? ` · ${line.notes}` : ""}
+                  </p>
+                  {assignment && (
+                    <div className="engineering-line-assignment">
+                      <Hammer size={17} />
+                      {resource?.name ?? "已分派"} · {assignment.date} ·{" "}
+                      {assignment.time}
+                      {assignment.notes ? ` · ${assignment.notes}` : ""}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </Section>
+        <div>
+          <Section title="安排施工">
+            {!selectedLine ? (
+              <p className="section-empty">
+                在左邊工程項目按「安排」，選擇師傅及施工日期。
+              </p>
+            ) : (
+              <>
+                <p className="selected-work-line">
+                  正在安排：<strong>{selectedLine.itemSnapshot.name}</strong>
+                </p>
                 <div className="form-grid two">
-                  <Field label="執行對象" required>
+                  <Field label="執行師傅" required>
                     <select
                       value={resourceId}
-                      onChange={(e) => {
-                        setResource(e.target.value);
-                        setSelected([]);
-                      }}
+                      onChange={(event) => setResource(event.target.value)}
                     >
                       <option value="">選擇判頭或公司師傅</option>
-                      {resources
-                        .filter((r) => r.active)
-                        .map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name} ·{" "}
-                            {r.type === "contractor"
-                              ? "判頭"
-                              : r.type === "staff"
-                                ? "公司師傅"
-                                : "服務供應商"}
-                          </option>
-                        ))}
+                      {compatible.map((resource) => (
+                        <option key={resource.id} value={resource.id}>
+                          {resource.name}
+                        </option>
+                      ))}
                     </select>
                   </Field>
                   <Field label="預計施工日期" required>
                     <input
                       type="date"
-                      value={date || order.startDate}
-                      onChange={(e) => setDate(e.target.value)}
+                      value={date}
+                      onChange={(event) => setDate(event.target.value)}
                     />
                   </Field>
+                </div>
+                <div className="form-grid two">
                   <Field label="時段">
                     <select
                       value={time}
-                      onChange={(e) => setTime(e.target.value)}
+                      onChange={(event) => setTime(event.target.value)}
                     >
-                      {["未定", "上午", "下午", "全天"].map((t) => (
-                        <option key={t}>{t}</option>
+                      {["未定", "上午", "下午", "全天"].map((slot) => (
+                        <option key={slot}>{slot}</option>
                       ))}
                     </select>
                   </Field>
+                  <Field label="安排備註">
+                    <input
+                      value={notes}
+                      onChange={(event) => setNotes(event.target.value)}
+                      placeholder="檔期或現場注意事項"
+                    />
+                  </Field>
                 </div>
-                <h3 className="small-heading">選擇承接的工程明細</h3>
-                <div className="assignment-lines">
-                  {order.lines.map((l) => (
-                    <label
-                      key={l.id}
-                      className={`assignment-line ${assigned.has(l.id) || !compatible(l.itemSnapshot.execution) ? "unavailable" : ""}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selected.includes(l.id)}
-                        disabled={
-                          assigned.has(l.id) ||
-                          !resourceId ||
-                          !compatible(l.itemSnapshot.execution)
-                        }
-                        onChange={(e) =>
-                          setSelected(
-                            e.target.checked
-                              ? [...selected, l.id]
-                              : selected.filter((x) => x !== l.id),
-                          )
-                        }
-                      />
-                      <span>
-                        <strong>{l.itemSnapshot.name}</strong>
-                        <small>
-                          {l.position} ·{" "}
-                          {l.itemSnapshot.execution === "contractor"
-                            ? "外判"
-                            : l.itemSnapshot.execution === "self"
-                              ? "公司自營"
-                              : "服務供應商"}
-                        </small>
-                      </span>
-                      {assigned.has(l.id) && <Badge>已安排</Badge>}
-                    </label>
-                  ))}
-                </div>
-                <Field label="安排備註">
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="與判頭確認的檔期或要留意的事項"
-                  />
-                </Field>
                 <Button
                   variant="primary"
+                  disabled={!resourceId || !date}
                   onClick={() => {
-                    const a = run(
+                    const result = run(
                       () =>
-                        engine.assign(actor, id, {
+                        engine.assign(actor, order.id, {
                           resourceId,
-                          lineIds: selected,
-                          date: date || order!.startDate,
+                          lineIds: [selectedLine.id],
+                          date,
                           time,
                           notes,
                         }),
-                      "安排已保存。",
+                      "施工安排已保存；日曆已更新。",
                     );
-                    if (a) {
-                      setSelected([]);
+                    if (result) {
+                      setSelectedLineId("");
                       setResource("");
                       setNotes("");
                     }
@@ -1612,93 +1811,12 @@ export function OrderDetail() {
                   <Check size={20} />
                   儲存安排
                 </Button>
-              </Section>
+              </>
             )}
-          </div>
-          <aside className="quote-summary">
-            <span className="eyebrow">來源關聯</span>
-            <h2>工程摘要</h2>
-            <div className="summary-row">
-              <span>工程明細</span>
-              <strong>{order.lines.length} 項</strong>
-            </div>
-            <div className="summary-row">
-              <span>已安排</span>
-              <strong>{assigned.size} 項</strong>
-            </div>
-            <div className="summary-row">
-              <span>待安排</span>
-              <strong>{order.lines.length - assigned.size} 項</strong>
-            </div>
-            <div className="summary-total">
-              <span>Invoice成交額</span>
-              <strong>{money(invoice.netTotal)}</strong>
-            </div>
-            <p className="summary-note">安排紀錄不代表已進場施工。</p>
-          </aside>
+          </Section>
+          <SitePhotos order={order} canEdit={canEdit} />
         </div>
-      ) : tab === "overview" ? (
-        <Section title="有效工程內容">
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>工程項目</th>
-                  <th>位置／款式</th>
-                  <th>範圍</th>
-                  <th>執行方式</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.lines.map((l) => (
-                  <tr key={l.id}>
-                    <td>
-                      <strong>{l.itemSnapshot.name}</strong>
-                      {l.notes && <small>{l.notes}</small>}
-                    </td>
-                    <td>
-                      {l.position}
-                      <small>{l.style}</small>
-                    </td>
-                    <td>
-                      {l.itemSnapshot.measure === "area"
-                        ? `${l.length}×${l.width}${l.dimensionUnit}`
-                        : l.itemSnapshot.measure === "length"
-                          ? `${l.length}${l.dimensionUnit}`
-                          : l.itemSnapshot.measure === "fixed"
-                            ? "一式"
-                            : `${l.quantity}${l.itemSnapshot.unit}`}
-                    </td>
-                    <td>
-                      <Badge>
-                        {l.itemSnapshot.execution === "contractor"
-                          ? "外判"
-                          : "公司／服務自營"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Section>
-      ) : (
-        <Section title="來源單據">
-          <div className="document-row">
-            <FileText size={28} />
-            <div>
-              <strong>{invoice.number}</strong>
-              <small>主Invoice · 已鎖定成交內容</small>
-            </div>
-            <Button onClick={() => nav("/documents/invoice/" + invoice.id)}>
-              預覽Invoice <ArrowRight size={20} />
-            </Button>
-          </div>
-          <p className="muted">
-            工程連接有效Invoice及原簽版本；CS不開原報價或簽署報價PDF。
-          </p>
-        </Section>
-      )}
+      </div>
       {dates && (
         <Dialog title="修改預計工程日期" onClose={() => setDates(false)}>
           <div className="form-grid two">
@@ -1706,21 +1824,21 @@ export function OrderDetail() {
               <input
                 type="date"
                 value={start}
-                onChange={(e) => setStart(e.target.value)}
+                onChange={(event) => setStart(event.target.value)}
               />
             </Field>
             <Field label="預計完工" required>
               <input
                 type="date"
                 value={end}
-                onChange={(e) => setEnd(e.target.value)}
+                onChange={(event) => setEnd(event.target.value)}
               />
             </Field>
           </div>
           <Field label="修改原因" required>
             <textarea
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(event) => setReason(event.target.value)}
             />
           </Field>
           <div className="dialog-actions">
@@ -1728,11 +1846,11 @@ export function OrderDetail() {
             <Button
               variant="primary"
               onClick={() => {
-                const r = run(() => {
-                  engine.updateDates(actor, id, { start, end, reason });
+                const result = run(() => {
+                  engine.updateDates(actor, order.id, { start, end, reason });
                   return true;
                 }, "日期已更新，原值及原因已留記錄。");
-                if (r) setDates(false);
+                if (result) setDates(false);
               }}
             >
               儲存日期
@@ -1741,5 +1859,55 @@ export function OrderDetail() {
         </Dialog>
       )}
     </>
+  );
+}
+
+export function Orders() {
+  return (
+    <div className="orders-workspace">
+      <WorkOrderRail />
+      <div className="workorder-main">
+        <PageHead eyebrow="施工接力" title="工程管理" />
+        <div className="list-panel">
+          <Empty
+            title="請選擇工程單"
+            description="從左邊列表選擇工程，查看工程期、施工安排及現場圖片。"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function OrderDetail() {
+  const { id = "" } = useParams();
+  const { actor, engine } = useApp();
+  const nav = useNavigate();
+  let order: WorkOrder | undefined;
+  try {
+    order = engine.getOrder(actor, id);
+  } catch {}
+  if (!order)
+    return (
+      <div className="orders-workspace">
+        <WorkOrderRail selectedId={id} />
+        <div className="workorder-main">
+          <PageHead eyebrow="工程管理" title="工程單" />
+          <div className="list-panel">
+            <Empty
+              title="沒有這個工程的查看權限"
+              action={<Button onClick={() => nav("/orders")}>返回工程</Button>}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  return (
+    <div className="orders-workspace">
+      <WorkOrderRail selectedId={id} />
+      <div className="workorder-main">
+        <OrderPanel order={order} />
+      </div>
+    </div>
   );
 }
