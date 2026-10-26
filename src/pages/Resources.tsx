@@ -410,21 +410,21 @@ export function Customers() {
   const [active, setActive] = useState<Customer | null>(null);
   const [creating, setCreating] = useState<Customer | null>(null);
   const nav = useNavigate();
+  const csRole = ["cs", "cs_supervisor"].includes(actor.role);
   const canCreate = ["sales", "head", "supervisor", "admin"].includes(
     actor.role,
   );
   let qs = [] as ReturnType<typeof engine.listQuotes>;
   try {
-    if (actor.role !== "cs") qs = engine.listQuotes(actor);
+    if (!csRole) qs = engine.listQuotes(actor);
   } catch {}
   const isClerk = actor.role === "clerk";
   let profiles: ReturnType<typeof engine.listCustomers> = [];
   try {
-    if (actor.role !== "cs") profiles = engine.listCustomers(actor);
+    if (!csRole) profiles = engine.listCustomers(actor);
   } catch {}
   let clients: Customer[] = profiles.map((profile) => profile.customer);
-  if (actor.role === "cs")
-    clients = engine.listOrders(actor).map((o) => o.customer);
+  if (csRole) clients = engine.listOrders(actor).map((o) => o.customer);
   const ownerByCustomer = new Map<string, string>();
   profiles.forEach((profile) => {
     ownerByCustomer.set(
@@ -623,7 +623,7 @@ export function Customers() {
                 <ArrowUpRight size={22} />
               </button>
             ))}
-          {actor.role === "cs" &&
+          {csRole &&
             engine
               .listOrders(actor)
               .filter((o) => o.customer.phone === active.phone)

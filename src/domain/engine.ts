@@ -540,6 +540,53 @@ function validEngineering(
   return problems;
 }
 
+const isCsActor = (actor: Actor): boolean =>
+  actor.role === "cs" || actor.role === "cs_supervisor";
+
+const DEMO_CS_ACTORS: Actor[] = [
+  {
+    id: "cs-lead-ahfa",
+    name: "阿花",
+    code: "AFA",
+    role: "cs_supervisor",
+    grants: ["handoff.read", "order.read", "assignment.write"],
+  },
+  {
+    id: "cs-joe",
+    name: "Joe",
+    code: "JOE",
+    role: "cs",
+    grants: ["handoff.read", "order.read", "assignment.write"],
+  },
+  {
+    id: "cs-nicole",
+    name: "Nicole",
+    code: "NIC",
+    role: "cs",
+    grants: ["handoff.read", "order.read", "assignment.write"],
+  },
+  {
+    id: "cs-fandy",
+    name: "Fandy",
+    code: "FAN",
+    role: "cs",
+    grants: ["handoff.read", "order.read", "assignment.write"],
+  },
+];
+function ensureDemoCsActors(state: AppState): void {
+  DEMO_CS_ACTORS.forEach((actor) => {
+    if (!state.actors.some((candidate) => candidate.id === actor.id))
+      state.actors.push(deepCopy(actor));
+  });
+}
+function nextWorkOrderNumber(state: AppState): string {
+  const year = DEMO_TODAY.slice(2, 4);
+  const sequence = (state.workOrderSequences?.[year] ?? 0) + 1;
+  state.workOrderSequences ??= {};
+  state.workOrderSequences[year] = sequence;
+  return `D${year}${String(sequence).padStart(5, "0")}`;
+}
+
 function serviceComplete(item: ServiceItem): boolean {
   if (
     !item.id ||
@@ -632,7 +679,9 @@ export class Engine {
       migrated.quoteSequences ??= {};
       migrated.receipts ??= [];
       migrated.receiptSequences ??= {};
+      migrated.workOrderSequences ??= {};
       migrated.customers ??= [];
+      ensureDemoCsActors(migrated);
       const migrateCustomer = (customer: Customer) => {
         customer.street ??= "";
         customer.address = composeAddress(customer);
@@ -709,6 +758,14 @@ export class Engine {
       });
       migrated.orders.forEach((order) => {
         migrateCustomer(order.customer);
+        const match = order.number.match(/^D(\d{2})(\d{5})$/);
+        if (match) {
+          const year = match[1];
+          migrated.workOrderSequences[year] = Math.max(
+            migrated.workOrderSequences[year] ?? 0,
+            Number(match[2]),
+          );
+        }
         const invoice = migrated.invoices.find(
           (item) => item.id === order.invoiceId,
         );
@@ -1063,7 +1120,7 @@ export class Engine {
       const startDate = addDays(DEMO_TODAY, 10);
       order = {
         id: uid("workorder"),
-        number: `${invoice.number}D`,
+        number: nextWorkOrderNumber(state),
         quoteId: invoice.quoteId,
         invoiceId: invoice.id,
         groupId: `group-${invoice.quoteId}`,
@@ -1090,7 +1147,7 @@ export class Engine {
       detail: "累計有效收款已達成交額50%，工程單已發工程部",
     });
     state.actors
-      .filter((item) => item.role === "cs")
+      .filter((item) => isCsActor(item))
       .forEach((recipient) =>
         this.notify(
           state,
@@ -1174,7 +1231,7 @@ export class Engine {
     const actor = this.actor(actorInput);
     if (
       !(
-        actor.role === "cs" ||
+        isCsActor(actor) ||
         actor.role === "admin" ||
         this.has(actor, "assignment.write")
       )
@@ -1184,7 +1241,7 @@ export class Engine {
   }
   listQuotes(actorInput: Actor): Quote[] {
     const actor = this.actor(actorInput);
-    if (actor.role === "cs") return [];
+    if (isCsActor(actor)) return [];
     return this.state.quotes
       .filter((quote) => this.quoteReadable(actor, quote))
       .map((quote) => sanitiseQuote(quote, actor.role === "admin"));
@@ -1219,7 +1276,7 @@ export class Engine {
   getQuote(actorInput: Actor, id: string): Quote {
     const actor = this.actor(actorInput);
     const quote = this.findQuote(id);
-    if (actor.role === "cs") fail("工程CS不可讀取原報價。");
+    if (isCsActor(actor)) fail("工程CS不可讀取原報價。");
     if (!this.quoteReadable(actor, quote)) fail("你沒有查看此報價的權限。");
     return sanitiseQuote(quote, actor.role === "admin");
   }
@@ -1233,7 +1290,7 @@ export class Engine {
   pricing(actorInput: Actor, quoteId: string): Pricing {
     const actor = this.actor(actorInput);
     const quote = this.findQuote(quoteId);
-    if (actor.role === "cs" || !this.quoteReadable(actor, quote))
+    if (isCsActor(actor) || !this.quoteReadable(actor, quote))
       fail("你沒有查看此計價的權限。");
     return publicPricing(this.pricingRaw(quote), actor);
   }
@@ -1375,7 +1432,7 @@ export class Engine {
     const actor = this.actor(actorInput);
     if (
       !(
-        actor.role === "cs" ||
+        isCsActor(actor) ||
         actor.role === "admin" ||
         this.has(actor, "handoff.read")
       )
@@ -1398,11 +1455,24 @@ export class Engine {
         (item) => item.invoiceId === quote.invoiceId,
       );
       if (!order?.csReleasedAt) return [];
+      const invoice = this.state.invoices.find(
+        (item) => item.id === quote.invoiceId,
+      );
+      const csOwner = order.csOwnerId
+        ? this.state.actors.find((candidate) => candidate.id === order.csOwnerId)
+        : undefined;
       return [
         {
           quoteId: quote.id,
           number: quote.number,
+          quoteNumber: quote.number,
+          workOrderNumber: order.number,
+          invoiceNumber: invoice?.number ?? "",
           customerName: version.customer.name,
+          phone: version.customer.phone,
+          category: invoice?.category ?? quote.officeCategory,
+          csOwnerId: order.csOwnerId,
+          csOwnerName: csOwner?.name,
           district: version.customer.district,
           address: version.customer.address,
           salesName: owner?.name ?? "未知",
@@ -1424,6 +1494,46 @@ export class Engine {
         },
       ];
     });
+  }
+  listCsTeam(actorInput: Actor): Actor[] {
+    const actor = this.actor(actorInput);
+    if (!(isCsActor(actor) || actor.role === "admin"))
+      fail("你沒有查看工程部CS團隊的權限。");
+    return this.state.actors
+      .filter((candidate) => isCsActor(candidate))
+      .map(deepCopy);
+  }
+  assignCsOwner(
+    actorInput: Actor,
+    workOrderId: string,
+    csOwnerId: string,
+  ): WorkOrder {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "cs_supervisor")
+      fail("只有CS主管可以安排跟進同事。");
+    let output!: WorkOrder;
+    this.mutate((state) => {
+      const order =
+        state.orders.find((item) => item.id === workOrderId) ??
+        fail("找不到工程單。");
+      if (!order.csReleasedAt) fail("此工程尚未發到CS，未可安排跟進。");
+      const owner = state.actors.find((item) => item.id === csOwnerId);
+      if (!owner || !isCsActor(owner)) fail("請選擇有效的CS同事。");
+      if (order.csOwnerId === owner.id) {
+        output = deepCopy(order);
+        return;
+      }
+      order.csOwnerId = owner.id;
+      this.audit(state, {
+        quoteId: order.quoteId,
+        workOrderId: order.id,
+        actorId: actor.id,
+        action: "cs_followup_assigned",
+        detail: `安排CS跟進同事：${owner.name}`,
+      });
+      output = deepCopy(order);
+    });
+    return sanitiseOrder(output, false);
   }
   listPayments(actorInput: Actor): Payment[] {
     const actor = this.actor(actorInput);
@@ -1453,7 +1563,7 @@ export class Engine {
     const actor = this.actor(actorInput);
     const readable = (invoice: Invoice) =>
       actor.role === "admin" ||
-      (actor.role === "cs" &&
+      (isCsActor(actor) &&
         Boolean(
           this.state.orders.find(
             (order) => order.invoiceId === invoice.id && order.csReleasedAt,
@@ -1518,7 +1628,7 @@ export class Engine {
     if (
       !(
         actor.role === "admin" ||
-        (actor.role === "cs" && releasedToCs) ||
+        (isCsActor(actor) && releasedToCs) ||
         actor.role === "clerk" ||
         actor.role === "finance" ||
         this.has(actor, "invoice.read") ||
@@ -1533,7 +1643,7 @@ export class Engine {
     invoiceId: string,
   ): InvoicePaymentStatus {
     const actor = this.actor(actorInput);
-    if (actor.role === "cs") fail("工程CS不可查看付款詳情或收據。 ");
+    if (isCsActor(actor)) fail("工程CS不可查看付款詳情或收據。 ");
     const invoice =
       this.state.invoices.find((item) => item.id === invoiceId) ??
       fail("找不到Invoice。");
@@ -1551,7 +1661,7 @@ export class Engine {
       .filter(
         (order) =>
           actor.role === "admin" ||
-          (actor.role === "cs" && Boolean(order.csReleasedAt)) ||
+          (isCsActor(actor) && Boolean(order.csReleasedAt)) ||
           actor.role === "clerk" ||
           this.has(actor, "order.read") ||
           this.findQuote(order.quoteId).ownerId === actor.id,
@@ -1566,7 +1676,7 @@ export class Engine {
     if (
       !(
         actor.role === "admin" ||
-        (actor.role === "cs" && Boolean(order.csReleasedAt)) ||
+        (isCsActor(actor) && Boolean(order.csReleasedAt)) ||
         actor.role === "clerk" ||
         this.has(actor, "order.read") ||
         this.findQuote(order.quoteId).ownerId === actor.id
@@ -1583,7 +1693,7 @@ export class Engine {
     if (
       !(
         actor.role === "admin" ||
-        (actor.role === "cs" && Boolean(order.csReleasedAt)) ||
+        (isCsActor(actor) && Boolean(order.csReleasedAt)) ||
         actor.role === "clerk" ||
         this.has(actor, "order.read") ||
         this.findQuote(order.quoteId).ownerId === actor.id
@@ -1601,7 +1711,7 @@ export class Engine {
     const quote = this.findQuote(quoteId);
     if (
       !(
-        actor.role === "cs" ||
+        isCsActor(actor) ||
         this.quoteReadable(actor, quote) ||
         actor.role === "admin"
       )
@@ -1610,7 +1720,7 @@ export class Engine {
     const rows = this.state.audits
       .filter((event) => event.quoteId === quoteId)
       .map(deepCopy);
-    if (actor.role === "cs")
+    if (isCsActor(actor))
       rows.forEach((event) => {
         event.detail = event.action.replace(/_/g, " ");
       });
@@ -2431,7 +2541,7 @@ export class Engine {
     const actor = this.actor(actorInput);
     if (
       !(
-        actor.role === "cs" ||
+        isCsActor(actor) ||
         actor.role === "admin" ||
         actor.grants.includes("assignment.write")
       )
@@ -2442,7 +2552,7 @@ export class Engine {
       const order =
         state.orders.find((item) => item.id === workOrderId) ??
         fail("找不到工程單。");
-      if (actor.role === "cs" && !order.csReleasedAt)
+      if (isCsActor(actor) && !order.csReleasedAt)
         fail("此工程尚未收足50%，未可安排工程。 ");
       const resource =
         state.resources.find((item) => item.id === input.resourceId) ??
@@ -2576,7 +2686,7 @@ export class Engine {
     const actor = this.actor(actorInput);
     if (
       !(
-        actor.role === "cs" ||
+        isCsActor(actor) ||
         actor.role === "admin" ||
         actor.grants.includes("assignment.write")
       )
@@ -2893,6 +3003,7 @@ export function createSeedState(): AppState {
       role: "cs",
       grants: ["handoff.read", "order.read", "assignment.write"],
     },
+    ...DEMO_CS_ACTORS,
     {
       id: "admin",
       name: "SuperAdmin",
@@ -3133,7 +3244,7 @@ export function createSeedState(): AppState {
   );
   const order: WorkOrder = {
     id: "workorder-issued",
-    number: `${invoice.number}D`,
+    number: "D2600001",
     quoteId: issued.id,
     invoiceId: invoice.id,
     groupId: "group-quote-issued",
@@ -3245,6 +3356,7 @@ export function createSeedState(): AppState {
     monthlySequences: { "2026-10": 1 },
     quoteSequences: { "2026-10": 6 },
     receiptSequences: {},
+    workOrderSequences: { "26": 1 },
   };
   hydrateCustomerProfiles(seed);
   return seed;

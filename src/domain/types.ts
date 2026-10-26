@@ -5,6 +5,7 @@ export type Role =
   | "finance"
   | "clerk"
   | "cs"
+  | "cs_supervisor"
   | "admin";
 export type Team = "A" | "B";
 export interface Actor {
@@ -257,6 +258,8 @@ export interface WorkOrder {
   status: "pending" | "arranged";
   /** 累計有效收款達成交額50%後才發給CS；未達標只供開單員查閱。 */
   csReleasedAt?: string;
+  /** CS主管指派的跟進同事；與判頭／師傅Assignment分開。 */
+  csOwnerId?: string;
   dateChanges: {
     start: string;
     end: string;
@@ -299,6 +302,7 @@ export interface AppState {
   monthlySequences: Record<string, number>;
   quoteSequences: Record<string, number>;
   receiptSequences: Record<string, number>;
+  workOrderSequences: Record<string, number>;
 }
 export interface LineAmount {
   id: string;
@@ -352,7 +356,14 @@ export interface Eligibility {
 export interface HandoffRow {
   quoteId: string;
   number: string;
+  quoteNumber: string;
+  workOrderNumber: string;
+  invoiceNumber: string;
   customerName: string;
+  phone: string;
+  category?: InvoiceCategory;
+  csOwnerId?: string;
+  csOwnerName?: string;
   district: string;
   address: string;
   salesName: string;
@@ -474,6 +485,7 @@ export const ROLE_NAMES: Record<Role, string> = {
   finance: "會計",
   clerk: "開單員",
   cs: "工程CS",
+  cs_supervisor: "CS主管",
   admin: "Super Admin",
 };
 export const METHOD_NAMES: Record<Payment["method"], string> = {

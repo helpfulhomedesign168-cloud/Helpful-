@@ -58,3 +58,12 @@
 - Sales／主管／阿頭仍只見自己範圍客戶；CS仍只經已釋放工程投影看客戶；不要因新增Sales欄而擴大Sales或CS讀取範圍。
 - Invoice詳情內每期付款的「開收據」／「查看收據」按鈕固定靠右，與該期「可發收據」標籤同一右邊界；付款證明按鈕可在其左，不得改動收據或付款狀態規則。
 - Demo客戶名稱只屬seed資料，不代表正式客戶；改名稱不可改永久customerId或歷史quote／Invoice／WorkOrder快照。
+
+## 2026-10-26 CS接單跟進及工程單編號（不得退化）
+
+- WorkOrder號碼與Invoice號碼分開：`D + YY + 5位年度流水`，例如`D2600001`；不再用`Invoice號 + D`。已存在WorkOrder號碼不重寫；新增WorkOrder才取新流水。
+- 接單跟進只列已累計有效收款達50%並釋放到CS的工程；不要再顯示「可安排工程／已發工程部」tabs或該狀態badge。
+- 列表欄：工程單、客戶、聯絡電話、Sales、類別、跟進同事、操作。工程單顯示WorkOrder號，Invoice及原Q只作小字參考。
+- 跟進同事是WorkOrder上的CS owner，與判頭／公司師傅Assignment分開；不要以Assignment或CS姓名猜測。
+- 只有CS主管可以安排及更改跟進同事；普通CS只讀，不顯示操作按鈕。CS主管可選全部CS同事，包括CS主管本人。
+- CS主管Role為`cs_supervisor`；CS帳戶包括現有工程CS、Joe、Nicole、Fandy及阿花。舊LocalStorage只補缺失actors及sequences，不重置。

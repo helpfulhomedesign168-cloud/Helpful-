@@ -34,6 +34,7 @@ import {
   WorkOrder,
   InvoiceCategory,
   INVOICE_CATEGORY_NAMES,
+  ROLE_NAMES,
 } from "../domain/types";
 
 type ProofPreview =
@@ -1139,19 +1140,21 @@ export function InvoiceDetail() {
 }
 
 export function Handoff() {
-  const { actor, engine } = useApp();
+  const { actor, engine, run } = useApp();
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState("all");
-  const [active, setActive] = useState<HandoffRow | null>(null);
+  const [assigning, setAssigning] = useState<HandoffRow | null>(null);
+  const [selectedCs, setSelectedCs] = useState("");
   const rows = engine.listHandoffs(actor);
-  const nav = useNavigate();
-  const shown = rows
-    .filter((r) => tab === "all" || r.stage === tab)
-    .filter((r) =>
-      `${r.number} ${r.customerName} ${r.district} ${r.salesName}`.includes(
-        search,
-      ),
-    );
+  let csTeam = [] as ReturnType<typeof engine.listCsTeam>;
+  try {
+    csTeam = engine.listCsTeam(actor);
+  } catch {}
+  const canAssign = actor.role === "cs_supervisor";
+  const shown = rows.filter((row) =>
+    `${row.workOrderNumber} ${row.quoteNumber} ${row.invoiceNumber} ${row.customerName} ${row.phone} ${row.salesName} ${row.csOwnerName ?? ""}`.includes(
+      search,
+    ),
+  );
   return (
     <>
       <PageHead eyebrow="CS接力入口" title="接單跟進" />
@@ -1160,25 +1163,8 @@ export function Handoff() {
           <Search
             value={search}
             onChange={setSearch}
-            placeholder="搜尋Q號、客戶、地區或Sales"
+            placeholder="搜尋工程單、客戶、電話或Sales"
           />
-        </div>
-        <div className="tabs">
-          {[
-            ["all", "可安排工程"],
-            ["issued", "已發工程部"],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              className={tab === key ? "selected" : ""}
-              onClick={() => setTab(key)}
-            >
-              {label}
-              <span>
-                {rows.filter((r) => key === "all" || r.stage === key).length}
-              </span>
-            </button>
-          ))}
         </div>
         {shown.length === 0 ? (
           <Empty
@@ -1187,43 +1173,56 @@ export function Handoff() {
           />
         ) : (
           <div className="table-scroll">
-            <table>
+            <table className="handoff-table">
               <thead>
                 <tr>
-                  <th>交接來源</th>
-                  <th>客戶／地區</th>
-                  <th>Sales</th>
-                  <th>目前進度</th>
-                  <th>下一步</th>
-                  <th />
+                  <th scope="col">工程單</th>
+                  <th scope="col">客戶</th>
+                  <th scope="col">聯絡電話</th>
+                  <th scope="col">Sales</th>
+                  <th scope="col">類別</th>
+                  <th scope="col">跟進同事</th>
+                  <th scope="col">操作</th>
                 </tr>
               </thead>
               <tbody>
-                {shown.map((r) => (
-                  <tr key={r.quoteId}>
+                {shown.map((row) => (
+                  <tr key={row.quoteId}>
                     <td>
-                      <strong className="source-link">{r.number}</strong>
+                      <strong className="source-link">
+                        {row.workOrderNumber}
+                      </strong>
+                      <small>
+                        Invoice {row.invoiceNumber} · Q {row.quoteNumber}
+                      </small>
                     </td>
                     <td>
-                      <strong>{r.customerName}</strong>
-                      <small>{r.district}</small>
+                      <strong>{row.customerName}</strong>
+                      <small>{row.district}</small>
                     </td>
-                    <td>{r.salesName}</td>
+                    <td>{row.phone}</td>
+                    <td>{row.salesName}</td>
                     <td>
-                      <Badge strong={r.stage === "issued"}>{r.label}</Badge>
+                      {row.category
+                        ? INVOICE_CATEGORY_NAMES[row.category]
+                        : "—"}
                     </td>
-                    <td className="next-step">{r.nextAction}</td>
+                    <td>{row.csOwnerName || "未安排"}</td>
                     <td>
-                      <Button
-                        onClick={() =>
-                          r.workOrderId
-                            ? nav("/orders/" + r.workOrderId)
-                            : setActive(r)
-                        }
-                      >
-                        {r.workOrderId ? "安排工程" : "查看交接"}{" "}
-                        <ArrowRight size={18} />
-                      </Button>
+                      {canAssign && row.workOrderId ? (
+                        <Button
+                          variant={row.csOwnerName ? "secondary" : "primary"}
+                          onClick={() => {
+                            setSelectedCs(row.csOwnerId ?? "");
+                            setAssigning(row);
+                          }}
+                        >
+                          {row.csOwnerName ? "更改安排" : "安排工程"}{" "}
+                          <ArrowRight size={18} />
+                        </Button>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -1232,47 +1231,46 @@ export function Handoff() {
           </div>
         )}
       </div>
-      {active && (
-        <Dialog title="接單摘要" onClose={() => setActive(null)}>
-          <Badge>{active.label}</Badge>
-          <h3 className="handoff-title">
-            {active.number} · {active.customerName}
-          </h3>
-          <p>{active.address}</p>
-          <div className="review-details">
-            <div>
-              <span>Sales</span>
-              <strong>{active.salesName}</strong>
-            </div>
-            <div>
-              <span>首期應收</span>
-              <strong>{money(active.firstDue)}</strong>
-            </div>
-            <div>
-              <span>會計已核</span>
-              <strong>{money(active.validPaid)}</strong>
-            </div>
-            <div>
-              <span>待核款</span>
-              <strong>{money(active.pendingPaid)}</strong>
-            </div>
+      {assigning && (
+        <Dialog title="安排CS跟進" onClose={() => setAssigning(null)}>
+          <p className="dialog-intro">
+            選擇負責跟進這張工程單的CS同事。這個安排只影響跟進同事，不會改動判頭或師傅安排。
+          </p>
+          <Field label="跟進同事" required>
+            <select
+              value={selectedCs}
+              onChange={(event) => setSelectedCs(event.target.value)}
+            >
+              <option value="">請選擇CS同事</option>
+              {csTeam.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}（{ROLE_NAMES[member.role]}）
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div className="dialog-actions">
+            <Button onClick={() => setAssigning(null)}>取消</Button>
+            <Button
+              variant="primary"
+              disabled={!selectedCs || !assigning.workOrderId}
+              onClick={() => {
+                if (!assigning.workOrderId || !selectedCs) return;
+                const updated = run(
+                  () =>
+                    engine.assignCsOwner(
+                      actor,
+                      assigning.workOrderId!,
+                      selectedCs,
+                    ),
+                  "跟進同事已安排。",
+                );
+                if (updated) setAssigning(null);
+              }}
+            >
+              儲存安排
+            </Button>
           </div>
-          <h3>工程範圍</h3>
-          {active.items.map((i, n) => (
-            <div className="handoff-item" key={n}>
-              <strong>{i.name}</strong>
-              <span>
-                {i.position} · {i.style || "無款式選擇"}
-              </span>
-            </div>
-          ))}
-          <div className="tools-note">
-            <strong>下一步</strong>
-            <p>{active.nextAction}</p>
-          </div>
-          <Button className="full-width" onClick={() => setActive(null)}>
-            返回接單清單
-          </Button>
         </Dialog>
       )}
     </>
@@ -1387,7 +1385,10 @@ export function OrderDetail() {
     resources = engine.listResources(actor);
   } catch {}
   const resource = resources.find((r) => r.id === resourceId);
-  const canEdit = actor.role === "cs" || actor.role === "admin";
+  const canEdit =
+    actor.role === "cs" ||
+    actor.role === "cs_supervisor" ||
+    actor.role === "admin";
   const assigned = new Set(assignments.flatMap((a) => a.lineIds));
   function compatible(execution: string) {
     return resource?.type === "contractor"

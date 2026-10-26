@@ -24,7 +24,7 @@ export const roleHome = (role: string) =>
     ? "/finance"
     : role === "clerk"
       ? "/submissions"
-      : role === "cs"
+      : role === "cs" || role === "cs_supervisor"
         ? "/handoff"
         : role === "admin"
           ? "/services"
@@ -37,7 +37,9 @@ export function Shell() {
   const [mobile, setMobile] = useState(false);
   const [tools, setTools] = useState(false);
   const selling = ["sales", "supervisor", "head"].includes(actor.role);
-  const office = ["cs", "clerk", "finance", "admin"].includes(actor.role);
+  const office = ["cs", "cs_supervisor", "clerk", "finance", "admin"].includes(
+    actor.role,
+  );
   const items = selling
     ? [
         ["/quotes", "報價管理", Files],
@@ -45,7 +47,7 @@ export function Shell() {
         ["/customers", "客戶", Users],
         ["/performance", "我的業績", ChartNoAxesCombined],
       ]
-    : actor.role === "cs"
+    : actor.role === "cs" || actor.role === "cs_supervisor"
       ? [
           ["/handoff", "接單跟進", ArrowRightLeft],
           ["/orders", "工程管理", Hammer],
@@ -206,7 +208,8 @@ export function Shell() {
                     run(() => engine.readNotification(actor, n.id));
                     setNotifications(false);
                     nav(
-                      actor.role === "cs"
+                      actor.role === "cs" ||
+                      actor.role === "cs_supervisor"
                         ? "/handoff"
                         : actor.role === "finance"
                           ? "/finance"

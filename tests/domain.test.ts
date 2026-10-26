@@ -232,6 +232,8 @@ describe("Engine Golden Path（同一來源跨角色）", () => {
       .listOrders(cs)
       .find((row) => row.quoteId === quote.id)!;
     expect(order.invoiceId).toBe(invoice.id);
+    expect(order.number).toMatch(/^D26\d{5}$/);
+    expect(order.number).not.toContain(invoice.number);
     expect(order.startDate).toBe("2026-11-01");
     expect(order.endDate).toBe("2027-02-01");
     const assignment = engine.assign(cs, order.id, {
