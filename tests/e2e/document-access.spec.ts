@@ -19,7 +19,7 @@ test("CS可讀已發工程部的Invoice與工程；開單員不可再直入工�
   await expect(page.getByText("SHMM26100001", { exact: true })).toBeVisible();
   await page.goto("/orders/workorder-issued");
   await expect(
-    page.getByRole("heading", { name: "Demo 已開工程客戶的工程", exact: true }),
+    page.getByRole("heading", { name: "張子微的工程", exact: true }),
   ).toBeVisible();
 
   await switchRole(page, "開單員");
@@ -58,7 +58,7 @@ test("開單員在提交報價頁核對Sales付款，分類前開單按鈕保持
 }) => {
   await page.goto("/");
   await switchRole(page, "開單員");
-  const row = page.locator("tbody tr").filter({ hasText: "Demo 待核款客戶" });
+  const row = page.locator("tbody tr").filter({ hasText: "李好波" });
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "核對收款", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "核對這筆客戶收款" });

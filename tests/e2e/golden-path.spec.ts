@@ -36,7 +36,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   await page.getByRole("button", { name: "選擇現有客戶", exact: true }).click();
   await page
     .locator(".customer-option")
-    .filter({ hasText: "Demo 草稿客戶" })
+    .filter({ hasText: "陳小強" })
     .first()
     .click();
   // Customer fields are always visible now; no expand button.
