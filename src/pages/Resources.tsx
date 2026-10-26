@@ -406,6 +406,7 @@ export function Services() {
 export function Customers() {
   const { actor, engine, run } = useApp();
   const [search, setSearch] = useState("");
+  const [salesFilter, setSalesFilter] = useState("all");
   const [active, setActive] = useState<Customer | null>(null);
   const [creating, setCreating] = useState<Customer | null>(null);
   const nav = useNavigate();
@@ -416,16 +417,45 @@ export function Customers() {
   try {
     if (actor.role !== "cs") qs = engine.listQuotes(actor);
   } catch {}
-  let clients: Customer[] = [];
+  const isClerk = actor.role === "clerk";
+  let profiles: ReturnType<typeof engine.listCustomers> = [];
   try {
-    clients = engine.listCustomers(actor).map((profile) => profile.customer);
+    if (actor.role !== "cs") profiles = engine.listCustomers(actor);
   } catch {}
+  let clients: Customer[] = profiles.map((profile) => profile.customer);
   if (actor.role === "cs")
     clients = engine.listOrders(actor).map((o) => o.customer);
+  const ownerByCustomer = new Map<string, string>();
+  profiles.forEach((profile) => {
+    ownerByCustomer.set(
+      profile.customer.id || profile.customer.phone,
+      profile.ownerId,
+    );
+    ownerByCustomer.set(profile.customer.phone, profile.ownerId);
+  });
+  const salesActors = engine
+    .listActors()
+    .filter((candidate) =>
+      ["sales", "supervisor", "head"].includes(candidate.role),
+    );
+  const ownerName = (customer: Customer) => {
+    const ownerId =
+      ownerByCustomer.get(customer.id || "") ??
+      ownerByCustomer.get(customer.phone);
+    return salesActors.find((candidate) => candidate.id === ownerId)?.name ??
+      "—";
+  };
   const list = clients
     .filter(
       (c, i, all) => c.name && all.findIndex((a) => a.phone === c.phone) === i,
     )
+    .filter((c) => {
+      if (!isClerk || salesFilter === "all") return true;
+      const ownerId =
+        ownerByCustomer.get(c.id || "") ??
+        ownerByCustomer.get(c.phone);
+      return ownerId === salesFilter;
+    })
     .filter((c) => `${c.name}${c.phone}${c.address}`.includes(search));
   return (
     <>
@@ -449,12 +479,27 @@ export function Customers() {
         }
       />
       <div className="list-panel">
-        <div className="list-toolbar">
+        <div className="list-toolbar customer-toolbar">
           <Search
             value={search}
             onChange={setSearch}
             placeholder="搜尋客戶姓名、電話或地址"
           />
+          {isClerk && (
+            <select
+              className="customer-sales-filter"
+              aria-label="Sales"
+              value={salesFilter}
+              onChange={(event) => setSalesFilter(event.target.value)}
+            >
+              <option value="all">全部 Sales</option>
+              {salesActors.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         {list.length === 0 ? (
           <Empty
@@ -480,10 +525,11 @@ export function Customers() {
             <table>
               <thead>
                 <tr>
-                  <th>客戶姓名</th>
-                  <th>聯絡電話</th>
-                  <th>工程地址</th>
-                  <th />
+                  <th scope="col">客戶姓名</th>
+                  {isClerk && <th scope="col">Sales</th>}
+                  <th scope="col">聯絡電話</th>
+                  <th scope="col">工程地址</th>
+                  <th scope="col" />
                 </tr>
               </thead>
               <tbody>
@@ -492,6 +538,7 @@ export function Customers() {
                     <td>
                       <strong>{c.name}</strong>
                     </td>
+                    {isClerk && <td>{ownerName(c)}</td>}
                     <td>{c.phone}</td>
                     <td>
                       {c.district} · {c.estate}
@@ -521,7 +568,6 @@ export function Customers() {
           <CustomerForm
             value={creating}
             onChange={setCreating}
-            defaultExpanded
           />
           <div className="dialog-actions">
             <Button onClick={() => setCreating(null)}>取消</Button>

@@ -494,23 +494,16 @@ function publicPricing(raw: RawPricing, actor: Actor): Pricing {
 }
 
 function validCustomer(customer: Customer): string[] {
+  // Legacy identity/ownership fields remain in the Customer snapshot for old
+  // records, but are no longer required or shown in the Sales form.
   const required: Array<[keyof Customer, string]> = [
     ["name", "客戶姓名"],
     ["phone", "主要電話"],
     ["whatsapp", "WhatsApp電話"],
-    ["idName", "證件姓名"],
-    ["idNumber", "證件號碼"],
-    ["source", "客戶來源"],
-    ["isElderly", "是否長者"],
-    ["emergencyName", "緊急聯絡人姓名"],
-    ["emergencyPhone", "緊急聯絡電話"],
     ["district", "地區"],
-    ["street", "街道"],
     ["estate", "屋苑"],
-    ["block", "座"],
     ["floor", "樓層"],
     ["unit", "單位"],
-    ["ownerName", "業主姓名"],
   ];
   const missing = required
     .filter(([key]) => !String(customer[key] ?? "").trim())
@@ -3017,7 +3010,7 @@ export function createSeedState(): AppState {
       {
         id: "version-draft-2",
         index: 1,
-        customer: customer("customer-draft-2", "Demo 草稿客戶", "91230002"),
+        customer: customer("customer-draft-2", "陳小強", "91230002"),
         lines: [quoteLine("line-draft-2", services[0])],
         discount: 1,
         createdAt: NOW,
@@ -3036,7 +3029,7 @@ export function createSeedState(): AppState {
       {
         id: "version-draft-3",
         index: 1,
-        customer: customer("customer-draft-3", "Demo 草稿客戶乙", "91230003"),
+        customer: customer("customer-draft-3", "太大力", "91230003"),
         lines: [quoteLine("line-draft-3", services[6])],
         discount: 0.94,
         createdAt: NOW,
@@ -3052,7 +3045,7 @@ export function createSeedState(): AppState {
     "sales-mm",
     services[4],
     1,
-    "Demo 待核款客戶",
+    "李好波",
   );
   pending.submission = {
     id: "submission-pending",
@@ -3066,7 +3059,7 @@ export function createSeedState(): AppState {
     "sales-kk",
     services[4],
     2,
-    "Demo 可開單客戶",
+    "王小虎",
   );
   ready.submission = {
     id: "submission-ready",
@@ -3081,7 +3074,7 @@ export function createSeedState(): AppState {
     "sales-mm",
     services[5],
     1,
-    "Demo 已開工程客戶",
+    "張子微",
   );
   issued.submission = {
     id: "submission-issued",

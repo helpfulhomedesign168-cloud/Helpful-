@@ -2387,3 +2387,49 @@ textarea {
     min-width: 1200px;
   }
 }
+
+/* Clerk customer list: Sales column/filter */
+.customer-toolbar .search {
+  flex: 1 1 520px;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+}
+.customer-sales-filter {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 220px;
+}
+.payment-row > .table-actions {
+  flex: 0 0 auto;
+  min-width: 210px;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+@media (max-width: 900px) {
+  .payment-row > .table-actions {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+}
+@media (max-width: 760px) {
+  .customer-toolbar .search {
+    flex-basis: 100%;
+  }
+  .customer-sales-filter {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Align each payment action with the installment badge on the right. */
+.installment-card .payment-row > .table-actions {
+  margin-right: -14px;
+}
+@media (max-width: 900px) {
+  .installment-card .payment-row > .table-actions {
+    margin-right: 0;
+  }
+}
