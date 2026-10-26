@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowRight,
@@ -10,7 +10,7 @@ import {
   Hammer,
   Printer,
 } from "lucide-react";
-import { useApp, showAttachment } from "../context";
+import { useApp, showAttachment, getAttachmentBlob } from "../context";
 import {
   Badge,
   Button,
@@ -23,6 +23,7 @@ import {
   UploadField,
 } from "../components/ui";
 import {
+  Attachment,
   Payment,
   Quote,
   HandoffRow,
@@ -34,6 +35,84 @@ import {
   InvoiceCategory,
   INVOICE_CATEGORY_NAMES,
 } from "../domain/types";
+
+type ProofPreview =
+  | { kind: "loading" }
+  | { kind: "image"; url: string }
+  | { kind: "file" }
+  | { kind: "missing" };
+
+function ProofThumb({ attachment }: { attachment: Attachment }) {
+  const { run } = useApp();
+  const [preview, setPreview] = useState<ProofPreview>({ kind: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | undefined;
+    setPreview({ kind: "loading" });
+    getAttachmentBlob(attachment)
+      .then((blob) => {
+        if (cancelled) return;
+        if (!blob) {
+          setPreview({ kind: "missing" });
+          return;
+        }
+        const mime = blob.type || attachment.mime || "";
+        if (mime.startsWith("image/")) {
+          objectUrl = URL.createObjectURL(blob);
+          setPreview({ kind: "image", url: objectUrl });
+          return;
+        }
+        setPreview({ kind: "file" });
+      })
+      .catch(() => {
+        if (!cancelled) setPreview({ kind: "missing" });
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [attachment.id]);
+
+  if (preview.kind === "loading")
+    return (
+      <span className="proof-thumb proof-thumb-loading" aria-hidden="true">
+        <FileText size={20} />
+      </span>
+    );
+  if (preview.kind === "missing")
+    return (
+      <span
+        className="proof-thumb proof-thumb-missing"
+        role="img"
+        aria-label={`${attachment.name}未附原件`}
+        title="未附原件"
+      >
+        <FileText size={20} />
+      </span>
+    );
+  return (
+    <button
+      type="button"
+      className="proof-thumb"
+      aria-label={`開啟 ${attachment.name}`}
+      title={attachment.name}
+      onClick={() =>
+        showAttachment(attachment).catch((error) =>
+          run(() => {
+            throw error;
+          }),
+        )
+      }
+    >
+      {preview.kind === "image" ? (
+        <img src={preview.url} alt="" />
+      ) : (
+        <FileText size={21} />
+      )}
+    </button>
+  );
+}
 export function Finance() {
   const { actor, engine, run } = useApp();
   const [tab, setTab] = useState("pending");
@@ -407,42 +486,40 @@ export function Submissions() {
       <PageHead
         eyebrow="開單工作區"
         title="提交報價"
-        description="先核對已收款及分類；分類及有效首期未齊，不可開Invoice。"
+        description="先核對付款及選擇分類；有已核有效付款後可開Invoice。"
       />
       <div className="list-panel">
-        <div className="list-toolbar">
+        <div className="submission-toolbar">
           <Search
             value={search}
             onChange={setSearch}
             placeholder="搜尋Q號、客戶、地址或Sales"
           />
-        </div>
-        <div className="office-filter-row">
-          <Field label="來源Team">
+          <div className="submission-filters">
             <select
+              aria-label="來源Team"
               value={teamFilter}
               onChange={(e) =>
                 setTeamFilter(e.target.value as "all" | "A" | "B")
               }
             >
-              <option value="all">全部Team</option>
+              <option value="all">全部 Team</option>
               <option value="A">Team A</option>
               <option value="B">Team B</option>
             </select>
-          </Field>
-          <Field label="Sales">
             <select
+              aria-label="Sales"
               value={salesFilter}
               onChange={(e) => setSalesFilter(e.target.value)}
             >
-              <option value="all">全部Sales</option>
+              <option value="all">全部 Sales</option>
               {salesActors.map((candidate) => (
                 <option key={candidate.id} value={candidate.id}>
                   {candidate.name}（Team {candidate.team ?? "—"}）
                 </option>
               ))}
             </select>
-          </Field>
+          </div>
         </div>
         {sources.length === 0 ? (
           <Empty
@@ -454,13 +531,15 @@ export function Submissions() {
             <table className="submission-table">
               <thead>
                 <tr>
-                  <th>報價單</th>
-                  <th>客戶／地區</th>
-                  <th>Sales</th>
-                  <th className="numeric">成交額</th>
-                  <th>付款核對／證明</th>
-                  <th>分類</th>
-                  <th>操作</th>
+                  <th scope="col">報價單</th>
+                  <th scope="col">客戶／地區</th>
+                  <th scope="col">Sales</th>
+                  <th scope="col" className="numeric">成交額</th>
+                  <th scope="col" className="numeric">首訂金額</th>
+                  <th scope="col">證明文件</th>
+                  <th scope="col">付款核對</th>
+                  <th scope="col">分類</th>
+                  <th scope="col">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -477,6 +556,9 @@ export function Submissions() {
                   );
                   const sales = salesActors.find(
                     (candidate) => candidate.id === quote.ownerId,
+                  );
+                  const proofs = sourcePayments.flatMap((payment) =>
+                    payment.proof ? [payment.proof] : [],
                   );
                   const openInvoice = () => {
                     const invoice = run(
@@ -504,6 +586,27 @@ export function Submissions() {
                       <td className="numeric money">
                         {money(engine.pricing(actor, quote.id).total)}
                       </td>
+                      <td className="numeric money">
+                        {eligibility.officeCategory ? (
+                          money(eligibility.firstDue)
+                        ) : (
+                          <span className="pending-value">待分類</span>
+                        )}
+                      </td>
+                      <td>
+                        {proofs.length ? (
+                          <div className="proof-thumbs">
+                            {proofs.map((proof, index) => (
+                              <ProofThumb
+                                key={`${proof.id}-${index}`}
+                                attachment={proof}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="proof-empty">未上載</span>
+                        )}
+                      </td>
                       <td>
                         <Badge
                           strong={
@@ -521,21 +624,6 @@ export function Submissions() {
                         </small>
                         {sourcePayments.map((payment) => (
                           <div className="inline-actions" key={payment.id}>
-                            {payment.proof && (
-                              <button
-                                className="text-button"
-                                onClick={() =>
-                                  showAttachment(payment.proof!).catch(
-                                    (error) =>
-                                      run(() => {
-                                        throw error;
-                                      }),
-                                  )
-                                }
-                              >
-                                <FileText size={16} /> 證明
-                              </button>
-                            )}
                             {payment.status === "pending" && (
                               <button
                                 className="text-button"
@@ -587,9 +675,6 @@ export function Submissions() {
                         >
                           已核對並開單 <ArrowRight size={18} />
                         </Button>
-                        {!eligibility.canIssue && (
-                          <small>{eligibility.nextAction}</small>
-                        )}
                       </td>
                     </tr>
                   );
