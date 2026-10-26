@@ -101,21 +101,31 @@ export async function saveAttachment(file: File): Promise<Attachment> {
     createdAt: new Date().toISOString(),
   };
 }
-export async function showAttachment(a: Attachment) {
+export async function getAttachmentBlob(
+  a: Attachment,
+): Promise<Blob | undefined> {
   const db = await openFiles();
-  const blob = await new Promise<Blob | undefined>((resolve, reject) => {
-    const rq = db.transaction("files").objectStore("files").get(a.id);
-    rq.onsuccess = () => resolve(rq.result);
-    rq.onerror = () => reject(rq.error);
-  });
-  db.close();
+  try {
+    return await new Promise<Blob | undefined>((resolve, reject) => {
+      const rq = db.transaction("files").objectStore("files").get(a.id);
+      rq.onsuccess = () => resolve(rq.result);
+      rq.onerror = () => reject(rq.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+export async function showAttachment(a: Attachment) {
+  const blob = await getAttachmentBlob(a);
   if (!blob)
     throw new Error(
       "這是初始示例檔案記錄，未附真實原件。你可在報價詳情上載測試檔案。",
     );
   const url = URL.createObjectURL(blob);
-  const win = window.open(url, "_blank", "noopener,noreferrer");
-  if (!win) {
+  const win = window.open(url, "_blank");
+  if (win) {
+    win.opener = null;
+  } else {
     const link = document.createElement("a");
     link.href = url;
     link.download = a.name;

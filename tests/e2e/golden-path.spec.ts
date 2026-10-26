@@ -126,6 +126,18 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
 
   await role(page, "開單員");
   row = page.locator("tbody tr").filter({ hasText: qNumber });
+  const proofThumb = row.getByRole("button", {
+    name: "開啟 首訂證明.svg",
+    exact: true,
+  });
+  await expect(proofThumb).toBeVisible();
+  await expect(proofThumb.locator("img")).toBeVisible();
+  const [proofPage] = await Promise.all([
+    page.waitForEvent("popup"),
+    proofThumb.click(),
+  ]);
+  await expect(proofPage).toHaveURL(/^blob:/);
+  await proofPage.close();
   await row.getByRole("button", { name: "核對收款", exact: true }).click();
   await page
     .getByRole("dialog")

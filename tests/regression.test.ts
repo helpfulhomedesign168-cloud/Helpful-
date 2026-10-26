@@ -228,3 +228,34 @@ it("舊Demo儲存資料會重組地址並回建Q號及Invoice月流水", () => {
     "舊手填地址",
   );
 });
+
+it("提交報價首訂金額由分類計劃派生，付款證明 metadata 返回同一筆付款", () => {
+  const e = new Engine(undefined, createSeedState());
+  const clerk = actor(e, "clerk");
+  const sales = actor(e, "sales-kk");
+  const ready = e.eligibility(clerk, "quote-ready-invoice");
+  expect(ready.officeCategory).toBe("grant-80k");
+  expect(ready.firstDue).toBe(4200);
+  const unclassified = e.eligibility(clerk, "quote-pending-office");
+  expect(unclassified.officeCategory).toBeUndefined();
+  expect(unclassified.firstDue).toBe(0);
+  const payment = e.recordPayment(sales, "quote-ready-invoice", {
+    amount: 100,
+    method: "fps",
+    date: "2026-10-22",
+    custody: "company",
+    reference: "SUBMISSION-PROOF",
+    notes: "提交報價頁示意",
+    proof: {
+      id: "proof-submission-thumb",
+      name: "首訂證明.png",
+      mime: "image/png",
+      size: 512,
+      createdAt: "2026-10-22T12:00:00+08:00",
+    },
+  });
+  expect(payment.proof?.id).toBe("proof-submission-thumb");
+  expect(
+    e.listPayments(clerk).find((row) => row.id === payment.id)?.proof?.name,
+  ).toBe("首訂證明.png");
+});
