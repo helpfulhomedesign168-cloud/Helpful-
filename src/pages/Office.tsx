@@ -1149,7 +1149,8 @@ export function Handoff() {
   try {
     csTeam = engine.listCsTeam(actor);
   } catch {}
-  const canAssign = actor.role === "cs_supervisor";
+  const canAssign =
+    actor.role === "cs_supervisor" || actor.role === "admin";
   const shown = rows.filter((row) =>
     `${row.workOrderNumber} ${row.quoteNumber} ${row.invoiceNumber} ${row.customerName} ${row.phone} ${row.salesName} ${row.csOwnerName ?? ""}`.includes(
       search,
@@ -1157,7 +1158,7 @@ export function Handoff() {
   );
   return (
     <>
-      <PageHead eyebrow="CS接力入口" title="接單跟進" />
+      <PageHead eyebrow="CS工程部" title="工程單" />
       <div className="list-panel">
         <div className="list-toolbar">
           <Search

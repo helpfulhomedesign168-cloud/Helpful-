@@ -1509,8 +1509,8 @@ export class Engine {
     csOwnerId: string,
   ): WorkOrder {
     const actor = this.actor(actorInput);
-    if (actor.role !== "cs_supervisor")
-      fail("只有CS主管可以安排跟進同事。");
+    if (actor.role !== "cs_supervisor" && actor.role !== "admin")
+      fail("只有CS主管或Super Admin可以安排跟進同事。");
     let output!: WorkOrder;
     this.mutate((state) => {
       const order =
@@ -1533,7 +1533,7 @@ export class Engine {
       });
       output = deepCopy(order);
     });
-    return sanitiseOrder(output, false);
+    return sanitiseOrder(output, actor.role === "admin");
   }
   listPayments(actorInput: Actor): Payment[] {
     const actor = this.actor(actorInput);

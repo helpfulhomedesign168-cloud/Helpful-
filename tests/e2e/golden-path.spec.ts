@@ -116,7 +116,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   ).toHaveCount(0);
   await role(page, "工程CS");
   await expect(
-    page.getByRole("heading", { name: "接單跟進", exact: true }),
+    page.getByRole("heading", { name: "工程單", exact: true }),
   ).toBeVisible();
   await expect(
     page.locator("tbody tr").filter({ hasText: qNumber }),

@@ -14,6 +14,11 @@ import {
   OrderDetail,
 } from "./pages/Office";
 import { Customers, Services, Performance } from "./pages/Resources";
+import {
+  Contractors,
+  ProductStyles,
+  Suppliers,
+} from "./pages/Placeholders";
 import { Documents } from "./pages/Documents";
 import { Button, Empty } from "./components/ui";
 import "./styles.css";
@@ -153,6 +158,30 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={["cs", "cs_supervisor", "admin", "finance"]}>
                   <OrderDetail />
+                </Guard>
+              }
+            />
+            <Route
+              path="/contractors"
+              element={
+                <Guard roles={["cs", "cs_supervisor", "admin"]}>
+                  <Contractors />
+                </Guard>
+              }
+            />
+            <Route
+              path="/suppliers"
+              element={
+                <Guard roles={["cs", "cs_supervisor", "admin"]}>
+                  <Suppliers />
+                </Guard>
+              }
+            />
+            <Route
+              path="/product-styles"
+              element={
+                <Guard roles={["cs", "cs_supervisor", "admin"]}>
+                  <ProductStyles />
                 </Guard>
               }
             />

@@ -14,7 +14,10 @@ import {
   ChevronDown,
   ArrowUpRight,
   LogOut,
-  Wrench,
+  HardHat,
+  Truck,
+  Palette,
+  Tags,
 } from "lucide-react";
 import { useApp } from "../context";
 import { ROLE_NAMES } from "../domain/types";
@@ -49,10 +52,13 @@ export function Shell() {
       ]
     : actor.role === "cs" || actor.role === "cs_supervisor"
       ? [
-          ["/handoff", "接單跟進", ArrowRightLeft],
+          ["/handoff", "工程單", ArrowRightLeft],
           ["/orders", "工程管理", Hammer],
+          ["/contractors", "工程師傅", HardHat],
+          ["/suppliers", "供應商", Truck],
           ["/customers", "客戶", Users],
-          ["/services", "工程目錄", Wrench],
+          ["/product-styles", "產品款式", Palette],
+          ["/services", "工程價目", Tags],
         ]
       : actor.role === "finance"
         ? [
@@ -66,11 +72,14 @@ export function Shell() {
               ["/customers", "客戶", Users],
             ]
           : [
-              ["/services", "工程目錄", Wrench],
-              ["/quotes", "報價查閱", Files],
-              ["/handoff", "接單跟進", ArrowRightLeft],
+              ["/handoff", "工程單", ArrowRightLeft],
               ["/orders", "工程管理", Hammer],
+              ["/contractors", "工程師傅", HardHat],
+              ["/suppliers", "供應商", Truck],
               ["/customers", "客戶", Users],
+              ["/product-styles", "產品款式", Palette],
+              ["/services", "工程價目", Tags],
+              ["/quotes", "報價查閱", Files],
             ];
   const notices = engine.notifications(actor);
   const unread = notices.filter((n) => !n.read).length;

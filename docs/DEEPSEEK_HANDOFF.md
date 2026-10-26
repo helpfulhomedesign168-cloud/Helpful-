@@ -67,3 +67,12 @@
 - 跟進同事是WorkOrder上的CS owner，與判頭／公司師傅Assignment分開；不要以Assignment或CS姓名猜測。
 - 只有CS主管可以安排及更改跟進同事；普通CS只讀，不顯示操作按鈕。CS主管可選全部CS同事，包括CS主管本人。
 - CS主管Role為`cs_supervisor`；CS帳戶包括現有工程CS、Joe、Nicole、Fandy及阿花。舊LocalStorage只補缺失actors及sequences，不重置。
+
+## 2026-10-26 CS／Super Admin工程部選單（不得退化）
+
+- CS menu固定順序：工程單、工程管理、工程師傅、供應商、客戶、產品款式、工程價目。
+- 「工程單」是原本接單跟進；「工程價目」是原本工程目錄，不要另建重複頁。
+- 工程管理及工程價目保留現有功能，不要因新增menu而變成空白或刪除。
+- 工程師傅、供應商、產品款式本輪只預留空白入口；沒有假資料、假功能或猜測欄位。
+- 工程師傅、供應商、產品款式及工程價目須加入Super Admin menu；Super Admin有相應編輯權限，但placeholder未建立前不顯示假編輯按鈕。
+- CS主管及Super Admin可安排／更改工程單的CS跟進同事；普通CS只讀。工程師傅及供應商未建立編輯功能，但角色權限方向為CS主管／Super Admin可編輯、普通CS只讀。
