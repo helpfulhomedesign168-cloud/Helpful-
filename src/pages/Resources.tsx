@@ -20,18 +20,6 @@ import {
   money,
 } from "../domain/types";
 import { CustomerForm } from "./Quotes";
-const SERVICE_CATEGORIES = [
-  "打拆",
-  "水喉",
-  "電力",
-  "泥水",
-  "油漆",
-  "傢俬",
-  "裝門",
-  "鋁窗",
-  "防滑",
-  "其他",
-];
 const SERVICE_SCOPES = ["廚房", "廁所", "全屋", "廳房", "露台", "花園", "其他"];
 const MEASURE_OPTIONS: Array<{ value: ServiceItem["measure"]; label: string }> = [
   { value: "area", label: "面積(長X闊)" },
@@ -47,7 +35,12 @@ export function Services() {
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [linkPicker, setLinkPicker] = useState(false);
   const [deleting, setDeleting] = useState<ServiceItem | null>(null);
+  const [tagEditor, setTagEditor] = useState(false);
+  const [tagDraft, setTagDraft] = useState("");
+  const [tagsToDelete, setTagsToDelete] = useState<string[]>([]);
+  const [confirmTagDelete, setConfirmTagDelete] = useState(false);
   const admin = actor.role === "admin";
+  const categories = engine.listServiceCategories(actor);
   const allItems = engine.listServices(actor);
   const items = allItems.filter((item) => item.published && !item.archived);
   const isExisting = Boolean(
@@ -67,7 +60,9 @@ export function Services() {
       name: "",
       category:
         category ??
-        (activeCategory === "全部" ? "打拆" : activeCategory),
+        (activeCategory === "全部"
+          ? categories[0] ?? "其他"
+          : activeCategory),
       scope: "廚房",
       details: "",
       linkedServiceIds: [],
@@ -116,7 +111,7 @@ export function Services() {
           >
             全部
           </button>
-          {SERVICE_CATEGORIES.map((category) => (
+          {categories.map((category) => (
             <button
               type="button"
               role="tab"
@@ -131,11 +126,14 @@ export function Services() {
           {admin && (
             <button
               type="button"
-              className="service-tab-add"
-              aria-label="新增工程項目"
-              onClick={() => newItem()}
+              className="service-tags-edit"
+              onClick={() => {
+                setTagDraft("");
+                setTagsToDelete([]);
+                setTagEditor(true);
+              }}
             >
-              <Plus size={19} />
+              編輯
             </button>
           )}
         </div>
@@ -146,7 +144,11 @@ export function Services() {
             placeholder="搜尋工程名稱或代號"
           />
           {admin && (
-            <Button variant="primary" onClick={() => newItem()}>
+            <Button
+              variant="primary"
+              aria-label="新增工程項目"
+              onClick={() => newItem()}
+            >
               <Plus size={20} />
               新增項目
             </Button>
@@ -239,7 +241,7 @@ export function Services() {
                 value={editing.category}
                 onChange={(event) => set({ category: event.target.value })}
               >
-                {SERVICE_CATEGORIES.map((category) => (
+                {categories.map((category) => (
                   <option key={category}>{category}</option>
                 ))}
               </select>
@@ -406,7 +408,7 @@ export function Services() {
             選擇要連貫的工程項目。只顯示分類、名稱及工程詳細。
           </p>
           <div className="linked-picker">
-            {SERVICE_CATEGORIES.map((category) => {
+            {categories.map((category) => {
               const rows = items.filter(
                 (service) =>
                   service.category === category && service.id !== editing.id,
@@ -444,6 +446,96 @@ export function Services() {
           <div className="dialog-actions">
             <Button variant="primary" onClick={() => setLinkPicker(false)}>
               完成
+            </Button>
+          </div>
+        </Dialog>
+      )}
+      {tagEditor && (
+        <Dialog title="編輯工程分類" onClose={() => setTagEditor(false)}>
+          <div className="tag-editor-add">
+            <label className="field-label">新增項目</label>
+            <div className="tag-add-row">
+              <input
+                aria-label="新增分類名稱"
+                value={tagDraft}
+                onChange={(event) => setTagDraft(event.target.value)}
+                placeholder="輸入新分類名稱"
+              />
+              <Button
+                variant="primary"
+                disabled={!tagDraft.trim()}
+                onClick={() => {
+                  const name = tagDraft.trim();
+                  const ok = run(() => {
+                    engine.addServiceCategory(actor, name);
+                    return true;
+                  }, "工程分類已新增。");
+                  if (ok) {
+                    setTagDraft("");
+                    setActiveCategory(name);
+                  }
+                }}
+              >
+                新增
+              </Button>
+            </div>
+          </div>
+          <div className="tag-editor-delete">
+            <h4>刪除項目</h4>
+            {categories.map((category) => (
+              <label className="tag-delete-row" key={category}>
+                <span>{category}項目</span>
+                <input
+                  type="checkbox"
+                  checked={tagsToDelete.includes(category)}
+                  onChange={(event) =>
+                    setTagsToDelete(
+                      event.target.checked
+                        ? [...tagsToDelete, category]
+                        : tagsToDelete.filter((item) => item !== category),
+                    )
+                  }
+                />
+              </label>
+            ))}
+          </div>
+          <div className="dialog-actions">
+            <Button
+              disabled={!tagsToDelete.length}
+              onClick={() => setConfirmTagDelete(true)}
+            >
+              刪除
+            </Button>
+            <Button onClick={() => setTagEditor(false)}>取消</Button>
+          </div>
+        </Dialog>
+      )}
+      {confirmTagDelete && (
+        <Dialog title="確認刪除" onClose={() => setConfirmTagDelete(false)}>
+          <p>
+            是否確定真的要刪除
+            {tagsToDelete.map((category) => `${category}項目`).join("、")}
+            ？一旦刪除，工程項目入面的工程全部都會一齊刪除掉。
+          </p>
+          <div className="dialog-actions">
+            <Button onClick={() => setConfirmTagDelete(false)}>取消</Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                const ok = run(() => {
+                  engine.deleteServiceCategories(actor, tagsToDelete);
+                  return true;
+                }, "工程分類及相關項目已刪除。");
+                if (ok) {
+                  if (tagsToDelete.includes(activeCategory))
+                    setActiveCategory("全部");
+                  setTagsToDelete([]);
+                  setConfirmTagDelete(false);
+                  setTagEditor(false);
+                }
+              }}
+            >
+              確定刪除
             </Button>
           </div>
         </Dialog>

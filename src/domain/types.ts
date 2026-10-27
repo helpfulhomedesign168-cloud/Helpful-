@@ -316,11 +316,24 @@ export interface Notification {
   read: boolean;
   createdAt: string;
 }
+export const DEFAULT_SERVICE_CATEGORIES = [
+  "打拆",
+  "水喉",
+  "電力",
+  "泥水",
+  "油漆",
+  "傢俬",
+  "裝門",
+  "鋁窗",
+  "防滑",
+  "其他",
+] as const;
 export interface AppState {
   schema: 1;
   actors: Actor[];
   customers: CustomerProfile[];
   services: ServiceItem[];
+  serviceCategories: string[];
   quotes: Quote[];
   payments: Payment[];
   invoices: Invoice[];

@@ -3356,3 +3356,49 @@ textarea {
   color: #777d70;
   font-size: 13px;
 }
+
+.service-tags-edit {
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-height: 42px;
+  padding: 8px 13px;
+  border: 0;
+  background: transparent;
+  color: #222;
+  font-size: 16px;
+  font-weight: 600;
+}
+.service-tags-edit:hover {
+  background: #f3f4ef;
+}
+.tag-editor-add {
+  margin-bottom: 22px;
+}
+.tag-add-row {
+  display: flex;
+  gap: 8px;
+}
+.tag-add-row input {
+  flex: 1;
+}
+.tag-add-row .btn {
+  flex: 0 0 auto;
+}
+.tag-editor-delete h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.tag-delete-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 4px;
+  border-bottom: 1px solid #eceee7;
+  color: #777d70;
+  font-size: 16px;
+}
+.tag-delete-row input {
+  width: 19px;
+  height: 19px;
+}

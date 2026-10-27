@@ -36,6 +36,7 @@ import {
   type InstallmentPlanRow,
   type InvoicePaymentStatus,
   INVOICE_CATEGORY_NAMES,
+  DEFAULT_SERVICE_CATEGORIES,
   DEMO_TODAY,
   EMPTY_CUSTOMER,
   currentVersion,
@@ -685,6 +686,7 @@ export class Engine {
       migrated.workOrderSequences ??= {};
       migrated.customers ??= [];
       migrated.extraWorks ??= [];
+      migrated.serviceCategories ??= [...DEFAULT_SERVICE_CATEGORIES];
       migrated.assignments.forEach((assignment) => {
         assignment.endDate ??= assignment.date;
       });
@@ -1261,6 +1263,47 @@ export class Engine {
     return actor.role === "admin"
       ? output
       : { ...output, customer: sanitiseCustomer(output.customer) };
+  }
+  listServiceCategories(actorInput: Actor): string[] {
+    const actor = this.actor(actorInput);
+    return deepCopy(this.state.serviceCategories);
+  }
+  addServiceCategory(actorInput: Actor, name: string): void {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "admin") fail("只有 Super Admin 可維護工程分類。");
+    const value = name.trim();
+    if (!value) fail("請輸入工程分類名稱。");
+    if (this.state.serviceCategories.includes(value))
+      fail("已有相同工程分類。");
+    this.mutate((state) => {
+      state.serviceCategories.push(value);
+      this.audit(state, {
+        actorId: actor.id,
+        action: "service_category_added",
+        detail: `新增工程分類 ${value}`,
+      });
+    });
+  }
+  deleteServiceCategories(actorInput: Actor, names: string[]): void {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "admin") fail("只有 Super Admin 可刪除工程分類。");
+    const selected = [...new Set(names.map((name) => name.trim()).filter(Boolean))];
+    if (!selected.length) fail("請選擇要刪除的工程分類。");
+    this.mutate((state) => {
+      selected.forEach((name) => {
+        const index = state.serviceCategories.indexOf(name);
+        if (index >= 0) state.serviceCategories.splice(index, 1);
+        state.services.forEach((service) => {
+          if (service.category !== name) return;
+          service.archived = true;
+        });
+        this.audit(state, {
+          actorId: actor.id,
+          action: "service_category_deleted",
+          detail: `刪除工程分類 ${name}，相關項目一併移除`,
+        });
+      });
+    });
   }
   listServices(actorInput: Actor): ServiceItem[] {
     const actor = this.actor(actorInput);
@@ -3780,6 +3823,7 @@ export function createSeedState(): AppState {
     actors,
     customers: [],
     services,
+    serviceCategories: [...DEFAULT_SERVICE_CATEGORIES],
     quotes: [draft1, draft2, draft3, pending, ready, issued],
     payments,
     invoices: [invoice],

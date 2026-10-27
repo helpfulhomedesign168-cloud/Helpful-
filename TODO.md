@@ -27,3 +27,4 @@
 - [x] 工程內容改成緊湊表格式；安排施工加開工日期及完工日期（Assignment.endDate）；新增「額外工程」度尺／送貨／搬運按鈕及獨立extraWorks安排，不屬於報價／Invoice項目；額外工程及Assignment日期會顯示在日曆。舊LocalStorage會補extraWorks及assignment.endDate，不重置。
 - [x] 工程價目頁按設計重做：10個分類tag＋全部＋新增項目plus、搜尋、價格／低銷／工程範圍／編輯表格；六項打拆demo catalog；新增／修改工程項目dialog。舊demo服務從active catalog隱藏（archived）但保留歷史報價snapshot，不硬刪除。舊LocalStorage會自動archive舊catalog及補入六項。
 - [x] 工程價目第二階段：新增／修改form跟設計（名稱／分類／範圍／詳細／計算方式radio／零售價／低銷價／合併低銷價）；計算方式建立後鎖定；連貫工程picker及Sales報價詢問加連貫工程；工程詳細顯示於列表名稱下；新增刪除項目（archive保留舊單snapshot）。舊catalog已archive，六項demo補details及links欄位。
+- [x] 修正Dialog每次re-render重設focus導致輸入框打一個字即失焦的bug（onClose用ref，effect只在mount）。工程分類改為persisted serviceCategories；tag尾的＋改成「編輯」，可新增tag及勾選刪除tag，刪除時確認「是否確定真的要刪除…一旦刪除，工程項目入面的工程全部都會一齊刪除掉」，相關services會archive。

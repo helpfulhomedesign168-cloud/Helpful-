@@ -130,3 +130,12 @@
 - Sales報價加入有linkedServiceIds的項目時，必須顯示「需要加連貫工程？」；dialog只列被連貫項目，user可選加入或暫不加入；加入後以獨立QuoteLine加入。
 - 列表必須有刪除按鈕；刪除用`deleteService`設archived，不可硬刪，因舊Quote/Invoice/WorkOrder snapshot要保留。
 - 舊localStorage的六項demo catalog要補details及linkedServiceIds；不可重複加catalog。
+
+## 2026-10-27 Dialog focus、工程分類tags新增／刪除（不得退化）
+
+- `Dialog`的focus effect只可在mount執行；`onClose`用ref更新。不可用`[onClose]`作effect dependency，否則每次輸入re-render會把focus搶回dialog，造成打一個字後不能繼續輸入。
+- 工程分類存於`AppState.serviceCategories`（不是hard-code在UI）；舊LocalStorage會補預設分類，已有分類不重加。
+- Tag row最後是「編輯」button，不是「＋」。Top「新增項目」只新增工程項目。
+- 「編輯」開分類editor：可新增分類；可勾選多個分類刪除。刪除前必須確認：「是否確定真的要刪除XXX工程項目？一旦刪除，工程項目入面的工程全部都會一齊刪除掉。」
+- 刪除分類時，相關`ServiceItem`一律`archived=true`，不可硬刪；舊Quote/Invoice/WorkOrder snapshot保留。刪除後如active tag被移除，回到全部。
+- 分類新增／刪除只限Super Admin。

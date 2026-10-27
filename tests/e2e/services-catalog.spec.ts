@@ -24,7 +24,9 @@ test("工程價目只顯示新catalog六項，分類tag及新增項目可運作"
 
   await page.getByRole("button", { name: "新增工程項目", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "新增工程項目" });
-  await dialog.getByLabel("工程名稱", { exact: false }).fill("E2E 水喉工程");
+  const nameInput = dialog.getByLabel("工程名稱", { exact: false });
+  await nameInput.pressSequentially("E2E 水喉工程");
+  await expect(nameInput).toHaveValue("E2E 水喉工程");
   await dialog.getByLabel("工程分類", { exact: false }).selectOption("水喉");
   await dialog.getByLabel("工程範圍", { exact: false }).selectOption("全屋");
   await dialog.getByLabel("工程詳細", { exact: false }).fill("E2E 工程詳細");
