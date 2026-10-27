@@ -108,6 +108,64 @@ it("普通CS只看自己被分派的工程；主管及Admin看全部；現場圖
   expect(() => engine.getInvoice(nicole, "invoice-issued")).toThrow("權限");
   expect(engine.getInvoice(joe, "invoice-issued").number).toBe("SHMM26100001");
 
+  const order = engine.getOrder(joe, orderId);
+  const assignment = engine.assign(joe, orderId, {
+    resourceId: "resource-staff",
+    lineIds: [order.lines[0].id],
+    date: "2026-11-01",
+    time: "上午",
+    notes: "初次安排",
+  });
+  expect(assignment.endDate).toBe("2026-11-01");
+  const updatedAssignment = engine.updateAssignment(joe, assignment.id, {
+    resourceId: "resource-staff",
+    date: "2026-11-02",
+    endDate: "2026-11-04",
+    time: "下午",
+    notes: "更新安排",
+  });
+  expect(updatedAssignment.date).toBe("2026-11-02");
+  expect(updatedAssignment.endDate).toBe("2026-11-04");
+  expect(updatedAssignment.time).toBe("下午");
+  expect(updatedAssignment.notes).toBe("更新安排");
+  const extra = engine.scheduleExtraWork(joe, orderId, {
+    kind: "measure",
+    resourceId: "resource-staff",
+    startDate: "2026-11-08",
+    endDate: "2026-11-09",
+    time: "下午",
+    notes: "度尺安排",
+  });
+  expect(extra.kind).toBe("measure");
+  expect(engine.listExtraWorks(joe, orderId)).toHaveLength(1);
+  engine.scheduleExtraWork(joe, orderId, {
+    kind: "measure",
+    resourceId: "resource-staff",
+    startDate: "2026-11-10",
+    endDate: "2026-11-10",
+    time: "上午",
+    notes: "更改度尺",
+  });
+  expect(engine.listExtraWorks(joe, orderId)).toHaveLength(1);
+  expect(() =>
+    engine.scheduleExtraWork(nicole, orderId, {
+      kind: "delivery",
+      resourceId: "resource-staff",
+      startDate: "2026-11-08",
+      endDate: "2026-11-08",
+      time: "上午",
+      notes: "",
+    }),
+  ).toThrow("權限");
+  expect(() =>
+    engine.updateAssignment(nicole, assignment.id, {
+      resourceId: "resource-staff",
+      date: "2026-11-03",
+      time: "上午",
+      notes: "",
+    }),
+  ).toThrow("權限");
+
   const photo = {
     id: "site-photo-1",
     name: "環境.jpg",
@@ -119,4 +177,20 @@ it("普通CS只看自己被分派的工程；主管及Admin看全部；現場圖
   expect(updated.sitePhotos?.[0].id).toBe("site-photo-1");
   expect(engine.getOrder(admin, orderId).sitePhotos?.[0].name).toBe("環境.jpg");
   expect(() => engine.addSitePhotos(nicole, orderId, [photo])).toThrow("權限");
+});
+
+it("Demo工程CS有30張10項以上工程；阿花分派D260099後變31張", () => {
+  const engine = new Engine(undefined, createSeedState());
+  const lead = actor(engine, "cs-lead-ahfa");
+  const cs = actor(engine, "cs");
+  const demoOrders = engine.listOrders(cs);
+  expect(demoOrders).toHaveLength(30);
+  demoOrders.forEach((order) =>
+    expect(order.lines.length).toBeGreaterThanOrEqual(10),
+  );
+  expect(demoOrders.some((order) => order.number === "D260099")).toBe(false);
+  const pending = engine.listOrders(lead).find((order) => order.number === "D260099");
+  expect(pending?.lines).toHaveLength(20);
+  engine.assignCsOwner(lead, pending!.id, "cs");
+  expect(engine.listOrders(cs)).toHaveLength(31);
 });

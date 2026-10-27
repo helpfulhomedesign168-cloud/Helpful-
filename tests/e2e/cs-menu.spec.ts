@@ -63,6 +63,6 @@ test("CS及Super Admin menu加入工程師傅、供應商、產品款式及工�
     page.getByRole("heading", { name: "工程單", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "安排工程", exact: true }),
+    page.getByRole("button", { name: "安排工程", exact: true }).first(),
   ).toBeVisible();
 });

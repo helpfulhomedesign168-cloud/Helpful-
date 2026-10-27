@@ -214,24 +214,30 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   row = page.locator("tbody tr").filter({ hasText: qNumber });
   await expect(row).toBeVisible();
   // CS supervisor can see all engineering orders; contractor Assignment is separate.
+  const workOrderNumber = (
+    await row.locator("td").first().innerText()
+  ).split("\n")[0].trim();
   await page.getByRole("link", { name: "工程管理", exact: true }).click();
   await page
     .locator(".order-rail-row")
-    .filter({ hasText: "UI測試新客戶" })
+    .filter({ hasText: workOrderNumber })
     .click();
-  await expect(page.locator(".page-head h1")).toHaveText(/^D26\d{5}$/);
+  await expect(page.locator(".workorder-head h1")).toHaveText(/^D26\d{5}$/);
   await page.getByRole("button", { name: "安排", exact: true }).first().click();
   await page
     .getByLabel("執行師傅", { exact: false })
     .selectOption("resource-contractor");
   await page.getByRole("button", { name: "儲存安排", exact: true }).click();
-  await expect(page.locator(".engineering-line-assignment")).toContainText(
-    "Demo 判頭",
-  );
+  const lineRow = page
+    .locator(".engineering-table tbody tr")
+    .filter({ hasText: "UI貫穿測試工程" });
+  await expect(lineRow).toContainText("Demo 判頭");
   await page.reload();
-  await expect(page.locator(".engineering-line-assignment")).toContainText(
-    "Demo 判頭",
-  );
+  await expect(
+    page
+      .locator(".engineering-table tbody tr")
+      .filter({ hasText: "UI貫穿測試工程" }),
+  ).toContainText("Demo 判頭");
   const stored = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("homeflow-state-v1")!),
   );

@@ -43,6 +43,9 @@ import {
   INVOICE_CATEGORY_NAMES,
   ROLE_NAMES,
   Assignment,
+  EXTRA_WORK_LABELS,
+  ExtraWorkKind,
+  ExtraWork,
 } from "../domain/types";
 
 type ProofPreview =
@@ -1310,23 +1313,20 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
   return (
     <aside className="order-rail">
       <div className="order-rail-head">
-        <div>
-          <span>工程單</span>
-          <strong>{month ? formatMonthLabel(month) : "全部月份"}</strong>
-        </div>
-        <small>{orders.length} 張</small>
+        <h2>工程單</h2>
+        <label className="month-picker">
+          <span>{formatMonthLabel(month)}</span>
+          <CalendarDays size={18} />
+          <input
+            type="month"
+            aria-label="工程單月份"
+            value={month}
+            onChange={(event) => setMonth(event.target.value)}
+          />
+        </label>
       </div>
-      <div className="order-rail-filters">
-        <input
-          type="month"
-          aria-label="工程單月份"
-          value={month}
-          onChange={(event) => setMonth(event.target.value)}
-        />
-        <button className="text-button" onClick={() => setMonth("")}>
-          全部
-        </button>
-        {manager && (
+      {manager && (
+        <div className="order-rail-manager">
           <select
             aria-label="跟進同事"
             value={csFilter}
@@ -1339,8 +1339,8 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
               </option>
             ))}
           </select>
-        )}
-      </div>
+        </div>
+      )}
       <div className="order-rail-list">
         {orders.length === 0 ? (
           <p className="section-empty">此月份沒有工程單。</p>
@@ -1350,7 +1350,6 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
             try {
               invoiceNumber = engine.getInvoice(actor, order.invoiceId).number;
             } catch {}
-            const arrived = (order.csReleasedAt ?? order.createdAt).slice(0, 10);
             return (
               <Link
                 key={order.id}
@@ -1358,11 +1357,7 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
                 className={`order-rail-row ${selectedId === order.id ? "selected" : ""}`}
               >
                 <strong>{order.number}</strong>
-                <small>Invoice {invoiceNumber || "—"}</small>
-                <span>
-                  {arrived} · {order.customer.name}
-                </span>
-                <span>{order.csOwnerId ? "已安排跟進" : "未安排跟進"}</span>
+                <small>INV:{invoiceNumber || "—"}</small>
               </Link>
             );
           })
@@ -1372,12 +1367,29 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
   );
 }
 
+function dateRange(startDate: string, endDate: string): string[] {
+  if (!startDate) return [];
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate || startDate}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()))
+    return [startDate];
+  const dates: string[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end && dates.length < 370) {
+    dates.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return dates;
+}
+
 function WorkOrderCalendar({
   order,
   assignments,
+  extraWorks,
 }: {
   order: WorkOrder;
   assignments: Assignment[];
+  extraWorks: ExtraWork[];
 }) {
   const [month, setMonth] = useState(order.startDate.slice(0, 7));
   useEffect(() => {
@@ -1388,12 +1400,29 @@ function WorkOrderCalendar({
   const days = new Date(year, monthIndex + 1, 0).getDate();
   const offset = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
   const events = new Map<string, string[]>();
+  const addEvent = (startDate: string, endDate: string, label: string) => {
+    dateRange(startDate, endDate).forEach((date) => {
+      const list = events.get(date) ?? [];
+      list.push(label);
+      events.set(date, list);
+    });
+  };
   assignments.forEach((assignment) => {
-    const line = order.lines.find((item) => assignment.lineIds.includes(item.id));
-    const label = line?.itemSnapshot.name ?? "施工";
-    const list = events.get(assignment.date) ?? [];
-    list.push(`${label} · ${assignment.time}`);
-    events.set(assignment.date, list);
+    const line = order.lines.find((item) =>
+      assignment.lineIds.includes(item.id),
+    );
+    addEvent(
+      assignment.date,
+      assignment.endDate ?? assignment.date,
+      `${line?.itemSnapshot.name ?? "施工"} · ${assignment.time}`,
+    );
+  });
+  extraWorks.forEach((extra) => {
+    addEvent(
+      extra.startDate,
+      extra.endDate,
+      `${EXTRA_WORK_LABELS[extra.kind]} · ${extra.time}`,
+    );
   });
   const cells: Array<string | null> = [
     ...Array.from({ length: offset }, () => null),
@@ -1414,7 +1443,6 @@ function WorkOrderCalendar({
     <section className="calendar-card" aria-label="工程日曆">
       <header className="calendar-head">
         <div>
-          <span>工程期 {order.startDate} 至 {order.endDate}</span>
           <strong>{formatMonthLabel(month)}</strong>
         </div>
         <div className="calendar-nav">
@@ -1450,10 +1478,6 @@ function WorkOrderCalendar({
             </div>
           );
         })}
-      </div>
-      <div className="calendar-legend">
-        <span><i className="legend-period" />工程期</span>
-        <span><i className="legend-event" />已安排施工</span>
       </div>
     </section>
   );
@@ -1596,21 +1620,31 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
   const [selectedLineId, setSelectedLineId] = useState("");
+  const [editingAssignmentId, setEditingAssignmentId] = useState("");
   const [resourceId, setResource] = useState("");
   const [date, setDate] = useState(order.startDate);
+  const [endDate, setEndDate] = useState(order.startDate);
   const [time, setTime] = useState("未定");
   const [notes, setNotes] = useState("");
+  const [extraKind, setExtraKind] = useState<ExtraWorkKind | null>(null);
+  const [extraResourceId, setExtraResource] = useState("");
+  const [extraStart, setExtraStart] = useState(order.startDate);
+  const [extraEnd, setExtraEnd] = useState(order.startDate);
+  const [extraTime, setExtraTime] = useState("未定");
+  const [extraNotes, setExtraNotes] = useState("");
   const [dates, setDates] = useState(false);
   const [start, setStart] = useState(order.startDate);
   const [end, setEnd] = useState(order.endDate);
   const [reason, setReason] = useState("");
   useEffect(() => {
     setSelectedLineId("");
+    setEditingAssignmentId("");
     setResource("");
     setNotes("");
   }, [order.id]);
   const invoice = engine.getInvoice(actor, order.invoiceId);
   const assignments = engine.listAssignments(actor, order.id);
+  const extraWorks = engine.listExtraWorks(actor, order.id);
   let resources = [] as ReturnType<typeof engine.listResources>;
   try {
     resources = engine.listResources(actor);
@@ -1631,32 +1665,49 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         ? execution === "self"
         : execution === "self" || execution === "service";
   });
-  const chooseLine = (lineId: string) => {
+  const openAssignment = (lineId: string, assignmentId?: string) => {
+    const assignment = assignments.find((item) => item.id === assignmentId);
     setSelectedLineId(lineId);
+    setEditingAssignmentId(assignment?.id ?? "");
+    setResource(assignment?.resourceId ?? "");
+    setDate(assignment?.date ?? order.startDate);
+    setEndDate(
+      assignment?.endDate ??
+        assignment?.date ??
+        order.startDate,
+    );
+    setTime(assignment?.time ?? "未定");
+    setNotes(assignment?.notes ?? "");
+  };
+  const closeAssignment = () => {
+    setSelectedLineId("");
+    setEditingAssignmentId("");
     setResource("");
-    setDate(order.startDate);
-    setTime("未定");
     setNotes("");
   };
+  const openExtra = (kind: ExtraWorkKind) => {
+    const existing = extraWorks.find((extra) => extra.kind === kind);
+    setExtraKind(kind);
+    setExtraResource(existing?.resourceId ?? "");
+    setExtraStart(existing?.startDate ?? order.startDate);
+    setExtraEnd(existing?.endDate ?? order.startDate);
+    setExtraTime(existing?.time ?? "未定");
+    setExtraNotes(existing?.notes ?? "");
+  };
+  const closeExtra = () => setExtraKind(null);
   return (
     <>
-      <PageHead
-        eyebrow="工程管理"
-        title={order.number}
-        actions={
-          <Button onClick={() => nav("/documents/invoice/" + invoice.id)}>
-            <Printer size={20} />
-            Invoice
-          </Button>
-        }
-      />
+      <div className="workorder-head">
+        <h1>{order.number}</h1>
+        <Button onClick={() => nav("/documents/invoice/" + invoice.id)}>
+          <Printer size={20} />
+          Invoice
+        </Button>
+      </div>
       <div className="order-banner order-banner-with-dates">
         <div>
           <span>工程地址</span>
           <strong>{order.customer.address}</strong>
-          <small>
-            {order.customer.name} · {order.customer.phone}
-          </small>
         </div>
         <div className="order-period">
           <div>
@@ -1669,7 +1720,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
           </div>
           {canEdit && (
             <Button
-              variant="ghost"
+              variant="primary"
               onClick={() => {
                 setStart(order.startDate);
                 setEnd(order.endDate);
@@ -1681,142 +1732,319 @@ function OrderPanel({ order }: { order: WorkOrder }) {
           )}
         </div>
       </div>
-      <WorkOrderCalendar order={order} assignments={assignments} />
-      <div className="order-workbench">
-        <Section title="工程內容">
-          <div className="engineering-lines">
-            {order.lines.map((line) => {
-              const assignment = assigned.get(line.id);
-              const resource = resources.find(
-                (item) => item.id === assignment?.resourceId,
-              );
-              return (
-                <article
-                  className={`engineering-line ${selectedLineId === line.id ? "selected" : ""}`}
-                  key={line.id}
-                >
-                  <div className="engineering-line-head">
-                    <div>
+      <WorkOrderCalendar
+        order={order}
+        assignments={assignments}
+        extraWorks={extraWorks}
+      />
+      <Section title="工程內容" className="engineering-content-card">
+        <div className="extra-works">
+          <strong>額外工程</strong>
+          <div className="extra-work-actions">
+            {(["measure", "delivery", "transport"] as ExtraWorkKind[]).map(
+              (kind) => {
+                const existing = extraWorks.find(
+                  (extra) => extra.kind === kind,
+                );
+                return (
+                  <button
+                    type="button"
+                    key={kind}
+                    className={`extra-work-button ${existing ? "scheduled" : ""}`}
+                    onClick={() => openExtra(kind)}
+                  >
+                    {existing ? "更改" : "安排"}
+                    {EXTRA_WORK_LABELS[kind]}
+                  </button>
+                );
+              },
+            )}
+          </div>
+        </div>
+        <div className="engineering-table-wrap">
+          <table className="engineering-table">
+            <thead>
+              <tr>
+                <th scope="col">工程項目</th>
+                <th scope="col">執行師傅</th>
+                <th scope="col">開工時間</th>
+                <th scope="col">完工時間</th>
+                <th scope="col">備註</th>
+                <th scope="col">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {order.lines.map((line) => {
+                const assignment = assigned.get(line.id);
+                const resource = resources.find(
+                  (item) => item.id === assignment?.resourceId,
+                );
+                return (
+                  <tr key={line.id}>
+                    <td>
                       <strong>{line.itemSnapshot.name}</strong>
                       <small>
                         {line.position}
                         {line.style ? ` · ${line.style}` : ""}
                       </small>
-                    </div>
-                    {assignment ? (
-                      <Badge strong>已安排</Badge>
-                    ) : canEdit ? (
-                      <Button onClick={() => chooseLine(line.id)}>
-                        安排 <ArrowRight size={16} />
-                      </Button>
-                    ) : null}
-                  </div>
-                  <p className="engineering-line-scope">
-                    {line.itemSnapshot.measure === "area"
-                      ? `${line.length} × ${line.width} ${line.dimensionUnit}`
-                      : line.itemSnapshot.measure === "length"
-                        ? `${line.length} ${line.dimensionUnit}`
-                        : line.itemSnapshot.measure === "fixed"
-                          ? "一式"
-                          : `${line.quantity} ${line.itemSnapshot.unit}`}
-                    {line.notes ? ` · ${line.notes}` : ""}
-                  </p>
-                  {assignment && (
-                    <div className="engineering-line-assignment">
-                      <Hammer size={17} />
-                      {resource?.name ?? "已分派"} · {assignment.date} ·{" "}
-                      {assignment.time}
-                      {assignment.notes ? ` · ${assignment.notes}` : ""}
-                    </div>
-                  )}
-                </article>
-              );
-            })}
+                      <small>
+                        {line.itemSnapshot.measure === "area"
+                          ? `${line.length} × ${line.width} ${line.dimensionUnit}`
+                          : line.itemSnapshot.measure === "length"
+                            ? `${line.length} ${line.dimensionUnit}`
+                            : line.itemSnapshot.measure === "fixed"
+                              ? "一式"
+                              : `${line.quantity} ${line.itemSnapshot.unit}`}
+                      </small>
+                    </td>
+                    <td>{resource?.name ?? "—"}</td>
+                    <td>{assignment?.date ?? "—"}</td>
+                    <td>{assignment?.endDate ?? assignment?.date ?? "—"}</td>
+                    <td>{assignment?.notes || "—"}</td>
+                    <td>
+                      <div className="engineering-row-actions">
+                        {assignment && <Badge strong>已安排</Badge>}
+                        {canEdit && (
+                          <Button
+                            variant={assignment ? "ghost" : "secondary"}
+                            onClick={() =>
+                              openAssignment(line.id, assignment?.id)
+                            }
+                          >
+                            {assignment ? "更改安排" : "安排"}
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {extraWorks.map((extra) => {
+                const resource = resources.find(
+                  (item) => item.id === extra.resourceId,
+                );
+                return (
+                  <tr key={extra.id} className="extra-work-row">
+                    <td>
+                      <strong>{EXTRA_WORK_LABELS[extra.kind]}</strong>
+                      <small>額外工程</small>
+                    </td>
+                    <td>{resource?.name ?? "—"}</td>
+                    <td>{extra.startDate}</td>
+                    <td>{extra.endDate}</td>
+                    <td>{extra.notes || "—"}</td>
+                    <td>
+                      <div className="engineering-row-actions">
+                        <Badge strong>已安排</Badge>
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            onClick={() => openExtra(extra.kind)}
+                          >
+                            更改安排
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+      <SitePhotos order={order} canEdit={canEdit} />
+      {selectedLine && (
+        <Dialog
+          title={editingAssignmentId ? "更改安排" : "安排施工"}
+          onClose={closeAssignment}
+        >
+          <p className="dialog-intro">
+            正在安排：{selectedLine.itemSnapshot.name} · {selectedLine.position}
+          </p>
+          <div className="form-grid two">
+            <Field label="執行師傅" required>
+              <select
+                value={resourceId}
+                onChange={(event) => setResource(event.target.value)}
+              >
+                <option value="">選擇判頭或公司師傅</option>
+                {compatible.map((resource) => (
+                  <option key={resource.id} value={resource.id}>
+                    {resource.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="開工日期" required>
+              <input
+                type="date"
+                value={date}
+                onChange={(event) => {
+                  setDate(event.target.value);
+                  if (event.target.value > endDate)
+                    setEndDate(event.target.value);
+                }}
+              />
+            </Field>
           </div>
-        </Section>
-        <div>
-          <Section title="安排施工">
-            {!selectedLine ? (
-              <p className="section-empty">
-                在左邊工程項目按「安排」，選擇師傅及施工日期。
-              </p>
-            ) : (
-              <>
-                <p className="selected-work-line">
-                  正在安排：<strong>{selectedLine.itemSnapshot.name}</strong>
-                </p>
-                <div className="form-grid two">
-                  <Field label="執行師傅" required>
-                    <select
-                      value={resourceId}
-                      onChange={(event) => setResource(event.target.value)}
-                    >
-                      <option value="">選擇判頭或公司師傅</option>
-                      {compatible.map((resource) => (
-                        <option key={resource.id} value={resource.id}>
-                          {resource.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="預計施工日期" required>
-                    <input
-                      type="date"
-                      value={date}
-                      onChange={(event) => setDate(event.target.value)}
-                    />
-                  </Field>
-                </div>
-                <div className="form-grid two">
-                  <Field label="時段">
-                    <select
-                      value={time}
-                      onChange={(event) => setTime(event.target.value)}
-                    >
-                      {["未定", "上午", "下午", "全天"].map((slot) => (
-                        <option key={slot}>{slot}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="安排備註">
-                    <input
-                      value={notes}
-                      onChange={(event) => setNotes(event.target.value)}
-                      placeholder="檔期或現場注意事項"
-                    />
-                  </Field>
-                </div>
-                <Button
-                  variant="primary"
-                  disabled={!resourceId || !date}
-                  onClick={() => {
-                    const result = run(
-                      () =>
-                        engine.assign(actor, order.id, {
+          <div className="form-grid two">
+            <Field label="完工日期" required>
+              <input
+                type="date"
+                min={date}
+                value={endDate}
+                onChange={(event) => setEndDate(event.target.value)}
+              />
+            </Field>
+            <Field label="時段">
+              <select
+                value={time}
+                onChange={(event) => setTime(event.target.value)}
+              >
+                {["未定", "上午", "下午", "全天"].map((slot) => (
+                  <option key={slot}>{slot}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <Field label="安排備註">
+            <input
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="檔期或現場注意事項"
+            />
+          </Field>
+          <div className="dialog-actions">
+            <Button onClick={closeAssignment}>取消</Button>
+            <Button
+              variant="primary"
+              disabled={!resourceId || !date || !endDate || endDate < date}
+              onClick={() => {
+                const result = run(
+                  () =>
+                    editingAssignmentId
+                      ? engine.updateAssignment(actor, editingAssignmentId, {
+                          resourceId,
+                          date,
+                          endDate,
+                          time,
+                          notes,
+                        })
+                      : engine.assign(actor, order.id, {
                           resourceId,
                           lineIds: [selectedLine.id],
                           date,
+                          endDate,
                           time,
                           notes,
                         }),
-                      "施工安排已保存；日曆已更新。",
-                    );
-                    if (result) {
-                      setSelectedLineId("");
-                      setResource("");
-                      setNotes("");
-                    }
-                  }}
-                >
-                  <Check size={20} />
-                  儲存安排
-                </Button>
-              </>
-            )}
-          </Section>
-          <SitePhotos order={order} canEdit={canEdit} />
-        </div>
-      </div>
+                  editingAssignmentId
+                    ? "施工安排已更新；日曆已更新。"
+                    : "施工安排已保存；日曆已更新。",
+                );
+                if (result) closeAssignment();
+              }}
+            >
+              儲存安排
+            </Button>
+          </div>
+        </Dialog>
+      )}
+      {extraKind && (
+        <Dialog
+          title={`${extraWorks.some((extra) => extra.kind === extraKind) ? "更改" : "安排"}${EXTRA_WORK_LABELS[extraKind]}`}
+          onClose={closeExtra}
+        >
+          <p className="dialog-intro">
+            額外工程不屬於報價單，只用作CS施工安排。
+          </p>
+          <div className="form-grid two">
+            <Field label="執行師傅" required>
+              <select
+                value={extraResourceId}
+                onChange={(event) => setExtraResource(event.target.value)}
+              >
+                <option value="">選擇判頭或公司師傅</option>
+                {resources
+                  .filter((resource) => resource.active)
+                  .map((resource) => (
+                    <option key={resource.id} value={resource.id}>
+                      {resource.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+            <Field label="開工日期" required>
+              <input
+                type="date"
+                value={extraStart}
+                onChange={(event) => {
+                  setExtraStart(event.target.value);
+                  if (event.target.value > extraEnd)
+                    setExtraEnd(event.target.value);
+                }}
+              />
+            </Field>
+          </div>
+          <div className="form-grid two">
+            <Field label="完工日期" required>
+              <input
+                type="date"
+                min={extraStart}
+                value={extraEnd}
+                onChange={(event) => setExtraEnd(event.target.value)}
+              />
+            </Field>
+            <Field label="時段">
+              <select
+                value={extraTime}
+                onChange={(event) => setExtraTime(event.target.value)}
+              >
+                {["未定", "上午", "下午", "全天"].map((slot) => (
+                  <option key={slot}>{slot}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <Field label="安排備註">
+            <input
+              value={extraNotes}
+              onChange={(event) => setExtraNotes(event.target.value)}
+              placeholder="例如：客人屋企有10隻貓"
+            />
+          </Field>
+          <div className="dialog-actions">
+            <Button onClick={closeExtra}>取消</Button>
+            <Button
+              variant="primary"
+              disabled={
+                !extraResourceId ||
+                !extraStart ||
+                !extraEnd ||
+                extraEnd < extraStart
+              }
+              onClick={() => {
+                const result = run(
+                  () =>
+                    engine.scheduleExtraWork(actor, order.id, {
+                      kind: extraKind,
+                      resourceId: extraResourceId,
+                      startDate: extraStart,
+                      endDate: extraEnd,
+                      time: extraTime,
+                      notes: extraNotes,
+                    }),
+                  "額外工程安排已保存；日曆已更新。",
+                );
+                if (result) closeExtra();
+              }}
+            >
+              儲存安排
+            </Button>
+          </div>
+        </Dialog>
+      )}
       {dates && (
         <Dialog title="修改預計工程日期" onClose={() => setDates(false)}>
           <div className="form-grid two">
@@ -1864,18 +2092,20 @@ function OrderPanel({ order }: { order: WorkOrder }) {
 
 export function Orders() {
   return (
-    <div className="orders-workspace">
-      <WorkOrderRail />
-      <div className="workorder-main">
-        <PageHead eyebrow="施工接力" title="工程管理" />
-        <div className="list-panel">
-          <Empty
-            title="請選擇工程單"
-            description="從左邊列表選擇工程，查看工程期、施工安排及現場圖片。"
-          />
+    <>
+      <PageHead title="工程管理" />
+      <div className="orders-workspace">
+        <WorkOrderRail />
+        <div className="workorder-main">
+          <div className="list-panel">
+            <Empty
+              title="請選擇工程單"
+              description="從左邊列表選擇工程。"
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -1889,25 +2119,30 @@ export function OrderDetail() {
   } catch {}
   if (!order)
     return (
+      <>
+        <PageHead title="工程管理" />
+        <div className="orders-workspace">
+          <WorkOrderRail selectedId={id} />
+          <div className="workorder-main">
+            <div className="list-panel">
+              <Empty
+                title="沒有這個工程的查看權限"
+                action={<Button onClick={() => nav("/orders")}>返回工程</Button>}
+              />
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  return (
+    <>
+      <PageHead title="工程管理" />
       <div className="orders-workspace">
         <WorkOrderRail selectedId={id} />
         <div className="workorder-main">
-          <PageHead eyebrow="工程管理" title="工程單" />
-          <div className="list-panel">
-            <Empty
-              title="沒有這個工程的查看權限"
-              action={<Button onClick={() => nav("/orders")}>返回工程</Button>}
-            />
-          </div>
+          <OrderPanel order={order} />
         </div>
       </div>
-    );
-  return (
-    <div className="orders-workspace">
-      <WorkOrderRail selectedId={id} />
-      <div className="workorder-main">
-        <OrderPanel order={order} />
-      </div>
-    </div>
+    </>
   );
 }

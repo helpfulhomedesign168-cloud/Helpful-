@@ -11,6 +11,9 @@ import {
   type CustomerProfile,
   type DraftInput,
   type Eligibility,
+  type ExtraWork,
+  type ExtraWorkInput,
+  type ExtraWorkKind,
   type HandoffRow,
   type Invoice,
   type Notification,
@@ -681,6 +684,10 @@ export class Engine {
       migrated.receiptSequences ??= {};
       migrated.workOrderSequences ??= {};
       migrated.customers ??= [];
+      migrated.extraWorks ??= [];
+      migrated.assignments.forEach((assignment) => {
+        assignment.endDate ??= assignment.date;
+      });
       ensureDemoCsActors(migrated);
       const migrateCustomer = (customer: Customer) => {
         customer.street ??= "";
@@ -781,6 +788,8 @@ export class Engine {
         if (paid >= invoice.netTotal * 0.5)
           order.csReleasedAt = invoice.createdAt;
       });
+      if (!migrated.orders.some((order) => order.number === "D260099"))
+        appendDemoEngineeringOrders(migrated);
       hydrateCustomerProfiles(migrated);
       return migrated;
     } catch {
@@ -1696,6 +1705,19 @@ export class Engine {
       ),
     );
   }
+  listExtraWorks(actorInput: Actor, workOrderId: string): ExtraWork[] {
+    const actor = this.actor(actorInput);
+    const order =
+      this.state.orders.find((item) => item.id === workOrderId) ??
+      fail("找不到工程單。");
+    if (!this.orderReadable(actor, order))
+      fail("你沒有查看此額外工程的權限。");
+    return deepCopy(
+      this.state.extraWorks.filter(
+        (extra) => extra.workOrderId === workOrderId,
+      ),
+    );
+  }
   listAudit(actorInput: Actor, quoteId: string): AuditEvent[] {
     const actor = this.actor(actorInput);
     const quote = this.findQuote(quoteId);
@@ -2552,6 +2574,8 @@ export class Engine {
       if (!resource.active) fail("此合作資源已停用。");
       if (!input.lineIds.length) fail("請選擇至少一項待安排明細。");
       if (!input.date || !input.time) fail("請填寫安排日期及時間。");
+      const endDate = input.endDate ?? input.date;
+      if (endDate < input.date) fail("完工日期不可早於開工日期。");
       const selected = order.lines.filter((line) =>
         input.lineIds.includes(line.id),
       );
@@ -2587,6 +2611,7 @@ export class Engine {
         resourceId: resource.id,
         lineIds: [...input.lineIds],
         date: input.date,
+        endDate,
         time: input.time,
         notes: input.notes ?? "",
         actorId: actor.id,
@@ -2607,6 +2632,67 @@ export class Engine {
       });
     });
     return deepCopy(output);
+  }
+  updateAssignment(
+    actorInput: Actor,
+    assignmentId: string,
+    input: Omit<AssignmentInput, "lineIds">,
+  ): Assignment {
+    const actor = this.actor(actorInput);
+    if (!(isCsActor(actor) || actor.role === "admin"))
+      fail("你沒有修改工程安排的權限。");
+    let output!: Assignment;
+    this.mutate((state) => {
+      const assignment =
+        state.assignments.find((item) => item.id === assignmentId) ??
+        fail("找不到工程安排。");
+      const order =
+        state.orders.find((item) => item.id === assignment.workOrderId) ??
+        fail("找不到工程單。");
+      if (!this.orderReadable(actor, order))
+        fail("你沒有修改此工程安排的權限。");
+      if (!input.date || !input.time) fail("請填寫安排日期及時間。");
+      const endDate = input.endDate ?? input.date;
+      if (endDate < input.date) fail("完工日期不可早於開工日期。");
+      const resource =
+        state.resources.find((item) => item.id === input.resourceId) ??
+        fail("找不到合作資源。");
+      if (!resource.active) fail("此合作資源已停用。");
+      const selected = order.lines.filter((line) =>
+        assignment.lineIds.includes(line.id),
+      );
+      const executions = [
+        ...new Set(selected.map((line) => line.itemSnapshot.execution)),
+      ];
+      if (executions.length !== 1) fail("此安排涉及不同執行方式，未可修改。");
+      const execution = executions[0];
+      const allowed =
+        (resource.type === "contractor" && execution === "contractor") ||
+        (resource.type === "staff" && execution === "self") ||
+        (resource.type === "service" &&
+          (execution === "self" || execution === "service"));
+      if (!allowed) fail("此合作資源不可承接所選執行方式的明細。");
+      if (
+        selected.some(
+          (line) => !resource.trades.includes(line.itemSnapshot.category),
+        )
+      )
+        fail("此判頭／師傅工種不符合所選工程分類。");
+      assignment.resourceId = input.resourceId;
+      assignment.date = input.date;
+      assignment.endDate = endDate;
+      assignment.time = input.time;
+      assignment.notes = input.notes ?? "";
+      this.audit(state, {
+        quoteId: order.quoteId,
+        workOrderId: order.id,
+        actorId: actor.id,
+        action: "assignment_updated",
+        detail: `更新施工安排：${resource.name}`,
+      });
+      output = deepCopy(assignment);
+    });
+    return output;
   }
   addSitePhotos(
     actorInput: Actor,
@@ -2651,6 +2737,65 @@ export class Engine {
       output = deepCopy(order);
     });
     return sanitiseOrder(output, actor.role === "admin");
+  }
+  scheduleExtraWork(
+    actorInput: Actor,
+    workOrderId: string,
+    input: ExtraWorkInput,
+  ): ExtraWork {
+    const actor = this.actor(actorInput);
+    if (!(isCsActor(actor) || actor.role === "admin"))
+      fail("你沒有安排額外工程的權限。");
+    let output!: ExtraWork;
+    this.mutate((state) => {
+      const order =
+        state.orders.find((item) => item.id === workOrderId) ??
+        fail("找不到工程單。");
+      if (!order.csReleasedAt) fail("此工程尚未發到CS。");
+      if (!this.orderReadable(actor, order))
+        fail("你沒有安排此額外工程的權限。");
+      const kinds: ExtraWorkKind[] = ["measure", "delivery", "transport"];
+      if (!kinds.includes(input.kind)) fail("請選擇有效的額外工程。");
+      const resource =
+        state.resources.find((item) => item.id === input.resourceId) ??
+        fail("找不到合作資源。");
+      if (!resource.active) fail("此合作資源已停用。");
+      if (!input.startDate || !input.endDate || !input.time)
+        fail("請填寫額外工程的開工、完工日期及時間。");
+      if (input.endDate < input.startDate)
+        fail("完工日期不可早於開工日期。");
+      const existing = state.extraWorks.find(
+        (item) => item.workOrderId === order.id && item.kind === input.kind,
+      );
+      const record: ExtraWork = existing ?? {
+        id: uid("extra-work"),
+        workOrderId: order.id,
+        kind: input.kind,
+        resourceId: resource.id,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        time: input.time,
+        notes: input.notes ?? "",
+        actorId: actor.id,
+        createdAt: NOW,
+      };
+      record.resourceId = resource.id;
+      record.startDate = input.startDate;
+      record.endDate = input.endDate;
+      record.time = input.time;
+      record.notes = input.notes ?? "";
+      record.updatedAt = NOW;
+      if (!existing) state.extraWorks.push(record);
+      this.audit(state, {
+        quoteId: order.quoteId,
+        workOrderId: order.id,
+        actorId: actor.id,
+        action: "extra_work_scheduled",
+        detail: `安排${input.kind === "measure" ? "度尺" : input.kind === "delivery" ? "送貨" : "搬運"}：${input.startDate} 至 ${input.endDate}`,
+      });
+      output = deepCopy(record);
+    });
+    return output;
   }
   archiveQuote(
     actorInput: Actor,
@@ -2808,6 +2953,173 @@ function quoteLine(
     notes: "Demo 工程明細",
     ...override,
   };
+}
+
+const DEMO_ENGINEERING_NAMES = [
+  "陳大文", "李小明", "黃美玲", "張志強", "王雅雯", "劉家豪", "何嘉欣", "梁俊傑",
+  "吳淑芬", "周文輝", "鄭麗華", "林志明", "馮詠儀", "曾偉業", "黃家寶", "陳婉婷",
+  "李國雄", "張秀蘭", "劉德華", "何美琪", "梁志豪", "吳凱琳", "周家俊", "鄭美儀",
+  "林國強", "馮嘉敏", "曾志偉", "黃雅文", "陳家輝", "李美華", "張偉強",
+];
+const DEMO_ENGINEERING_DISTRICTS = [
+  "黃大仙", "觀塘", "沙田", "荃灣", "將軍澳", "屯門", "元朗", "深水埗",
+];
+
+function demoLineAmount(line: QuoteLine): number {
+  const price = line.itemSnapshot.price;
+  if (line.itemSnapshot.measure === "area")
+    return Math.round(line.length * line.width * price);
+  if (line.itemSnapshot.measure === "length")
+    return Math.round(line.length * price);
+  if (line.itemSnapshot.measure === "fixed") return price;
+  return Math.round(line.quantity * price);
+}
+
+function demoEngineeringLines(
+  services: ServiceItem[],
+  count: number,
+  prefix: string,
+): QuoteLine[] {
+  const positions = [
+    "客廳", "飯廳", "主人房", "客房", "廚房", "浴室", "走廊", "露台",
+    "書房", "工人房",
+  ];
+  return Array.from({ length: count }, (_, index) => {
+    const service = services[index % services.length];
+    return quoteLine(`${prefix}-line-${index + 1}`, service, {
+      id: `${prefix}-line-${index + 1}`,
+      position: positions[index % positions.length],
+      length:
+        service.measure === "area" || service.measure === "length"
+          ? 8 + (index % 8)
+          : 0,
+      width: service.measure === "area" ? 6 + (index % 4) : 0,
+      quantity: service.measure === "quantity" ? 1 + (index % 3) : 0,
+      notes: "Demo 工程明細",
+    });
+  });
+}
+
+/** 30 張已分派給工程CS的demo工程，另加一張20項、待阿花分派的D260099。 */
+function appendDemoEngineeringOrders(seed: AppState): void {
+  const services = seed.services.filter((service) => service.published);
+  if (!services.length) return;
+  const makeDemo = (
+    index: number,
+    number: string,
+    lineCount: number,
+    ownerId?: string,
+  ) => {
+    const customerName =
+      DEMO_ENGINEERING_NAMES[index % DEMO_ENGINEERING_NAMES.length];
+    const district =
+      DEMO_ENGINEERING_DISTRICTS[index % DEMO_ENGINEERING_DISTRICTS.length];
+    const demoCustomer = customer(
+      `demo-engineering-customer-${index}`,
+      customerName,
+      `9${String(6100000 + index).padStart(7, "0")}`,
+    );
+    demoCustomer.district = district;
+    demoCustomer.estate = `Demo 屋苑 ${index + 1}`;
+    demoCustomer.block = `${(index % 4) + 1}座`;
+    demoCustomer.floor = `${(index % 12) + 5}樓`;
+    demoCustomer.unit = `${String.fromCharCode(65 + (index % 4))}室`;
+    demoCustomer.street = "Demo 工程街";
+    demoCustomer.address = `${district} Demo 工程街 Demo 屋苑 ${index + 1} ${demoCustomer.block} ${demoCustomer.floor} ${demoCustomer.unit}`;
+    const lines = demoEngineeringLines(services, lineCount, number.toLowerCase());
+    const total = lines.reduce((sum, line) => sum + demoLineAmount(line), 0);
+    const quoteId = `quote-${number.toLowerCase()}`;
+    const versionId = `version-${number.toLowerCase()}`;
+    const invoiceId = `invoice-${number.toLowerCase()}`;
+    const createdAt = `2026-10-${String((index % 28) + 1).padStart(2, "0")}T09:00:00+08:00`;
+    const invoice: Invoice = {
+      id: invoiceId,
+      number:
+        number === "D260099"
+          ? "SHMM26100099"
+          : `SHMM2610${String(200 + index).padStart(4, "0")}`,
+      quoteId,
+      versionId,
+      customer: deepCopy(demoCustomer),
+      lines: deepCopy(lines),
+      discount: 0,
+      discountMode: "none",
+      discountValue: 0,
+      netTotal: total,
+      createdAt,
+      actorId: "clerk",
+      supervisorId: "admin",
+      category: "self-pay",
+    };
+    const quote: Quote = {
+      id: quoteId,
+      number: `QDEMO${number.slice(1)}`,
+      ownerId: "sales-mm",
+      team: "B",
+      versions: [
+        {
+          id: versionId,
+          index: 1,
+          customer: deepCopy(demoCustomer),
+          lines: deepCopy(lines),
+          discount: 1,
+          createdAt,
+          signedDocument: attachment(
+            `signed-${number.toLowerCase()}`,
+            `${number}-signed.jpg`,
+          ),
+          signature: {
+            date: "2026-10-20",
+            supervisorId: "supervisor-sh",
+            actorId: "sales-mm",
+            createdAt,
+          },
+          printPreparation: {
+            date: "2026-10-20",
+            supervisorId: "supervisor-sh",
+            actorId: "sales-mm",
+            quoteNumber: `QDEMO${number.slice(1)}`,
+            createdAt,
+          },
+          signedDocumentQuoteNumber: `QDEMO${number.slice(1)}`,
+        },
+      ],
+      createdAt,
+      updatedAt: createdAt,
+      archived: false,
+      submission: {
+        id: `submission-${number.toLowerCase()}`,
+        versionId,
+        actorId: "sales-mm",
+        createdAt,
+      },
+      officeCategory: "self-pay",
+      invoiceId,
+    };
+    const order: WorkOrder = {
+      id: `workorder-${number.toLowerCase()}`,
+      number,
+      quoteId,
+      invoiceId,
+      groupId: `group-${number.toLowerCase()}`,
+      versionId,
+      customer: deepCopy(demoCustomer),
+      lines: deepCopy(lines),
+      createdAt,
+      startDate: `2026-11-${String((index % 28) + 1).padStart(2, "0")}`,
+      endDate: "2027-03-20",
+      status: "pending",
+      csReleasedAt: createdAt,
+      csOwnerId: ownerId,
+      dateChanges: [],
+    };
+    seed.quotes.push(quote);
+    seed.invoices.push(invoice);
+    seed.orders.push(order);
+  };
+  for (let index = 0; index < 30; index += 1)
+    makeDemo(index, `D2600${String(200 + index)}`, 12, "cs");
+  makeDemo(30, "D260099", 20);
 }
 
 /**
@@ -3378,6 +3690,7 @@ export function createSeedState(): AppState {
     receipts: [],
     orders: [order],
     assignments: [],
+    extraWorks: [],
     resources,
     audits: [
       {
@@ -3396,6 +3709,7 @@ export function createSeedState(): AppState {
     receiptSequences: {},
     workOrderSequences: { "26": 1 },
   };
+  appendDemoEngineeringOrders(seed);
   hydrateCustomerProfiles(seed);
   return seed;
 }

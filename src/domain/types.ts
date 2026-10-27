@@ -238,10 +238,31 @@ export interface Assignment {
   resourceId: string;
   lineIds: string[];
   date: string;
+  /** 開工／完工日期；舊資料沒有時以 date 作單日安排。 */
+  endDate: string;
   time: string;
   notes: string;
   actorId: string;
   createdAt: string;
+}
+export type ExtraWorkKind = "measure" | "delivery" | "transport";
+export const EXTRA_WORK_LABELS: Record<ExtraWorkKind, string> = {
+  measure: "度尺",
+  delivery: "送貨",
+  transport: "搬運",
+};
+export interface ExtraWork {
+  id: string;
+  workOrderId: string;
+  kind: ExtraWorkKind;
+  resourceId: string;
+  startDate: string;
+  endDate: string;
+  time: string;
+  notes: string;
+  actorId: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 export interface WorkOrder {
   id: string;
@@ -298,6 +319,7 @@ export interface AppState {
   receipts: Receipt[];
   orders: WorkOrder[];
   assignments: Assignment[];
+  extraWorks: ExtraWork[];
   resources: Resource[];
   audits: AuditEvent[];
   notifications: Notification[];
@@ -453,6 +475,15 @@ export interface AssignmentInput {
   resourceId: string;
   lineIds: string[];
   date: string;
+  endDate?: string;
+  time: string;
+  notes: string;
+}
+export interface ExtraWorkInput {
+  kind: ExtraWorkKind;
+  resourceId: string;
+  startDate: string;
+  endDate: string;
   time: string;
   notes: string;
 }
