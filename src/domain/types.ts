@@ -260,6 +260,8 @@ export interface WorkOrder {
   csReleasedAt?: string;
   /** CS主管指派的跟進同事；與判頭／師傅Assignment分開。 */
   csOwnerId?: string;
+  /** 整張工程共用的現場環境圖片；換師傅仍保留。 */
+  sitePhotos?: Attachment[];
   dateChanges: {
     start: string;
     end: string;

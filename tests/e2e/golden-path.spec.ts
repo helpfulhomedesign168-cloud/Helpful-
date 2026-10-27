@@ -210,32 +210,27 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
     .getByRole("button", { name: "確認有效收款", exact: true })
     .click();
 
-  await role(page, "工程CS");
+  await role(page, "阿花");
   row = page.locator("tbody tr").filter({ hasText: qNumber });
   await expect(row).toBeVisible();
-  // CS follow-up assignment and contractor Assignment are separate workflows.
+  // CS supervisor can see all engineering orders; contractor Assignment is separate.
   await page.getByRole("link", { name: "工程管理", exact: true }).click();
   await page
-    .locator("tbody tr")
+    .locator(".order-rail-row")
     .filter({ hasText: "UI測試新客戶" })
-    .getByRole("button", { name: "查看工程", exact: true })
     .click();
-  await expect(
-    page.getByRole("heading", { name: "UI測試新客戶的工程", exact: true }),
-  ).toBeVisible();
+  await expect(page.locator(".page-head h1")).toHaveText(/^D26\d{5}$/);
+  await page.getByRole("button", { name: "安排", exact: true }).first().click();
   await page
-    .getByLabel("執行對象", { exact: false })
+    .getByLabel("執行師傅", { exact: false })
     .selectOption("resource-contractor");
-  await page
-    .locator(".assignment-line")
-    .filter({ hasText: "UI貫穿測試工程" })
-    .getByRole("checkbox")
-    .check();
   await page.getByRole("button", { name: "儲存安排", exact: true }).click();
-  await expect(page.locator(".assignment-card")).toContainText("Demo 判頭");
+  await expect(page.locator(".engineering-line-assignment")).toContainText(
+    "Demo 判頭",
+  );
   await page.reload();
-  await expect(page.locator(".assignment-card")).toContainText(
-    "UI貫穿測試工程",
+  await expect(page.locator(".engineering-line-assignment")).toContainText(
+    "Demo 判頭",
   );
   const stored = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("homeflow-state-v1")!),

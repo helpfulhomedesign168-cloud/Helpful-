@@ -11,7 +11,7 @@ test("CS可讀已發工程部的Invoice與工程；開單員不可再直入工�
   const errors: string[] = [];
   page.on("pageerror", (event) => errors.push(event.message));
   await page.goto("/");
-  await switchRole(page, "工程CS");
+  await switchRole(page, "阿花");
   await page.goto("/documents/invoice/invoice-issued");
   await expect(
     page.getByRole("heading", { name: "工程Invoice", exact: true }),
@@ -19,7 +19,7 @@ test("CS可讀已發工程部的Invoice與工程；開單員不可再直入工�
   await expect(page.getByText("SHMM26100001", { exact: true })).toBeVisible();
   await page.goto("/orders/workorder-issued");
   await expect(
-    page.getByRole("heading", { name: "張子微的工程", exact: true }),
+    page.getByRole("heading", { name: "D2600001", exact: true }),
   ).toBeVisible();
 
   await switchRole(page, "開單員");

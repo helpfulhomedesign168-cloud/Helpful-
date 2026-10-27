@@ -114,6 +114,7 @@ describe("Engine Golden Path（同一來源跨角色）", () => {
     const finance = actor(engine, "finance");
     const clerk = actor(engine, "clerk");
     const cs = actor(engine, "cs");
+    const lead = actor(engine, "cs-lead-ahfa");
     const admin = actor(engine, "admin");
     const pd = engine
       .listServices(admin)
@@ -228,6 +229,10 @@ describe("Engine Golden Path（同一來源跨角色）", () => {
       cleared: true,
     });
     expect(engine.issueReceipt(clerk, second.id).amount).toBe(20000);
+    const releasedOrder = engine
+      .listOrders(lead)
+      .find((row) => row.quoteId === quote.id)!;
+    engine.assignCsOwner(lead, releasedOrder.id, "cs");
     const order = engine
       .listOrders(cs)
       .find((row) => row.quoteId === quote.id)!;
@@ -262,6 +267,7 @@ describe("Engine 安全投影、負面資格與計價", () => {
     const engine = new Engine(undefined, createSeedState());
     const clerk = actor(engine, "clerk");
     const cs = actor(engine, "cs");
+    const lead = actor(engine, "cs-lead-ahfa");
     const invoice = engine.issueInvoice(clerk, "quote-ready-invoice");
     const initial = engine
       .listPayments(clerk)
@@ -291,6 +297,10 @@ describe("Engine 安全投影、負面資格與計價", () => {
     });
     const status = engine.invoicePaymentStatus(clerk, invoice.id);
     expect(status.releasedToCS).toBe(true);
+    const releasedOrder = engine
+      .listOrders(lead)
+      .find((row) => row.invoiceId === invoice.id)!;
+    engine.assignCsOwner(lead, releasedOrder.id, "cs");
     expect(
       engine.listOrders(cs).filter((row) => row.invoiceId === invoice.id),
     ).toHaveLength(1);

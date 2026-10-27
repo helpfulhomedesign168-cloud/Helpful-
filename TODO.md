@@ -21,3 +21,4 @@
 - [x] 客戶示範名稱及Office客戶／收據UI：文文客戶改為陳小強、李好波、張子微；嘉嘉客戶改為太大力、王小虎。開單員客戶列表新增Sales欄及Sales篩選（由CustomerProfile.ownerId派生）。Invoice每期付款的開收據／查看收據按鈕固定靠右，與「可發收據」標籤對齊；只改UI，不改付款或收據規則。
 - [x] CS接單跟進及工程單編號：WorkOrder改用獨立 D + 年份 + 5位流水（例D2600001），不再直接加Invoice後綴；新增CS主管阿花及CS同事Joe／Nicole／Fandy。接單跟進移除「可安排工程／已發工程部」tabs及狀態badge，改為工程單／客戶／聯絡電話／Sales／類別／跟進同事／操作。CS主管可安排及更改CS跟進同事；普通CS只讀。現有WorkOrder號碼不重寫；舊LocalStorage會補CS accounts及workOrderSequences，不重置。
 - [x] CS／Super Admin工程部選單：CS menu改為工程單、工程管理、工程師傅、供應商、客戶、產品款式、工程價目；工程單由接單跟進改名，工程價目由工程目錄改名。新增工程師傅、供應商、產品款式三個空白placeholder，不加入假資料。Super Admin menu加入相關5個module；CS主管及Super Admin可安排CS跟進同事，普通CS只讀。工程管理及工程價目現有功能保留。
+- [x] 工程管理工作台：CS主管及Super Admin看全部已釋放工程並可按CS同事篩選；普通CS只可看自己csOwnerId的工程。工程管理改為左邊工程單列表、月份filter、右邊detail；工程期calendar、逐項工程內容安排、施工安排後calendar事件、WorkOrder共用多張現場環境圖片及大圖預覽。

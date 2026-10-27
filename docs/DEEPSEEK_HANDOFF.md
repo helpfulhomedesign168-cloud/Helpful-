@@ -76,3 +76,13 @@
 - 工程師傅、供應商、產品款式本輪只預留空白入口；沒有假資料、假功能或猜測欄位。
 - 工程師傅、供應商、產品款式及工程價目須加入Super Admin menu；Super Admin有相應編輯權限，但placeholder未建立前不顯示假編輯按鈕。
 - CS主管及Super Admin可安排／更改工程單的CS跟進同事；普通CS只讀。工程師傅及供應商未建立編輯功能，但角色權限方向為CS主管／Super Admin可編輯、普通CS只讀。
+
+## 2026-10-26 工程管理工作台（不得退化）
+
+- 普通CS在工程管理只可讀取 `WorkOrder.csOwnerId === 自己` 的已釋放工程；CS主管及Super Admin可讀全部已釋放工程，並可按CS同事篩選。不要把「所有CS都可看全部」寫回。
+- 工程管理版面：左邊工程單列表按 `csReleasedAt` 月份filter；右邊顯示選中工程detail。CS主管／Admin可篩選CS同事。
+- 工程單detail標題用WorkOrder號（如D2600001），不再用「客戶名的工程」。地址card不顯示安排狀態；預計開工／完工放右邊。
+- 下方calendar顯示該WorkOrder的startDate至endDate及Assignment施工日期；可前後月瀏覽。
+- 工程內容逐項安排：每次只安排一個line；已安排項目不可重複。安排後calendar必須顯示該項施工日期／時段。
+- 現場環境圖片存於 `WorkOrder.sitePhotos`，屬整張工程，換師傅仍保留，支援多張；圖片binary仍在IndexedDB，大圖只作預覽，不是正式檔案庫。
+- 以上普通CS／主管／Admin權限必須由domain `listOrders`、`getOrder`、`listAssignments`、`assign`、`updateDates`、`addSitePhotos`共同執行，不可以只在UI隱藏。

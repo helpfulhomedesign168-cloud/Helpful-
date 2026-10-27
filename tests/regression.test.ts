@@ -6,6 +6,7 @@ it("CS可讀Invoice而不可讀原Q；已簽價及期款不被Admin加價反改"
   const e = new Engine(undefined, createSeedState()),
     admin = actor(e, "admin"),
     cs = actor(e, "cs"),
+    csLead = actor(e, "cs-lead-ahfa"),
     sales = actor(e, "sales-mm"),
     clerk = actor(e, "clerk");
   const old = e.pricing(sales, "quote-pending-office");
@@ -14,8 +15,9 @@ it("CS可讀Invoice而不可讀原Q；已簽價及期款不被Admin加價反改"
   expect(e.pricing(sales, "quote-pending-office").total).toBe(old.total);
   expect(e.eligibility(cs, "quote-pending-office").firstDue).toBe(0);
   expect(e.eligibility(cs, "quote-pending-office").label).toBe("待分類");
-  expect(e.invoicePricing(cs, "invoice-issued").total).toBe(3800);
-  expect(() => e.pricing(cs, "quote-issued")).toThrow();
+  expect(e.invoicePricing(csLead, "invoice-issued").total).toBe(3800);
+  expect(() => e.invoicePricing(cs, "invoice-issued")).toThrow("沒有查看");
+  expect(() => e.pricing(csLead, "quote-issued")).toThrow();
   const invoice = e.issueInvoice(clerk, "quote-ready-invoice");
   expect(invoice.netTotal).toBe(14000);
   expect(invoice.number).toBe("SHKK26100002");
@@ -89,7 +91,7 @@ it("未來有效日期不可提前放行；工種不符不能分派", () => {
   const e = new Engine(undefined, seed),
     finance = actor(e, "finance"),
     sales = actor(e, "sales-mm"),
-    cs = actor(e, "cs");
+    csLead = actor(e, "cs-lead-ahfa");
   expect(() =>
     e.validatePayment(finance, "payment-pending-1500", {
       date: "2026-11-01",
@@ -104,9 +106,9 @@ it("未來有效日期不可提前放行；工種不符不能分派", () => {
       custody: "sales",
     }),
   ).toThrow("已發生");
-  const order = e.getOrder(cs, "workorder-issued");
+  const order = e.getOrder(csLead, "workorder-issued");
   expect(() =>
-    e.assign(cs, order.id, {
+    e.assign(csLead, order.id, {
       resourceId: "wrong-trade",
       lineIds: [order.lines[0].id],
       date: "2026-11-01",
