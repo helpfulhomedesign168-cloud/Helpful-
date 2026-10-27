@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, PenLine, ArrowUpRight, Check, ChevronDown } from "lucide-react";
+import { Plus, PenLine, ArrowUpRight, Check, Trash2, X } from "lucide-react";
 import { useApp } from "../context";
 import {
   Badge,
@@ -32,25 +32,35 @@ const SERVICE_CATEGORIES = [
   "防滑",
   "其他",
 ];
+const SERVICE_SCOPES = ["廚房", "廁所", "全屋", "廳房", "露台", "花園", "其他"];
+const MEASURE_OPTIONS: Array<{ value: ServiceItem["measure"]; label: string }> = [
+  { value: "area", label: "面積(長X闊)" },
+  { value: "length", label: "直呎" },
+  { value: "fixed", label: "固定價" },
+  { value: "quantity", label: "件數／套數" },
+];
 
 export function Services() {
   const { actor, engine, run } = useApp();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("打拆");
   const [editing, setEditing] = useState<ServiceItem | null>(null);
-  const [more, setMore] = useState(false);
+  const [linkPicker, setLinkPicker] = useState(false);
+  const [deleting, setDeleting] = useState<ServiceItem | null>(null);
   const admin = actor.role === "admin";
   const allItems = engine.listServices(actor);
   const items = allItems.filter((item) => item.published && !item.archived);
+  const isExisting = Boolean(
+    editing && allItems.some((item) => item.id === editing.id),
+  );
   const visible = items.filter((item) => {
     if (activeCategory !== "全部" && item.category !== activeCategory)
       return false;
-    return `${item.name}${item.code}${item.category}${item.scope ?? ""}`.includes(
+    return `${item.name}${item.code}${item.category}${item.scope ?? ""}${item.details ?? ""}`.includes(
       search,
     );
   });
   function newItem(category?: string) {
-    setMore(false);
     setEditing({
       id: crypto.randomUUID(),
       code: `S-${String(allItems.length + 1).padStart(3, "0")}`,
@@ -58,14 +68,16 @@ export function Services() {
       category:
         category ??
         (activeCategory === "全部" ? "打拆" : activeCategory),
-      scope: "",
+      scope: "廚房",
+      details: "",
+      linkedServiceIds: [],
       unit: "平方呎",
       price: 0,
       measure: "area",
       minQty: 0,
       minAmount: 0,
-      increment: 0,
-      minScope: "line",
+      increment: 0.5,
+      minScope: "service",
       execution: "contractor",
       costMode: "ratio",
       costBasis: "line",
@@ -77,6 +89,19 @@ export function Services() {
   }
   const set = (data: Partial<ServiceItem>) =>
     setEditing((current) => (current ? { ...current, ...data } : null));
+  const linked = (editing?.linkedServiceIds ?? [])
+    .map((id) => allItems.find((service) => service.id === id))
+    .filter((service): service is ServiceItem => Boolean(service));
+  const retailLabel =
+    editing?.measure === "area"
+      ? "零售價（HKD／平方呎）"
+      : editing?.measure === "length"
+        ? "零售價（HKD／直呎）"
+        : editing?.measure === "quantity"
+          ? "零售價／件"
+          : "零售價";
+  const lowLabel =
+    editing?.measure === "length" ? "低銷價（直呎）" : "低銷價（平方呎）";
   return (
     <>
       <PageHead title="工程價目" />
@@ -149,6 +174,7 @@ export function Services() {
                   <tr key={service.id}>
                     <td>
                       <strong>{service.name}</strong>
+                      {service.details && <small>{service.details}</small>}
                     </td>
                     <td>
                       <strong>{money(service.price)}</strong>
@@ -164,16 +190,25 @@ export function Services() {
                     <td>{service.scope || "—"}</td>
                     <td>
                       {admin && (
-                        <Button
-                          variant="ghost"
-                          onClick={() => {
-                            setEditing(structuredClone(service));
-                            setMore(false);
-                          }}
-                          aria-label={`修改${service.name}`}
-                        >
-                          <PenLine size={21} />
-                        </Button>
+                        <div className="service-row-actions">
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              setEditing(structuredClone(service));
+                              setLinkPicker(false);
+                            }}
+                            aria-label={`修改${service.name}`}
+                          >
+                            <PenLine size={20} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => setDeleting(service)}
+                            aria-label={`刪除${service.name}`}
+                          >
+                            <Trash2 size={19} />
+                          </Button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -186,14 +221,13 @@ export function Services() {
       {editing && (
         <Dialog
           wide
-          title={
-            allItems.some((service) => service.id === editing.id)
-              ? "修改工程項目"
-              : "新增工程項目"
-          }
-          onClose={() => setEditing(null)}
+          title={isExisting ? "修改工程項目" : "新增工程項目"}
+          onClose={() => {
+            setEditing(null);
+            setLinkPicker(false);
+          }}
         >
-          <div className="form-grid two">
+          <div className="service-form-top">
             <Field label="工程名稱" required>
               <input
                 value={editing.name}
@@ -210,31 +244,65 @@ export function Services() {
                 ))}
               </select>
             </Field>
-            <Field label="怎樣計價" required>
+            <Field label="工程範圍" required>
               <select
-                value={editing.measure}
-                onChange={(event) => {
-                  const measure = event.target.value as ServiceItem["measure"];
-                  set({
-                    measure,
-                    unit:
-                      measure === "area"
-                        ? "平方呎"
-                        : measure === "length"
-                          ? "直呎"
-                          : measure === "quantity"
-                            ? "套"
-                            : "項",
-                  });
-                }}
+                value={editing.scope ?? ""}
+                onChange={(event) => set({ scope: event.target.value })}
               >
-                <option value="area">面積（長 × 闊）</option>
-                <option value="length">長度／直呎</option>
-                <option value="quantity">件數／套數</option>
-                <option value="fixed">固定一項價</option>
+                {SERVICE_SCOPES.map((scope) => (
+                  <option key={scope}>{scope}</option>
+                ))}
               </select>
             </Field>
-            <Field label={`出街單價（HKD／${editing.unit}）`} required>
+          </div>
+          <Field label="工程詳細">
+            <textarea
+              className="service-details-input"
+              value={editing.details ?? ""}
+              onChange={(event) => set({ details: event.target.value })}
+            />
+          </Field>
+          <div className="measure-section">
+            <div className="measure-head">
+              <strong>計算方式</strong>
+              <span>*決定好計算方式後，日後並不能更改。</span>
+            </div>
+            <div className="measure-options">
+              {MEASURE_OPTIONS.map((option) => (
+                <label
+                  className={`measure-option ${isExisting ? "locked" : ""}`}
+                  key={option.value}
+                >
+                  <input
+                    type="radio"
+                    name="measure"
+                    checked={editing.measure === option.value}
+                    disabled={isExisting}
+                    onChange={() =>
+                      set({
+                        measure: option.value,
+                        unit:
+                          option.value === "area"
+                            ? "平方呎"
+                            : option.value === "length"
+                              ? "直呎"
+                              : option.value === "quantity"
+                                ? "件"
+                                : "項",
+                        minQty:
+                          option.value === "area" || option.value === "length"
+                            ? editing.minQty
+                            : 0,
+                      })
+                    }
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="service-price-grid">
+            <Field label={retailLabel} required>
               <input
                 type="number"
                 min=".01"
@@ -242,193 +310,74 @@ export function Services() {
                 onChange={(event) => set({ price: Number(event.target.value) })}
               />
             </Field>
-            <Field label="最低計費量（沒有可留空）">
-              <input
-                type="number"
-                min="0"
-                value={editing.minQty || ""}
-                onChange={(event) => set({ minQty: Number(event.target.value) })}
-              />
-            </Field>
-            <Field label="執行方式" required>
+            {(editing.measure === "area" || editing.measure === "length") && (
+              <Field label={lowLabel}>
+                <input
+                  type="number"
+                  min="0"
+                  value={editing.minQty || ""}
+                  onChange={(event) =>
+                    set({ minQty: Number(event.target.value) })
+                  }
+                />
+              </Field>
+            )}
+            <Field label="合併低銷價">
               <select
-                value={editing.execution}
-                onChange={(event) => {
-                  const execution = event.target.value as ServiceItem["execution"];
+                value={editing.minScope === "service" ? "可以" : "不可以"}
+                onChange={(event) =>
                   set({
-                    execution,
-                    costMode:
-                      execution === "contractor"
-                        ? "ratio"
-                        : execution === "self"
-                          ? "self"
-                          : "fixed",
-                  });
-                }}
+                    minScope:
+                      event.target.value === "可以" ? "service" : "line",
+                  })
+                }
               >
-                <option value="contractor">一般判頭外判</option>
-                <option value="self">公司自營安裝</option>
-                <option value="service">固定服務供應商</option>
+                <option>可以</option>
+                <option>不可以</option>
               </select>
             </Field>
           </div>
-          {editing.execution === "contractor" ? (
-            <div className="tools-note">
-              外判成本自動按該明細折後成交額的60%計算，Sales不能修改。
-            </div>
-          ) : editing.execution === "service" ? (
-            <Field label="固定服務成本（HKD）" required>
-              <input
-                type="number"
-                min="0"
-                value={editing.fixedCost ?? ""}
-                onChange={(event) =>
-                  set({
-                    fixedCost:
-                      event.target.value === ""
-                        ? undefined
-                        : Number(event.target.value),
-                  })
-                }
-              />
-            </Field>
-          ) : (
-            <div className="form-grid two">
-              <Field label="物料預算（HKD）" required>
-                <input
-                  type="number"
-                  min="0"
-                  value={editing.materialCost ?? ""}
-                  onChange={(event) =>
+          <div className="linked-services">
+            <strong>連貫工程</strong>
+            {linked.map((service) => (
+              <div className="linked-row" key={service.id}>
+                <span>
+                  <strong>{service.name}</strong>
+                  <small>{service.details}</small>
+                </span>
+                <button
+                  type="button"
+                  aria-label={`移除連貫工程${service.name}`}
+                  onClick={() =>
                     set({
-                      materialCost:
-                        event.target.value === ""
-                          ? undefined
-                          : Number(event.target.value),
+                      linkedServiceIds: (editing.linkedServiceIds ?? []).filter(
+                        (id) => id !== service.id,
+                      ),
                     })
-                  }
-                />
-              </Field>
-              <Field label="安裝人工預算（HKD）" required>
-                <input
-                  type="number"
-                  min="0"
-                  value={editing.labourCost ?? ""}
-                  onChange={(event) =>
-                    set({
-                      labourCost:
-                        event.target.value === ""
-                          ? undefined
-                          : Number(event.target.value),
-                    })
-                  }
-                />
-              </Field>
-              <Field label="成本適用範圍">
-                <select
-                  value={editing.costBasis}
-                  onChange={(event) =>
-                    set({ costBasis: event.target.value as "unit" | "line" })
                   }
                 >
-                  <option value="unit">每計量單位</option>
-                  <option value="line">這項明細一次</option>
-                </select>
-              </Field>
-            </div>
-          )}
-          <Field label="Sales施工提示">
-            <textarea
-              value={editing.notes}
-              onChange={(event) => set({ notes: event.target.value })}
-              placeholder="包含／不包含、連工包料及現場需留意內容"
-            />
-          </Field>
-          <Button variant="ghost" onClick={() => setMore(!more)}>
-            <ChevronDown size={20} />
-            其他規則
-          </Button>
-          {more && (
-            <div className="expanded-form">
-              <div className="form-grid two">
-                <Field label="工程範圍">
-                  <input
-                    value={editing.scope ?? ""}
-                    onChange={(event) => set({ scope: event.target.value })}
-                    placeholder="例如廚房／全屋"
-                  />
-                </Field>
-                <Field label="最低收費金額（HKD）">
-                  <input
-                    type="number"
-                    min="0"
-                    value={editing.minAmount || ""}
-                    onChange={(event) =>
-                      set({ minAmount: Number(event.target.value) })
-                    }
-                  />
-                </Field>
-                <Field label="低消計算範圍">
-                  <select
-                    value={editing.minScope}
-                    onChange={(event) =>
-                      set({ minScope: event.target.value as "line" | "service" })
-                    }
-                  >
-                    <option value="line">每條明細各自計算</option>
-                    <option value="service">同項工程合計</option>
-                  </select>
-                </Field>
-                <Field label="計費進位">
-                  <select
-                    value={editing.increment}
-                    onChange={(event) =>
-                      set({ increment: Number(event.target.value) })
-                    }
-                  >
-                    <option value="0">保留精確數量</option>
-                    <option value="0.5">向上半呎／半單位</option>
-                    <option value="1">向上整呎／整單位</option>
-                  </select>
-                </Field>
-                <Field label="款式／顏色（以逗號分隔）">
-                  <input
-                    value={editing.options.join("，")}
-                    onChange={(event) =>
-                      set({
-                        options: event.target.value
-                          .split(/[,，]/)
-                          .map((option) => option.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                  />
-                </Field>
+                  <X size={17} />
+                </button>
               </div>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={editing.allowPending}
-                  onChange={(event) =>
-                    set({ allowPending: event.target.checked })
-                  }
-                />
-                同價款式可待選
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={editing.published}
-                  onChange={(event) =>
-                    set({ published: event.target.checked })
-                  }
-                />
-                啟用於新報價
-              </label>
-            </div>
-          )}
+            ))}
+            <button
+              type="button"
+              className="linked-add"
+              onClick={() => setLinkPicker(true)}
+            >
+              <Plus size={19} />
+              新增連貫工程
+            </button>
+          </div>
           <div className="dialog-actions">
-            <Button onClick={() => setEditing(null)}>取消</Button>
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setLinkPicker(false);
+              }}
+            >
+              取消
+            </Button>
             <Button
               variant="primary"
               onClick={() => {
@@ -436,11 +385,88 @@ export function Services() {
                   engine.saveService(actor, editing);
                   return true;
                 }, "工程項目已保存；舊簽署版本不會反寫。");
-                if (ok) setEditing(null);
+                if (ok) {
+                  setEditing(null);
+                  setLinkPicker(false);
+                }
               }}
             >
               <Check size={20} />
               儲存工程項目
+            </Button>
+          </div>
+        </Dialog>
+      )}
+      {editing && linkPicker && (
+        <Dialog
+          title="新增連貫工程"
+          onClose={() => setLinkPicker(false)}
+        >
+          <p className="dialog-intro">
+            選擇要連貫的工程項目。只顯示分類、名稱及工程詳細。
+          </p>
+          <div className="linked-picker">
+            {SERVICE_CATEGORIES.map((category) => {
+              const rows = items.filter(
+                (service) =>
+                  service.category === category && service.id !== editing.id,
+              );
+              if (!rows.length) return null;
+              return (
+                <div className="linked-picker-group" key={category}>
+                  <h4>{category}項目</h4>
+                  {rows.map((service) => (
+                    <label className="linked-option" key={service.id}>
+                      <input
+                        type="checkbox"
+                        checked={(editing.linkedServiceIds ?? []).includes(
+                          service.id,
+                        )}
+                        onChange={(event) => {
+                          const current = editing.linkedServiceIds ?? [];
+                          set({
+                            linkedServiceIds: event.target.checked
+                              ? [...current, service.id]
+                              : current.filter((id) => id !== service.id),
+                          });
+                        }}
+                      />
+                      <span>
+                        <strong>{service.name}</strong>
+                        {service.details && <small>{service.details}</small>}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+          <div className="dialog-actions">
+            <Button variant="primary" onClick={() => setLinkPicker(false)}>
+              完成
+            </Button>
+          </div>
+        </Dialog>
+      )}
+      {deleting && (
+        <Dialog title="刪除工程項目" onClose={() => setDeleting(null)}>
+          <p>
+            確定刪除「{deleting.name}」？項目會從價目表移除；舊報價的
+            snapshot 不會被改寫。
+          </p>
+          <div className="dialog-actions">
+            <Button onClick={() => setDeleting(null)}>取消</Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                const ok = run(() => {
+                  engine.deleteService(actor, deleting.id);
+                  return true;
+                }, "工程項目已刪除。");
+                if (ok) setDeleting(null);
+              }}
+            >
+              刪除
             </Button>
           </div>
         </Dialog>

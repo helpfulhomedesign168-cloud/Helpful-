@@ -698,6 +698,7 @@ export class Engine {
         });
         migrated.services.push(...createDemoCatalogServices());
       }
+      hydrateDemoCatalogServices(migrated.services);
       ensureDemoCsActors(migrated);
       const migrateCustomer = (customer: Customer) => {
         customer.street ??= "";
@@ -2855,11 +2856,34 @@ export class Engine {
       });
     });
   }
+  deleteService(actorInput: Actor, id: string): void {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "admin") fail("只有 Super Admin 可刪除工程項目。");
+    this.mutate((state) => {
+      const service =
+        state.services.find((item) => item.id === id) ??
+        fail("找不到工程項目。");
+      if (service.archived) return;
+      service.archived = true;
+      this.audit(state, {
+        actorId: actor.id,
+        action: "service_deleted",
+        detail: `刪除工程項目 ${service.name}`,
+      });
+    });
+  }
   saveService(actorInput: Actor, item: ServiceItem): void {
     const actor = this.actor(actorInput);
     if (actor.role !== "admin") fail("只有 Super Admin 可維護工程目錄。");
     if (!serviceComplete(item))
       fail("工程目錄資料未完整或不屬目前支援的計價規則。");
+    const previous = this.state.services.find(
+      (service) => service.id === item.id,
+    );
+    if (previous && previous.measure !== item.measure)
+      fail("計算方式建立後不可更改；請刪除項目後重新建立。");
+    if (item.linkedServiceIds?.includes(item.id))
+      fail("工程項目不可連貫自己。");
     this.mutate((state) => {
       const index = state.services.findIndex(
         (service) => service.id === item.id,
@@ -3159,21 +3183,35 @@ function createDemoCatalogServices(): ServiceItem[] {
     name,
     category: "打拆",
     scope,
+    details:
+      "打鑿大約2-3寸，以見到石屎為盡；清拆後廢物另外收費",
+    linkedServiceIds: [],
     unit: "平方呎",
     price: 50,
     measure: "area",
     minQty: 100,
     minAmount: 0,
     increment: 0.5,
-    minScope: "line",
+    minScope: "service",
     execution: "contractor",
     costMode: "ratio",
     costBasis: "line",
     options: [],
     allowPending: false,
-    notes: "Demo 工程範圍，未核公司正式天書。",
+    notes: "",
     published: true,
   }));
+}
+
+function hydrateDemoCatalogServices(services: ServiceItem[]): void {
+  const details =
+    "打鑿大約2-3寸，以見到石屎為盡；清拆後廢物另外收費";
+  DEMO_CATALOG_SERVICE_IDS.forEach((id) => {
+    const service = services.find((item) => item.id === id);
+    if (!service) return;
+    service.details ??= details;
+    service.linkedServiceIds ??= [];
+  });
 }
 
 /**

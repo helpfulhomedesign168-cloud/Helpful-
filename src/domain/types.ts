@@ -64,6 +64,10 @@ export interface ServiceItem {
   category: string;
   /** 工程範圍，例如廚房／全屋；可留空。 */
   scope?: string;
+  /** 顯示於工程名稱下方的工程詳細。 */
+  details?: string;
+  /** 可選的連貫工程（引用同一個價目表的項目）。 */
+  linkedServiceIds?: string[];
   unit: string;
   price: number;
   measure: "area" | "length" | "quantity" | "fixed";

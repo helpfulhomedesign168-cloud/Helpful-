@@ -120,3 +120,13 @@
 - 新增／修改工程項目dialog欄位不得改成舊版：工程名稱、工程分類、怎樣計價、出街單價、最低計費量、執行方式、外判60%提示、Sales施工提示、其他規則（含工程範圍）。
 - 舊LocalStorage遷移會archive舊services並補六項；已有六項則不重複。不可reset。
 - 下一批user提供的分類項目會加入同一active catalog；不要重新加回舊demo服務。
+
+## 2026-10-27 工程價目第二階段：詳細、連貫工程、計算方式鎖定、刪除（不得退化）
+
+- `ServiceItem`新增`details`及`linkedServiceIds`；列表的工程名稱下面必須用細字顯示details。
+- 新增／修改form按參考圖：工程名稱、工程分類、工程範圍、工程詳細、計算方式radio、零售價／低銷價／合併低銷價、連貫工程。不要加回舊的執行方式、60%提示、Sales提示或其他規則UI。
+- 計算方式只可在新增時選；修改時radio disabled，domain `saveService`亦必須拒絕measure變更。
+- 連貫工程picker只可顯示分類tag、工程名稱及details；不可顯示價錢、低銷或範圍。每個ServiceItem可以有0至多個linkedServiceIds。
+- Sales報價加入有linkedServiceIds的項目時，必須顯示「需要加連貫工程？」；dialog只列被連貫項目，user可選加入或暫不加入；加入後以獨立QuoteLine加入。
+- 列表必須有刪除按鈕；刪除用`deleteService`設archived，不可硬刪，因舊Quote/Invoice/WorkOrder snapshot要保留。
+- 舊localStorage的六項demo catalog要補details及linkedServiceIds；不可重複加catalog。
