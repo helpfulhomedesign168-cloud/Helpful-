@@ -1311,12 +1311,16 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
     <aside className="order-rail">
       <div className="order-rail-head">
         <h2>工程單</h2>
-        <input
-          type="month"
-          aria-label="工程單月份"
-          value={month}
-          onChange={(event) => setMonth(event.target.value)}
-        />
+        <label className="month-picker">
+          <span>{formatMonthLabel(month)}</span>
+          <CalendarDays size={18} />
+          <input
+            type="month"
+            aria-label="工程單月份"
+            value={month}
+            onChange={(event) => setMonth(event.target.value)}
+          />
+        </label>
       </div>
       {manager && (
         <div className="order-rail-manager">
