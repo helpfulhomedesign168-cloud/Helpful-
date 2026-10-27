@@ -139,10 +139,6 @@ export function Shell() {
           >
             <Menu />
           </button>
-          <div className="topbar-location">
-            <span className="status-dot" />
-            同一來源・接力處理
-          </div>
           <div className="topbar-actions">
             <button
               className="notification-button"

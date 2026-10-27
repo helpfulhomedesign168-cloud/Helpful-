@@ -108,6 +108,32 @@ it("普通CS只看自己被分派的工程；主管及Admin看全部；現場圖
   expect(() => engine.getInvoice(nicole, "invoice-issued")).toThrow("權限");
   expect(engine.getInvoice(joe, "invoice-issued").number).toBe("SHMM26100001");
 
+  const order = engine.getOrder(joe, orderId);
+  const assignment = engine.assign(joe, orderId, {
+    resourceId: "resource-staff",
+    lineIds: [order.lines[0].id],
+    date: "2026-11-01",
+    time: "上午",
+    notes: "初次安排",
+  });
+  const updatedAssignment = engine.updateAssignment(joe, assignment.id, {
+    resourceId: "resource-staff",
+    date: "2026-11-02",
+    time: "下午",
+    notes: "更新安排",
+  });
+  expect(updatedAssignment.date).toBe("2026-11-02");
+  expect(updatedAssignment.time).toBe("下午");
+  expect(updatedAssignment.notes).toBe("更新安排");
+  expect(() =>
+    engine.updateAssignment(nicole, assignment.id, {
+      resourceId: "resource-staff",
+      date: "2026-11-03",
+      time: "上午",
+      notes: "",
+    }),
+  ).toThrow("權限");
+
   const photo = {
     id: "site-photo-1",
     name: "環境.jpg",

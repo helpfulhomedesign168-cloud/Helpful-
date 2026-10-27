@@ -86,3 +86,11 @@
 - 工程內容逐項安排：每次只安排一個line；已安排項目不可重複。安排後calendar必須顯示該項施工日期／時段。
 - 現場環境圖片存於 `WorkOrder.sitePhotos`，屬整張工程，換師傅仍保留，支援多張；圖片binary仍在IndexedDB，大圖只作預覽，不是正式檔案庫。
 - 以上普通CS／主管／Admin權限必須由domain `listOrders`、`getOrder`、`listAssignments`、`assign`、`updateDates`、`addSitePhotos`共同執行，不可以只在UI隱藏。
+
+## 2026-10-27 工程管理UI簡化及更改安排（不得退化）
+
+- 移除工程管理相關的無謂細字：topbar「同一來源・接力處理」、施工接力eyebrow、rail的日期／客戶／跟進狀態、地址卡的客戶電話、calendar的「工程期 …至…」及legend。
+- 工程管理頁面必須有頂部「工程管理」標題；左邊rail只保留「工程單」、月份picker、主管／Admin的同事filter，以及每行工程單號＋`INV:`；右邊detail以工程單號為標題。
+- 安排施工表單放Dialog，不要長期佔用右邊column；工程內容card應為full width，現場環境card放其下。
+- 已安排工程項目必須有「更改安排」；修改師傅／日期／時段／備註透過`updateAssignment`，需保留原Assignment及audit，不可刪除重建。
+- `updateAssignment`同樣受CS擁有權、主管／Admin全權及WorkOrder released狀態限制。

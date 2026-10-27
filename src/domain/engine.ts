@@ -2608,6 +2608,64 @@ export class Engine {
     });
     return deepCopy(output);
   }
+  updateAssignment(
+    actorInput: Actor,
+    assignmentId: string,
+    input: Omit<AssignmentInput, "lineIds">,
+  ): Assignment {
+    const actor = this.actor(actorInput);
+    if (!(isCsActor(actor) || actor.role === "admin"))
+      fail("你沒有修改工程安排的權限。");
+    let output!: Assignment;
+    this.mutate((state) => {
+      const assignment =
+        state.assignments.find((item) => item.id === assignmentId) ??
+        fail("找不到工程安排。");
+      const order =
+        state.orders.find((item) => item.id === assignment.workOrderId) ??
+        fail("找不到工程單。");
+      if (!this.orderReadable(actor, order))
+        fail("你沒有修改此工程安排的權限。");
+      if (!input.date || !input.time) fail("請填寫安排日期及時間。");
+      const resource =
+        state.resources.find((item) => item.id === input.resourceId) ??
+        fail("找不到合作資源。");
+      if (!resource.active) fail("此合作資源已停用。");
+      const selected = order.lines.filter((line) =>
+        assignment.lineIds.includes(line.id),
+      );
+      const executions = [
+        ...new Set(selected.map((line) => line.itemSnapshot.execution)),
+      ];
+      if (executions.length !== 1) fail("此安排涉及不同執行方式，未可修改。");
+      const execution = executions[0];
+      const allowed =
+        (resource.type === "contractor" && execution === "contractor") ||
+        (resource.type === "staff" && execution === "self") ||
+        (resource.type === "service" &&
+          (execution === "self" || execution === "service"));
+      if (!allowed) fail("此合作資源不可承接所選執行方式的明細。");
+      if (
+        selected.some(
+          (line) => !resource.trades.includes(line.itemSnapshot.category),
+        )
+      )
+        fail("此判頭／師傅工種不符合所選工程分類。");
+      assignment.resourceId = input.resourceId;
+      assignment.date = input.date;
+      assignment.time = input.time;
+      assignment.notes = input.notes ?? "";
+      this.audit(state, {
+        quoteId: order.quoteId,
+        workOrderId: order.id,
+        actorId: actor.id,
+        action: "assignment_updated",
+        detail: `更新施工安排：${resource.name}`,
+      });
+      output = deepCopy(assignment);
+    });
+    return output;
+  }
   addSitePhotos(
     actorInput: Actor,
     workOrderId: string,

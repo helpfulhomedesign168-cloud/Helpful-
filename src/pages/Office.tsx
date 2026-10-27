@@ -1310,23 +1310,16 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
   return (
     <aside className="order-rail">
       <div className="order-rail-head">
-        <div>
-          <span>工程單</span>
-          <strong>{month ? formatMonthLabel(month) : "全部月份"}</strong>
-        </div>
-        <small>{orders.length} 張</small>
-      </div>
-      <div className="order-rail-filters">
+        <h2>工程單</h2>
         <input
           type="month"
           aria-label="工程單月份"
           value={month}
           onChange={(event) => setMonth(event.target.value)}
         />
-        <button className="text-button" onClick={() => setMonth("")}>
-          全部
-        </button>
-        {manager && (
+      </div>
+      {manager && (
+        <div className="order-rail-manager">
           <select
             aria-label="跟進同事"
             value={csFilter}
@@ -1339,8 +1332,8 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
               </option>
             ))}
           </select>
-        )}
-      </div>
+        </div>
+      )}
       <div className="order-rail-list">
         {orders.length === 0 ? (
           <p className="section-empty">此月份沒有工程單。</p>
@@ -1350,7 +1343,6 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
             try {
               invoiceNumber = engine.getInvoice(actor, order.invoiceId).number;
             } catch {}
-            const arrived = (order.csReleasedAt ?? order.createdAt).slice(0, 10);
             return (
               <Link
                 key={order.id}
@@ -1358,11 +1350,7 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
                 className={`order-rail-row ${selectedId === order.id ? "selected" : ""}`}
               >
                 <strong>{order.number}</strong>
-                <small>Invoice {invoiceNumber || "—"}</small>
-                <span>
-                  {arrived} · {order.customer.name}
-                </span>
-                <span>{order.csOwnerId ? "已安排跟進" : "未安排跟進"}</span>
+                <small>INV:{invoiceNumber || "—"}</small>
               </Link>
             );
           })
@@ -1414,7 +1402,6 @@ function WorkOrderCalendar({
     <section className="calendar-card" aria-label="工程日曆">
       <header className="calendar-head">
         <div>
-          <span>工程期 {order.startDate} 至 {order.endDate}</span>
           <strong>{formatMonthLabel(month)}</strong>
         </div>
         <div className="calendar-nav">
@@ -1450,10 +1437,6 @@ function WorkOrderCalendar({
             </div>
           );
         })}
-      </div>
-      <div className="calendar-legend">
-        <span><i className="legend-period" />工程期</span>
-        <span><i className="legend-event" />已安排施工</span>
       </div>
     </section>
   );
@@ -1596,6 +1579,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
   const [selectedLineId, setSelectedLineId] = useState("");
+  const [editingAssignmentId, setEditingAssignmentId] = useState("");
   const [resourceId, setResource] = useState("");
   const [date, setDate] = useState(order.startDate);
   const [time, setTime] = useState("未定");
@@ -1606,6 +1590,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   const [reason, setReason] = useState("");
   useEffect(() => {
     setSelectedLineId("");
+    setEditingAssignmentId("");
     setResource("");
     setNotes("");
   }, [order.id]);
@@ -1631,32 +1616,34 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         ? execution === "self"
         : execution === "self" || execution === "service";
   });
-  const chooseLine = (lineId: string) => {
+  const openAssignment = (lineId: string, assignmentId?: string) => {
+    const assignment = assignments.find((item) => item.id === assignmentId);
     setSelectedLineId(lineId);
+    setEditingAssignmentId(assignment?.id ?? "");
+    setResource(assignment?.resourceId ?? "");
+    setDate(assignment?.date ?? order.startDate);
+    setTime(assignment?.time ?? "未定");
+    setNotes(assignment?.notes ?? "");
+  };
+  const closeAssignment = () => {
+    setSelectedLineId("");
+    setEditingAssignmentId("");
     setResource("");
-    setDate(order.startDate);
-    setTime("未定");
     setNotes("");
   };
   return (
     <>
-      <PageHead
-        eyebrow="工程管理"
-        title={order.number}
-        actions={
-          <Button onClick={() => nav("/documents/invoice/" + invoice.id)}>
-            <Printer size={20} />
-            Invoice
-          </Button>
-        }
-      />
+      <div className="workorder-head">
+        <h1>{order.number}</h1>
+        <Button onClick={() => nav("/documents/invoice/" + invoice.id)}>
+          <Printer size={20} />
+          Invoice
+        </Button>
+      </div>
       <div className="order-banner order-banner-with-dates">
         <div>
           <span>工程地址</span>
           <strong>{order.customer.address}</strong>
-          <small>
-            {order.customer.name} · {order.customer.phone}
-          </small>
         </div>
         <div className="order-period">
           <div>
@@ -1669,7 +1656,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
           </div>
           {canEdit && (
             <Button
-              variant="ghost"
+              variant="primary"
               onClick={() => {
                 setStart(order.startDate);
                 setEnd(order.endDate);
@@ -1682,141 +1669,142 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         </div>
       </div>
       <WorkOrderCalendar order={order} assignments={assignments} />
-      <div className="order-workbench">
-        <Section title="工程內容">
-          <div className="engineering-lines">
-            {order.lines.map((line) => {
-              const assignment = assigned.get(line.id);
-              const resource = resources.find(
-                (item) => item.id === assignment?.resourceId,
-              );
-              return (
-                <article
-                  className={`engineering-line ${selectedLineId === line.id ? "selected" : ""}`}
-                  key={line.id}
-                >
-                  <div className="engineering-line-head">
-                    <div>
-                      <strong>{line.itemSnapshot.name}</strong>
-                      <small>
-                        {line.position}
-                        {line.style ? ` · ${line.style}` : ""}
-                      </small>
-                    </div>
-                    {assignment ? (
-                      <Badge strong>已安排</Badge>
-                    ) : canEdit ? (
-                      <Button onClick={() => chooseLine(line.id)}>
-                        安排 <ArrowRight size={16} />
-                      </Button>
-                    ) : null}
+      <Section title="工程內容" className="engineering-content-card">
+        <div className="engineering-lines">
+          {order.lines.map((line) => {
+            const assignment = assigned.get(line.id);
+            const resource = resources.find(
+              (item) => item.id === assignment?.resourceId,
+            );
+            return (
+              <article className="engineering-line" key={line.id}>
+                <div className="engineering-line-head">
+                  <div>
+                    <strong>{line.itemSnapshot.name}</strong>
+                    <small>
+                      {line.position}
+                      {line.style ? ` · ${line.style}` : ""}
+                    </small>
                   </div>
-                  <p className="engineering-line-scope">
-                    {line.itemSnapshot.measure === "area"
-                      ? `${line.length} × ${line.width} ${line.dimensionUnit}`
-                      : line.itemSnapshot.measure === "length"
-                        ? `${line.length} ${line.dimensionUnit}`
-                        : line.itemSnapshot.measure === "fixed"
-                          ? "一式"
-                          : `${line.quantity} ${line.itemSnapshot.unit}`}
-                    {line.notes ? ` · ${line.notes}` : ""}
-                  </p>
-                  {assignment && (
-                    <div className="engineering-line-assignment">
-                      <Hammer size={17} />
-                      {resource?.name ?? "已分派"} · {assignment.date} ·{" "}
-                      {assignment.time}
-                      {assignment.notes ? ` · ${assignment.notes}` : ""}
-                    </div>
+                  {assignment && <Badge strong>已安排</Badge>}
+                  {canEdit && (
+                    <Button
+                      variant={assignment ? "ghost" : "secondary"}
+                      onClick={() =>
+                        openAssignment(line.id, assignment?.id)
+                      }
+                    >
+                      {assignment ? "更改安排" : "安排"}
+                    </Button>
                   )}
-                </article>
-              );
-            })}
-          </div>
-        </Section>
-        <div>
-          <Section title="安排施工">
-            {!selectedLine ? (
-              <p className="section-empty">
-                在左邊工程項目按「安排」，選擇師傅及施工日期。
-              </p>
-            ) : (
-              <>
-                <p className="selected-work-line">
-                  正在安排：<strong>{selectedLine.itemSnapshot.name}</strong>
+                </div>
+                <p className="engineering-line-scope">
+                  {line.itemSnapshot.measure === "area"
+                    ? `${line.length} × ${line.width} ${line.dimensionUnit}`
+                    : line.itemSnapshot.measure === "length"
+                      ? `${line.length} ${line.dimensionUnit}`
+                      : line.itemSnapshot.measure === "fixed"
+                        ? "一式"
+                        : `${line.quantity} ${line.itemSnapshot.unit}`}
+                  {line.notes ? ` · ${line.notes}` : ""}
                 </p>
-                <div className="form-grid two">
-                  <Field label="執行師傅" required>
-                    <select
-                      value={resourceId}
-                      onChange={(event) => setResource(event.target.value)}
-                    >
-                      <option value="">選擇判頭或公司師傅</option>
-                      {compatible.map((resource) => (
-                        <option key={resource.id} value={resource.id}>
-                          {resource.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="預計施工日期" required>
-                    <input
-                      type="date"
-                      value={date}
-                      onChange={(event) => setDate(event.target.value)}
-                    />
-                  </Field>
-                </div>
-                <div className="form-grid two">
-                  <Field label="時段">
-                    <select
-                      value={time}
-                      onChange={(event) => setTime(event.target.value)}
-                    >
-                      {["未定", "上午", "下午", "全天"].map((slot) => (
-                        <option key={slot}>{slot}</option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="安排備註">
-                    <input
-                      value={notes}
-                      onChange={(event) => setNotes(event.target.value)}
-                      placeholder="檔期或現場注意事項"
-                    />
-                  </Field>
-                </div>
-                <Button
-                  variant="primary"
-                  disabled={!resourceId || !date}
-                  onClick={() => {
-                    const result = run(
-                      () =>
-                        engine.assign(actor, order.id, {
+                {assignment && (
+                  <div className="engineering-line-assignment">
+                    <Hammer size={17} />
+                    {resource?.name ?? "已分派"} · {assignment.date} ·{" "}
+                    {assignment.time}
+                    {assignment.notes ? ` · ${assignment.notes}` : ""}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </Section>
+      <SitePhotos order={order} canEdit={canEdit} />
+      {selectedLine && (
+        <Dialog
+          title={editingAssignmentId ? "更改安排" : "安排施工"}
+          onClose={closeAssignment}
+        >
+          <p className="dialog-intro">
+            正在安排：{selectedLine.itemSnapshot.name} · {selectedLine.position}
+          </p>
+          <div className="form-grid two">
+            <Field label="執行師傅" required>
+              <select
+                value={resourceId}
+                onChange={(event) => setResource(event.target.value)}
+              >
+                <option value="">選擇判頭或公司師傅</option>
+                {compatible.map((resource) => (
+                  <option key={resource.id} value={resource.id}>
+                    {resource.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="預計施工日期" required>
+              <input
+                type="date"
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="form-grid two">
+            <Field label="時段">
+              <select
+                value={time}
+                onChange={(event) => setTime(event.target.value)}
+              >
+                {["未定", "上午", "下午", "全天"].map((slot) => (
+                  <option key={slot}>{slot}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="安排備註">
+              <input
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="檔期或現場注意事項"
+              />
+            </Field>
+          </div>
+          <div className="dialog-actions">
+            <Button onClick={closeAssignment}>取消</Button>
+            <Button
+              variant="primary"
+              disabled={!resourceId || !date}
+              onClick={() => {
+                const result = run(
+                  () =>
+                    editingAssignmentId
+                      ? engine.updateAssignment(actor, editingAssignmentId, {
+                          resourceId,
+                          date,
+                          time,
+                          notes,
+                        })
+                      : engine.assign(actor, order.id, {
                           resourceId,
                           lineIds: [selectedLine.id],
                           date,
                           time,
                           notes,
                         }),
-                      "施工安排已保存；日曆已更新。",
-                    );
-                    if (result) {
-                      setSelectedLineId("");
-                      setResource("");
-                      setNotes("");
-                    }
-                  }}
-                >
-                  <Check size={20} />
-                  儲存安排
-                </Button>
-              </>
-            )}
-          </Section>
-          <SitePhotos order={order} canEdit={canEdit} />
-        </div>
-      </div>
+                  editingAssignmentId
+                    ? "施工安排已更新；日曆已更新。"
+                    : "施工安排已保存；日曆已更新。",
+                );
+                if (result) closeAssignment();
+              }}
+            >
+              儲存安排
+            </Button>
+          </div>
+        </Dialog>
+      )}
       {dates && (
         <Dialog title="修改預計工程日期" onClose={() => setDates(false)}>
           <div className="form-grid two">
@@ -1864,18 +1852,20 @@ function OrderPanel({ order }: { order: WorkOrder }) {
 
 export function Orders() {
   return (
-    <div className="orders-workspace">
-      <WorkOrderRail />
-      <div className="workorder-main">
-        <PageHead eyebrow="施工接力" title="工程管理" />
-        <div className="list-panel">
-          <Empty
-            title="請選擇工程單"
-            description="從左邊列表選擇工程，查看工程期、施工安排及現場圖片。"
-          />
+    <>
+      <PageHead title="工程管理" />
+      <div className="orders-workspace">
+        <WorkOrderRail />
+        <div className="workorder-main">
+          <div className="list-panel">
+            <Empty
+              title="請選擇工程單"
+              description="從左邊列表選擇工程。"
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -1889,25 +1879,30 @@ export function OrderDetail() {
   } catch {}
   if (!order)
     return (
+      <>
+        <PageHead title="工程管理" />
+        <div className="orders-workspace">
+          <WorkOrderRail selectedId={id} />
+          <div className="workorder-main">
+            <div className="list-panel">
+              <Empty
+                title="沒有這個工程的查看權限"
+                action={<Button onClick={() => nav("/orders")}>返回工程</Button>}
+              />
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  return (
+    <>
+      <PageHead title="工程管理" />
       <div className="orders-workspace">
         <WorkOrderRail selectedId={id} />
         <div className="workorder-main">
-          <PageHead eyebrow="工程管理" title="工程單" />
-          <div className="list-panel">
-            <Empty
-              title="沒有這個工程的查看權限"
-              action={<Button onClick={() => nav("/orders")}>返回工程</Button>}
-            />
-          </div>
+          <OrderPanel order={order} />
         </div>
       </div>
-    );
-  return (
-    <div className="orders-workspace">
-      <WorkOrderRail selectedId={id} />
-      <div className="workorder-main">
-        <OrderPanel order={order} />
-      </div>
-    </div>
+    </>
   );
 }

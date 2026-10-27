@@ -34,7 +34,6 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await expect(
     page.getByRole("heading", { name: "D2600001", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("工程期 2026-11-01 至 2027-02-01", { exact: true })).toBeVisible();
   await expect(page.getByRole("region", { name: "工程日曆" })).toBeVisible();
 
   const photoInput = page.locator(".site-photo-upload input[type=file]");
@@ -69,9 +68,18 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
     "2026-11-05",
   );
 
+  await page.getByRole("button", { name: "更改安排", exact: true }).click();
+  await expect(page.getByLabel("時段", { exact: false })).toHaveValue("上午");
+  await page.getByLabel("時段", { exact: false }).selectOption("下午");
+  await page.getByRole("button", { name: "儲存安排", exact: true }).click();
+  await expect(page.locator(".engineering-line-assignment")).toContainText(
+    "下午",
+  );
+  await expect(page.locator(".calendar-cell.has-events")).toContainText("下午");
+
   await page.reload();
   await expect(page.locator(".site-photo-thumb")).toHaveCount(2);
-  await expect(page.locator(".calendar-cell.has-events")).toContainText("上午");
+  await expect(page.locator(".calendar-cell.has-events")).toContainText("下午");
 
   await switchRole(page, "Joe");
   await page.goto("/orders");
