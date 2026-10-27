@@ -20,20 +20,45 @@ import {
   money,
 } from "../domain/types";
 import { CustomerForm } from "./Quotes";
+const SERVICE_CATEGORIES = [
+  "打拆",
+  "水喉",
+  "電力",
+  "泥水",
+  "油漆",
+  "傢俬",
+  "裝門",
+  "鋁窗",
+  "防滑",
+  "其他",
+];
+
 export function Services() {
   const { actor, engine, run } = useApp();
   const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("打拆");
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [more, setMore] = useState(false);
   const admin = actor.role === "admin";
-  const items = engine.listServices(actor);
-  function newItem() {
+  const allItems = engine.listServices(actor);
+  const items = allItems.filter((item) => item.published && !item.archived);
+  const visible = items.filter((item) => {
+    if (activeCategory !== "全部" && item.category !== activeCategory)
+      return false;
+    return `${item.name}${item.code}${item.category}${item.scope ?? ""}`.includes(
+      search,
+    );
+  });
+  function newItem(category?: string) {
     setMore(false);
     setEditing({
       id: crypto.randomUUID(),
-      code: `S-${String(items.length + 1).padStart(3, "0")}`,
+      code: `S-${String(allItems.length + 1).padStart(3, "0")}`,
       name: "",
-      category: "泥水",
+      category:
+        category ??
+        (activeCategory === "全部" ? "打拆" : activeCategory),
+      scope: "",
       unit: "平方呎",
       price: 0,
       measure: "area",
@@ -51,86 +76,101 @@ export function Services() {
     });
   }
   const set = (data: Partial<ServiceItem>) =>
-    setEditing((e) => (e ? { ...e, ...data } : null));
+    setEditing((current) => (current ? { ...current, ...data } : null));
   return (
     <>
-      <PageHead
-        eyebrow={admin ? "主檔管理" : "只讀參考"}
-        title="工程價目"
-        actions={
-          admin && (
-            <Button variant="primary" onClick={newItem}>
-              <Plus size={20} />
-              新增工程項目
-            </Button>
-          )
-        }
-      />
-      <div className="list-panel">
-        <div className="list-toolbar">
+      <PageHead title="工程價目" />
+      <div className="list-panel service-catalog">
+        <div className="service-tabs" role="tablist" aria-label="工程分類">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeCategory === "全部"}
+            className={activeCategory === "全部" ? "active" : ""}
+            onClick={() => setActiveCategory("全部")}
+          >
+            全部
+          </button>
+          {SERVICE_CATEGORIES.map((category) => (
+            <button
+              type="button"
+              role="tab"
+              key={category}
+              aria-selected={activeCategory === category}
+              className={activeCategory === category ? "active" : ""}
+              onClick={() => setActiveCategory(category)}
+            >
+              {category}項目
+            </button>
+          ))}
+          {admin && (
+            <button
+              type="button"
+              className="service-tab-add"
+              aria-label="新增工程項目"
+              onClick={() => newItem()}
+            >
+              <Plus size={19} />
+            </button>
+          )}
+        </div>
+        <div className="service-toolbar">
           <Search
             value={search}
             onChange={setSearch}
             placeholder="搜尋工程名稱或代號"
           />
-          <Badge>示例價目 · 待公司核准</Badge>
+          {admin && (
+            <Button variant="primary" onClick={() => newItem()}>
+              <Plus size={20} />
+              新增項目
+            </Button>
+          )}
         </div>
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>工程名稱</th>
-                <th>分類</th>
-                <th className="numeric">出街單價</th>
-                <th>低消</th>
-                <th>執行方式</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {items
-                .filter((s) =>
-                  `${s.name}${s.code}${s.category}`.includes(search),
-                )
-                .map((s) => (
-                  <tr key={s.id}>
+        {visible.length === 0 ? (
+          <Empty
+            title="此分類未有工程項目"
+            description="可按右上角「新增項目」加入，或切換其他分類。"
+          />
+        ) : (
+          <div className="table-scroll">
+            <table className="service-table">
+              <thead>
+                <tr>
+                  <th>工程名稱</th>
+                  <th>價格</th>
+                  <th>低銷</th>
+                  <th>工程範圍</th>
+                  <th>編輯</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((service) => (
+                  <tr key={service.id}>
                     <td>
-                      <strong>{s.name}</strong>
-                      <small>
-                        {s.code}
-                        {!s.published ? " · 已停用" : ""}
-                      </small>
-                    </td>
-                    <td>{s.category}</td>
-                    <td className="numeric">
-                      {money(s.price)}
-                      <small>／{s.unit}</small>
+                      <strong>{service.name}</strong>
                     </td>
                     <td>
-                      {s.minQty > 0
-                        ? `${s.minQty} ${s.unit}`
-                        : s.minAmount > 0
-                          ? money(s.minAmount)
+                      <strong>{money(service.price)}</strong>
+                      <small>每{service.unit}</small>
+                    </td>
+                    <td>
+                      {service.minQty > 0
+                        ? `${service.minQty}${service.unit}`
+                        : service.minAmount > 0
+                          ? money(service.minAmount)
                           : "無"}
                     </td>
-                    <td>
-                      <Badge>
-                        {s.execution === "contractor"
-                          ? "外判"
-                          : s.execution === "self"
-                            ? "公司自營"
-                            : "服務供應商"}
-                      </Badge>
-                    </td>
+                    <td>{service.scope || "—"}</td>
                     <td>
                       {admin && (
                         <Button
                           variant="ghost"
                           onClick={() => {
-                            setEditing(structuredClone(s));
+                            setEditing(structuredClone(service));
                             setMore(false);
                           }}
-                          aria-label={`修改${s.name}`}
+                          aria-label={`修改${service.name}`}
                         >
                           <PenLine size={21} />
                         </Button>
@@ -138,15 +178,16 @@ export function Services() {
                     </td>
                   </tr>
                 ))}
-            </tbody>
-          </table>
-        </div>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
       {editing && (
         <Dialog
           wide
           title={
-            items.some((s) => s.id === editing.id)
+            allItems.some((service) => service.id === editing.id)
               ? "修改工程項目"
               : "新增工程項目"
           }
@@ -156,35 +197,24 @@ export function Services() {
             <Field label="工程名稱" required>
               <input
                 value={editing.name}
-                onChange={(e) => set({ name: e.target.value })}
+                onChange={(event) => set({ name: event.target.value })}
               />
             </Field>
             <Field label="工程分類" required>
-              <input
+              <select
                 value={editing.category}
-                onChange={(e) => set({ category: e.target.value })}
-                list="service-categories"
-              />
-              <datalist id="service-categories">
-                {[
-                  "打拆",
-                  "泥水",
-                  "水電",
-                  "油漆",
-                  "木工",
-                  "門窗",
-                  "防水",
-                  "搬運",
-                ].map((c) => (
-                  <option key={c}>{c}</option>
+                onChange={(event) => set({ category: event.target.value })}
+              >
+                {SERVICE_CATEGORIES.map((category) => (
+                  <option key={category}>{category}</option>
                 ))}
-              </datalist>
+              </select>
             </Field>
             <Field label="怎樣計價" required>
               <select
                 value={editing.measure}
-                onChange={(e) => {
-                  const measure = e.target.value as ServiceItem["measure"];
+                onChange={(event) => {
+                  const measure = event.target.value as ServiceItem["measure"];
                   set({
                     measure,
                     unit:
@@ -209,7 +239,7 @@ export function Services() {
                 type="number"
                 min=".01"
                 value={editing.price || ""}
-                onChange={(e) => set({ price: Number(e.target.value) })}
+                onChange={(event) => set({ price: Number(event.target.value) })}
               />
             </Field>
             <Field label="最低計費量（沒有可留空）">
@@ -217,14 +247,14 @@ export function Services() {
                 type="number"
                 min="0"
                 value={editing.minQty || ""}
-                onChange={(e) => set({ minQty: Number(e.target.value) })}
+                onChange={(event) => set({ minQty: Number(event.target.value) })}
               />
             </Field>
             <Field label="執行方式" required>
               <select
                 value={editing.execution}
-                onChange={(e) => {
-                  const execution = e.target.value as ServiceItem["execution"];
+                onChange={(event) => {
+                  const execution = event.target.value as ServiceItem["execution"];
                   set({
                     execution,
                     costMode:
@@ -252,12 +282,12 @@ export function Services() {
                 type="number"
                 min="0"
                 value={editing.fixedCost ?? ""}
-                onChange={(e) =>
+                onChange={(event) =>
                   set({
                     fixedCost:
-                      e.target.value === ""
+                      event.target.value === ""
                         ? undefined
-                        : Number(e.target.value),
+                        : Number(event.target.value),
                   })
                 }
               />
@@ -269,12 +299,12 @@ export function Services() {
                   type="number"
                   min="0"
                   value={editing.materialCost ?? ""}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     set({
                       materialCost:
-                        e.target.value === ""
+                        event.target.value === ""
                           ? undefined
-                          : Number(e.target.value),
+                          : Number(event.target.value),
                     })
                   }
                 />
@@ -284,12 +314,12 @@ export function Services() {
                   type="number"
                   min="0"
                   value={editing.labourCost ?? ""}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     set({
                       labourCost:
-                        e.target.value === ""
+                        event.target.value === ""
                           ? undefined
-                          : Number(e.target.value),
+                          : Number(event.target.value),
                     })
                   }
                 />
@@ -297,8 +327,8 @@ export function Services() {
               <Field label="成本適用範圍">
                 <select
                   value={editing.costBasis}
-                  onChange={(e) =>
-                    set({ costBasis: e.target.value as "unit" | "line" })
+                  onChange={(event) =>
+                    set({ costBasis: event.target.value as "unit" | "line" })
                   }
                 >
                   <option value="unit">每計量單位</option>
@@ -310,7 +340,7 @@ export function Services() {
           <Field label="Sales施工提示">
             <textarea
               value={editing.notes}
-              onChange={(e) => set({ notes: e.target.value })}
+              onChange={(event) => set({ notes: event.target.value })}
               placeholder="包含／不包含、連工包料及現場需留意內容"
             />
           </Field>
@@ -321,19 +351,28 @@ export function Services() {
           {more && (
             <div className="expanded-form">
               <div className="form-grid two">
+                <Field label="工程範圍">
+                  <input
+                    value={editing.scope ?? ""}
+                    onChange={(event) => set({ scope: event.target.value })}
+                    placeholder="例如廚房／全屋"
+                  />
+                </Field>
                 <Field label="最低收費金額（HKD）">
                   <input
                     type="number"
                     min="0"
                     value={editing.minAmount || ""}
-                    onChange={(e) => set({ minAmount: Number(e.target.value) })}
+                    onChange={(event) =>
+                      set({ minAmount: Number(event.target.value) })
+                    }
                   />
                 </Field>
                 <Field label="低消計算範圍">
                   <select
                     value={editing.minScope}
-                    onChange={(e) =>
-                      set({ minScope: e.target.value as "line" | "service" })
+                    onChange={(event) =>
+                      set({ minScope: event.target.value as "line" | "service" })
                     }
                   >
                     <option value="line">每條明細各自計算</option>
@@ -343,7 +382,9 @@ export function Services() {
                 <Field label="計費進位">
                   <select
                     value={editing.increment}
-                    onChange={(e) => set({ increment: Number(e.target.value) })}
+                    onChange={(event) =>
+                      set({ increment: Number(event.target.value) })
+                    }
                   >
                     <option value="0">保留精確數量</option>
                     <option value="0.5">向上半呎／半單位</option>
@@ -353,11 +394,11 @@ export function Services() {
                 <Field label="款式／顏色（以逗號分隔）">
                   <input
                     value={editing.options.join("，")}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       set({
-                        options: e.target.value
+                        options: event.target.value
                           .split(/[,，]/)
-                          .map((o) => o.trim())
+                          .map((option) => option.trim())
                           .filter(Boolean),
                       })
                     }
@@ -368,7 +409,9 @@ export function Services() {
                 <input
                   type="checkbox"
                   checked={editing.allowPending}
-                  onChange={(e) => set({ allowPending: e.target.checked })}
+                  onChange={(event) =>
+                    set({ allowPending: event.target.checked })
+                  }
                 />
                 同價款式可待選
               </label>
@@ -376,7 +419,9 @@ export function Services() {
                 <input
                   type="checkbox"
                   checked={editing.published}
-                  onChange={(e) => set({ published: e.target.checked })}
+                  onChange={(event) =>
+                    set({ published: event.target.checked })
+                  }
                 />
                 啟用於新報價
               </label>

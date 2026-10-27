@@ -111,3 +111,12 @@
 - 額外工程安排同樣需要師傅、開工、完工、時段、備註；必須有domain權限（普通CS只可自己工程，主管／Admin全部）及audit。
 - 額外工程及Assignment的日期range都會出現在calendar；Assignment有endDate時calendar覆蓋整個range。
 - 舊LocalStorage遷移必須補`extraWorks`及`assignment.endDate`，不可reset。
+
+## 2026-10-27 工程價目 catalog UI（不得退化）
+
+- 工程價目頁只顯示 `published && !archived` 的active catalog；舊demo服務設為`archived`，不可硬刪，因舊Quote/Invoice/WorkOrder仍用itemSnapshot。
+- 分類tag固定：全部、打拆項目、水喉項目、電力項目、泥水項目、油漆項目、傢俬項目、裝門項目、鋁窗項目、防滑項目、其他項目，最後有新增項目plus。
+- 六項打拆demo item為：廚房／廁所／全屋／廳房／露台／花園牆身·地台清拆打鑿；價格HK$50／平方呎，低銷100平方呎，工程範圍對應。
+- 新增／修改工程項目dialog欄位不得改成舊版：工程名稱、工程分類、怎樣計價、出街單價、最低計費量、執行方式、外判60%提示、Sales施工提示、其他規則（含工程範圍）。
+- 舊LocalStorage遷移會archive舊services並補六項；已有六項則不重複。不可reset。
+- 下一批user提供的分類項目會加入同一active catalog；不要重新加回舊demo服務。
