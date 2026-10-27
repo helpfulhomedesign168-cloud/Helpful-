@@ -146,3 +146,19 @@ it("普通CS只看自己被分派的工程；主管及Admin看全部；現場圖
   expect(engine.getOrder(admin, orderId).sitePhotos?.[0].name).toBe("環境.jpg");
   expect(() => engine.addSitePhotos(nicole, orderId, [photo])).toThrow("權限");
 });
+
+it("Demo工程CS有30張10項以上工程；阿花分派D260099後變31張", () => {
+  const engine = new Engine(undefined, createSeedState());
+  const lead = actor(engine, "cs-lead-ahfa");
+  const cs = actor(engine, "cs");
+  const demoOrders = engine.listOrders(cs);
+  expect(demoOrders).toHaveLength(30);
+  demoOrders.forEach((order) =>
+    expect(order.lines.length).toBeGreaterThanOrEqual(10),
+  );
+  expect(demoOrders.some((order) => order.number === "D260099")).toBe(false);
+  const pending = engine.listOrders(lead).find((order) => order.number === "D260099");
+  expect(pending?.lines).toHaveLength(20);
+  engine.assignCsOwner(lead, pending!.id, "cs");
+  expect(engine.listOrders(cs)).toHaveLength(31);
+});

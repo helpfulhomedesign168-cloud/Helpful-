@@ -1686,17 +1686,19 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                       {line.style ? ` · ${line.style}` : ""}
                     </small>
                   </div>
-                  {assignment && <Badge strong>已安排</Badge>}
-                  {canEdit && (
-                    <Button
-                      variant={assignment ? "ghost" : "secondary"}
-                      onClick={() =>
-                        openAssignment(line.id, assignment?.id)
-                      }
-                    >
-                      {assignment ? "更改安排" : "安排"}
-                    </Button>
-                  )}
+                  <div className="engineering-line-actions">
+                    {assignment && <Badge strong>已安排</Badge>}
+                    {canEdit && (
+                      <Button
+                        variant={assignment ? "ghost" : "secondary"}
+                        onClick={() =>
+                          openAssignment(line.id, assignment?.id)
+                        }
+                      >
+                        {assignment ? "更改安排" : "安排"}
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <p className="engineering-line-scope">
                   {line.itemSnapshot.measure === "area"

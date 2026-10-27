@@ -94,3 +94,11 @@
 - 安排施工表單放Dialog，不要長期佔用右邊column；工程內容card應為full width，現場環境card放其下。
 - 已安排工程項目必須有「更改安排」；修改師傅／日期／時段／備註透過`updateAssignment`，需保留原Assignment及audit，不可刪除重建。
 - `updateAssignment`同樣受CS擁有權、主管／Admin全權及WorkOrder released狀態限制。
+
+## 2026-10-27 Topbar、badge及demo dataset（不得退化）
+
+- 移除topbar tagline時不可再令notification／用戶靠左；`.topbar-actions`必須維持右邊（margin-left:auto）。
+- 工程內容的「已安排」badge及「更改安排」必須組成一組靠右，不可把badge放在flex中間。
+- Demo dataset是刻意加入：工程CS（actor id `cs`）有30張已分派工程，每張12項；阿花有一張未分派`D260099`，20項。阿花分派給工程CS後，工程CS會變31張。
+- Demo work order必須有獨立quote／invoice／lines，不可共用同一quote或invoice；否則`listHandoffs`會因quote dedupe而少咗D260099。
+- 舊LocalStorage如未有D260099，`readStorage`會補入demo；已有則不重複。不要用reset去解決，否則會清走用戶資料。

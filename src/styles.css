@@ -274,6 +274,7 @@ strong {
   display: flex;
   align-items: center;
   gap: 26px;
+  margin-left: auto;
 }
 .actor-button {
   border: 0;
@@ -2918,4 +2919,11 @@ textarea {
   .order-rail {
     width: 100%;
   }
+}
+
+.engineering-line-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
 }
