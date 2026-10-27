@@ -688,6 +688,16 @@ export class Engine {
       migrated.assignments.forEach((assignment) => {
         assignment.endDate ??= assignment.date;
       });
+      if (
+        !migrated.services.some((service) =>
+          DEMO_CATALOG_SERVICE_IDS.includes(service.id),
+        )
+      ) {
+        migrated.services.forEach((service) => {
+          service.archived = true;
+        });
+        migrated.services.push(...createDemoCatalogServices());
+      }
       ensureDemoCsActors(migrated);
       const migrateCustomer = (customer: Customer) => {
         customer.street ??= "";
@@ -1254,7 +1264,11 @@ export class Engine {
   listServices(actorInput: Actor): ServiceItem[] {
     const actor = this.actor(actorInput);
     return this.state.services
-      .filter((item) => item.published || actor.role === "admin")
+      .filter(
+        (item) =>
+          actor.role === "admin" ||
+          (item.published && !item.archived),
+      )
       .map((item) =>
         actor.role === "admin" ? deepCopy(item) : removeCost(item),
       );
@@ -3122,6 +3136,46 @@ function appendDemoEngineeringOrders(seed: AppState): void {
   makeDemo(30, "D260099", 20);
 }
 
+const DEMO_CATALOG_SERVICE_IDS = [
+  "svc-demo-demolition-kitchen",
+  "svc-demo-demolition-toilet",
+  "svc-demo-demolition-whole",
+  "svc-demo-demolition-living",
+  "svc-demo-demolition-balcony",
+  "svc-demo-demolition-garden",
+];
+function createDemoCatalogServices(): ServiceItem[] {
+  const rows: Array<[string, string, string, string]> = [
+    ["廚房牆身/地台 清拆打鑿", "廚房", "DEM-KIT", "svc-demo-demolition-kitchen"],
+    ["廁所牆身/地台 清拆打鑿", "廁所", "DEM-TOI", "svc-demo-demolition-toilet"],
+    ["全屋牆身/地台 清拆打鑿", "全屋", "DEM-WHO", "svc-demo-demolition-whole"],
+    ["廳房牆身/地台 清拆打鑿", "廳房", "DEM-LIV", "svc-demo-demolition-living"],
+    ["露台牆身/地台 清拆打鑿", "露台", "DEM-BAL", "svc-demo-demolition-balcony"],
+    ["花園牆身/地台 清拆打鑿", "花園", "DEM-GAR", "svc-demo-demolition-garden"],
+  ];
+  return rows.map(([name, scope, code, id]) => ({
+    id,
+    code,
+    name,
+    category: "打拆",
+    scope,
+    unit: "平方呎",
+    price: 50,
+    measure: "area",
+    minQty: 100,
+    minAmount: 0,
+    increment: 0.5,
+    minScope: "line",
+    execution: "contractor",
+    costMode: "ratio",
+    costBasis: "line",
+    options: [],
+    allowPending: false,
+    notes: "Demo 工程範圍，未核公司正式天書。",
+    published: true,
+  }));
+}
+
 /**
  * Demo-only data. Prices are representative examples, not a verified company price book.
  * It intentionally contains ordinary draft, submitted, ready-to-invoice, and issued sources.
@@ -3443,6 +3497,10 @@ export function createSeedState(): AppState {
       archived: false,
     };
   };
+  services.forEach((service) => {
+    service.archived = true;
+  });
+  services.push(...createDemoCatalogServices());
   const draft1: Quote = {
     id: "quote-draft-1",
     number: "QMM26100001",

@@ -62,6 +62,8 @@ export interface ServiceItem {
   code: string;
   name: string;
   category: string;
+  /** 工程範圍，例如廚房／全屋；可留空。 */
+  scope?: string;
   unit: string;
   price: number;
   measure: "area" | "length" | "quantity" | "fixed";
@@ -79,6 +81,8 @@ export interface ServiceItem {
   allowPending: boolean;
   notes: string;
   published: boolean;
+  /** 舊 demo 目錄保留作歷史引用，但不再顯示於新價目／新報價。 */
+  archived?: boolean;
 }
 export interface QuoteLine {
   id: string;

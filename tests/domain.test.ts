@@ -405,7 +405,7 @@ describe("Engine 安全投影、負面資格與計價", () => {
     const admin = actor(engine, "admin");
     const service = engine
       .listServices(sales)
-      .find((item) => item.id === "svc-pd-door")!;
+      .find((item) => item.id === "svc-demo-demolition-kitchen")!;
     expect(Object.hasOwn(service, "materialCost")).toBe(false);
     expect(Object.hasOwn(service, "costMode")).toBe(false);
     const q = engine.getQuote(sales, "quote-pending-office");

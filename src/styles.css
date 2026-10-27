@@ -3049,3 +3049,109 @@ textarea {
   min-height: 36px;
   padding: 5px 10px;
 }
+
+/* Engineering price catalog */
+.service-catalog {
+  padding: 0;
+  overflow: hidden;
+}
+.service-tabs {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 14px 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.service-tabs button {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 8px 13px;
+  border: 0;
+  border-radius: 7px 7px 0 0;
+  background: transparent;
+  color: #696f64;
+  font-size: 16px;
+  white-space: nowrap;
+}
+.service-tabs button:hover {
+  color: #222;
+  background: #f3f4ef;
+}
+.service-tabs button.active {
+  background: #e8eae3;
+  color: #222;
+  font-weight: 600;
+}
+.service-tabs .service-tab-add {
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+  font-size: 22px;
+  border-radius: 7px;
+  color: #222;
+}
+.service-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.service-toolbar .search {
+  max-width: 430px;
+}
+.service-toolbar .btn {
+  gap: 7px;
+}
+.service-table td:first-child strong,
+.service-table td:nth-child(2) strong {
+  display: block;
+  font-size: 16px;
+}
+.service-table td:first-child small,
+.service-table td:nth-child(2) small {
+  display: block;
+  margin-top: 2px;
+  color: #767c70;
+  font-size: 13px;
+}
+.service-table th:nth-child(1) {
+  width: 38%;
+}
+.service-table th:nth-child(2) {
+  width: 15%;
+}
+.service-table th:nth-child(3) {
+  width: 15%;
+}
+.service-table th:nth-child(4) {
+  width: 22%;
+}
+.service-table th:nth-child(5) {
+  width: 10%;
+  text-align: right;
+}
+.service-table td:nth-child(5) {
+  text-align: right;
+}
+.service-table td {
+  height: 68px;
+}
+@media (max-width: 760px) {
+  .service-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .service-toolbar .search {
+    max-width: none;
+  }
+  .service-toolbar .btn {
+    align-self: flex-start;
+  }
+  .service-tabs {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
