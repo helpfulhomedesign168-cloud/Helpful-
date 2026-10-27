@@ -11,6 +11,9 @@ import {
   type CustomerProfile,
   type DraftInput,
   type Eligibility,
+  type ExtraWork,
+  type ExtraWorkInput,
+  type ExtraWorkKind,
   type HandoffRow,
   type Invoice,
   type Notification,
@@ -681,6 +684,10 @@ export class Engine {
       migrated.receiptSequences ??= {};
       migrated.workOrderSequences ??= {};
       migrated.customers ??= [];
+      migrated.extraWorks ??= [];
+      migrated.assignments.forEach((assignment) => {
+        assignment.endDate ??= assignment.date;
+      });
       ensureDemoCsActors(migrated);
       const migrateCustomer = (customer: Customer) => {
         customer.street ??= "";
@@ -1698,6 +1705,19 @@ export class Engine {
       ),
     );
   }
+  listExtraWorks(actorInput: Actor, workOrderId: string): ExtraWork[] {
+    const actor = this.actor(actorInput);
+    const order =
+      this.state.orders.find((item) => item.id === workOrderId) ??
+      fail("找不到工程單。");
+    if (!this.orderReadable(actor, order))
+      fail("你沒有查看此額外工程的權限。");
+    return deepCopy(
+      this.state.extraWorks.filter(
+        (extra) => extra.workOrderId === workOrderId,
+      ),
+    );
+  }
   listAudit(actorInput: Actor, quoteId: string): AuditEvent[] {
     const actor = this.actor(actorInput);
     const quote = this.findQuote(quoteId);
@@ -2554,6 +2574,8 @@ export class Engine {
       if (!resource.active) fail("此合作資源已停用。");
       if (!input.lineIds.length) fail("請選擇至少一項待安排明細。");
       if (!input.date || !input.time) fail("請填寫安排日期及時間。");
+      const endDate = input.endDate ?? input.date;
+      if (endDate < input.date) fail("完工日期不可早於開工日期。");
       const selected = order.lines.filter((line) =>
         input.lineIds.includes(line.id),
       );
@@ -2589,6 +2611,7 @@ export class Engine {
         resourceId: resource.id,
         lineIds: [...input.lineIds],
         date: input.date,
+        endDate,
         time: input.time,
         notes: input.notes ?? "",
         actorId: actor.id,
@@ -2629,6 +2652,8 @@ export class Engine {
       if (!this.orderReadable(actor, order))
         fail("你沒有修改此工程安排的權限。");
       if (!input.date || !input.time) fail("請填寫安排日期及時間。");
+      const endDate = input.endDate ?? input.date;
+      if (endDate < input.date) fail("完工日期不可早於開工日期。");
       const resource =
         state.resources.find((item) => item.id === input.resourceId) ??
         fail("找不到合作資源。");
@@ -2655,6 +2680,7 @@ export class Engine {
         fail("此判頭／師傅工種不符合所選工程分類。");
       assignment.resourceId = input.resourceId;
       assignment.date = input.date;
+      assignment.endDate = endDate;
       assignment.time = input.time;
       assignment.notes = input.notes ?? "";
       this.audit(state, {
@@ -2711,6 +2737,65 @@ export class Engine {
       output = deepCopy(order);
     });
     return sanitiseOrder(output, actor.role === "admin");
+  }
+  scheduleExtraWork(
+    actorInput: Actor,
+    workOrderId: string,
+    input: ExtraWorkInput,
+  ): ExtraWork {
+    const actor = this.actor(actorInput);
+    if (!(isCsActor(actor) || actor.role === "admin"))
+      fail("你沒有安排額外工程的權限。");
+    let output!: ExtraWork;
+    this.mutate((state) => {
+      const order =
+        state.orders.find((item) => item.id === workOrderId) ??
+        fail("找不到工程單。");
+      if (!order.csReleasedAt) fail("此工程尚未發到CS。");
+      if (!this.orderReadable(actor, order))
+        fail("你沒有安排此額外工程的權限。");
+      const kinds: ExtraWorkKind[] = ["measure", "delivery", "transport"];
+      if (!kinds.includes(input.kind)) fail("請選擇有效的額外工程。");
+      const resource =
+        state.resources.find((item) => item.id === input.resourceId) ??
+        fail("找不到合作資源。");
+      if (!resource.active) fail("此合作資源已停用。");
+      if (!input.startDate || !input.endDate || !input.time)
+        fail("請填寫額外工程的開工、完工日期及時間。");
+      if (input.endDate < input.startDate)
+        fail("完工日期不可早於開工日期。");
+      const existing = state.extraWorks.find(
+        (item) => item.workOrderId === order.id && item.kind === input.kind,
+      );
+      const record: ExtraWork = existing ?? {
+        id: uid("extra-work"),
+        workOrderId: order.id,
+        kind: input.kind,
+        resourceId: resource.id,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        time: input.time,
+        notes: input.notes ?? "",
+        actorId: actor.id,
+        createdAt: NOW,
+      };
+      record.resourceId = resource.id;
+      record.startDate = input.startDate;
+      record.endDate = input.endDate;
+      record.time = input.time;
+      record.notes = input.notes ?? "";
+      record.updatedAt = NOW;
+      if (!existing) state.extraWorks.push(record);
+      this.audit(state, {
+        quoteId: order.quoteId,
+        workOrderId: order.id,
+        actorId: actor.id,
+        action: "extra_work_scheduled",
+        detail: `安排${input.kind === "measure" ? "度尺" : input.kind === "delivery" ? "送貨" : "搬運"}：${input.startDate} 至 ${input.endDate}`,
+      });
+      output = deepCopy(record);
+    });
+    return output;
   }
   archiveQuote(
     actorInput: Actor,
@@ -3605,6 +3690,7 @@ export function createSeedState(): AppState {
     receipts: [],
     orders: [order],
     assignments: [],
+    extraWorks: [],
     resources,
     audits: [
       {

@@ -24,3 +24,4 @@
 - [x] 工程管理工作台：CS主管及Super Admin看全部已釋放工程並可按CS同事篩選；普通CS只可看自己csOwnerId的工程。工程管理改為左邊工程單列表、月份filter、右邊detail；工程期calendar、逐項工程內容安排、施工安排後calendar事件、WorkOrder共用多張現場環境圖片及大圖預覽。
 - [x] 工程管理UI簡化：移除「同一來源・接力處理」、施工接力eyebrow、rail日期／客戶／跟進狀態、地址客戶電話及「工程期」細字；按設計重排工程管理／工程單／detail／calendar／工程內容。安排表單改為dialog，已安排項目新增「更改安排」，可用updateAssignment修改師傅、日期、時段及備註。
 - [x] 修正移除topbar tagline後notification及用戶被推左的layout regression（topbar actions margin-left:auto）；「已安排」badge改與「更改安排」一起靠右。新增demo dataset：工程CS有30張已分派工程（每張12項），阿花有一張未分派D260099（20項）可安排給工程CS；安排後工程CS變31張。舊LocalStorage會一次性補入demo資料，不重置原有資料。
+- [x] 工程內容改成緊湊表格式；安排施工加開工日期及完工日期（Assignment.endDate）；新增「額外工程」度尺／送貨／搬運按鈕及獨立extraWorks安排，不屬於報價／Invoice項目；額外工程及Assignment日期會顯示在日曆。舊LocalStorage會補extraWorks及assignment.endDate，不重置。

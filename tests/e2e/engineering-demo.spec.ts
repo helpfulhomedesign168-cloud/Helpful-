@@ -33,6 +33,6 @@ test("工程CS有30張demo工程；阿花分派D260099後有31張及20項工程"
   await expect(
     page.getByRole("heading", { name: "D260099", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".engineering-line")).toHaveCount(20);
+  await expect(page.locator(".engineering-table tbody tr")).toHaveCount(20);
   expect(errors).toEqual([]);
 });

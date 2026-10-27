@@ -228,13 +228,16 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
     .getByLabel("執行師傅", { exact: false })
     .selectOption("resource-contractor");
   await page.getByRole("button", { name: "儲存安排", exact: true }).click();
-  await expect(page.locator(".engineering-line-assignment")).toContainText(
-    "Demo 判頭",
-  );
+  const lineRow = page
+    .locator(".engineering-table tbody tr")
+    .filter({ hasText: "UI貫穿測試工程" });
+  await expect(lineRow).toContainText("Demo 判頭");
   await page.reload();
-  await expect(page.locator(".engineering-line-assignment")).toContainText(
-    "Demo 判頭",
-  );
+  await expect(
+    page
+      .locator(".engineering-table tbody tr")
+      .filter({ hasText: "UI貫穿測試工程" }),
+  ).toContainText("Demo 判頭");
   const stored = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("homeflow-state-v1")!),
   );

@@ -116,15 +116,47 @@ it("普通CS只看自己被分派的工程；主管及Admin看全部；現場圖
     time: "上午",
     notes: "初次安排",
   });
+  expect(assignment.endDate).toBe("2026-11-01");
   const updatedAssignment = engine.updateAssignment(joe, assignment.id, {
     resourceId: "resource-staff",
     date: "2026-11-02",
+    endDate: "2026-11-04",
     time: "下午",
     notes: "更新安排",
   });
   expect(updatedAssignment.date).toBe("2026-11-02");
+  expect(updatedAssignment.endDate).toBe("2026-11-04");
   expect(updatedAssignment.time).toBe("下午");
   expect(updatedAssignment.notes).toBe("更新安排");
+  const extra = engine.scheduleExtraWork(joe, orderId, {
+    kind: "measure",
+    resourceId: "resource-staff",
+    startDate: "2026-11-08",
+    endDate: "2026-11-09",
+    time: "下午",
+    notes: "度尺安排",
+  });
+  expect(extra.kind).toBe("measure");
+  expect(engine.listExtraWorks(joe, orderId)).toHaveLength(1);
+  engine.scheduleExtraWork(joe, orderId, {
+    kind: "measure",
+    resourceId: "resource-staff",
+    startDate: "2026-11-10",
+    endDate: "2026-11-10",
+    time: "上午",
+    notes: "更改度尺",
+  });
+  expect(engine.listExtraWorks(joe, orderId)).toHaveLength(1);
+  expect(() =>
+    engine.scheduleExtraWork(nicole, orderId, {
+      kind: "delivery",
+      resourceId: "resource-staff",
+      startDate: "2026-11-08",
+      endDate: "2026-11-08",
+      time: "上午",
+      notes: "",
+    }),
+  ).toThrow("權限");
   expect(() =>
     engine.updateAssignment(nicole, assignment.id, {
       resourceId: "resource-staff",

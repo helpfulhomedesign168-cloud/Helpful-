@@ -102,3 +102,12 @@
 - Demo dataset是刻意加入：工程CS（actor id `cs`）有30張已分派工程，每張12項；阿花有一張未分派`D260099`，20項。阿花分派給工程CS後，工程CS會變31張。
 - Demo work order必須有獨立quote／invoice／lines，不可共用同一quote或invoice；否則`listHandoffs`會因quote dedupe而少咗D260099。
 - 舊LocalStorage如未有D260099，`readStorage`會補入demo；已有則不重複。不要用reset去解決，否則會清走用戶資料。
+
+## 2026-10-27 工程內容表格、開工／完工日期及額外工程（不得退化）
+
+- 工程內容必須用緊湊表格式，不再每個項目一張高card。欄位：工程項目、執行師傅、開工時間、完工時間、備註、操作。
+- 安排施工欄位為「開工日期」及「完工日期」，不是單一「預計施工日期」。Assignment有`date`及`endDate`；舊Assignment沒有endDate時以date補上。
+- 「額外工程」度尺／送貨／搬運不是報價或Invoice line，不可加入quote.lines或invoice.lines；獨立存於`AppState.extraWorks`，每個WorkOrder每種kind最多一筆，可upsert。
+- 額外工程安排同樣需要師傅、開工、完工、時段、備註；必須有domain權限（普通CS只可自己工程，主管／Admin全部）及audit。
+- 額外工程及Assignment的日期range都會出現在calendar；Assignment有endDate時calendar覆蓋整個range。
+- 舊LocalStorage遷移必須補`extraWorks`及`assignment.endDate`，不可reset。
