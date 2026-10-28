@@ -334,6 +334,8 @@ export interface AppState {
   customers: CustomerProfile[];
   services: ServiceItem[];
   serviceCategories: string[];
+  /** Demo catalog/order refresh version; used once for migration. */
+  demoEngineeringVersion?: number;
   quotes: Quote[];
   payments: Payment[];
   invoices: Invoice[];

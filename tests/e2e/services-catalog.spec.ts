@@ -18,9 +18,10 @@ test("工程價目只顯示新catalog六項，分類tag及新增項目可運作"
   await expect(page.getByText("防水工程", { exact: true })).toHaveCount(0);
 
   await page.getByRole("tab", { name: "水喉項目", exact: true }).click();
-  await expect(page.getByText("此分類未有工程項目", { exact: true })).toBeVisible();
-  await page.getByRole("tab", { name: "全部", exact: true }).click();
   await expect(page.locator(".service-table tbody tr")).toHaveCount(6);
+  await expect(page.getByText("更換所有來水喉管 (明喉)", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "全部", exact: true }).click();
+  await expect(page.locator(".service-table tbody tr")).toHaveCount(30);
 
   await page.getByRole("button", { name: "新增工程項目", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "新增工程項目" });
@@ -34,7 +35,9 @@ test("工程價目只顯示新catalog六項，分類tag及新增項目可運作"
   await dialog.getByLabel(/零售價/, { exact: false }).fill("800");
   await dialog.getByRole("button", { name: "新增連貫工程", exact: true }).click();
   const linkDialog = page.getByRole("dialog", { name: "新增連貫工程" });
-  await linkDialog.getByLabel(/廚房牆身/).check();
+  await linkDialog
+    .getByRole("checkbox", { name: /^廚房牆身\/地台 清拆打鑿/ })
+    .check();
   await linkDialog.getByRole("button", { name: "完成", exact: true }).click();
   await dialog.getByRole("button", { name: "儲存工程項目", exact: true }).click();
   await expect(dialog).toBeHidden();

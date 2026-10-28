@@ -20,7 +20,9 @@ test("有連貫工程的項目在Sales報價會詢問是否加入", async ({ pag
   await form.getByLabel(/零售價/, { exact: false }).fill("900");
   await form.getByRole("button", { name: "新增連貫工程", exact: true }).click();
   const linkDialog = page.getByRole("dialog", { name: "新增連貫工程" });
-  await linkDialog.getByLabel(/廚房牆身/).check();
+  await linkDialog
+    .getByRole("checkbox", { name: /^廚房牆身\/地台 清拆打鑿/ })
+    .check();
   await linkDialog.getByRole("button", { name: "完成", exact: true }).click();
   await form.getByRole("button", { name: "儲存工程項目", exact: true }).click();
 
