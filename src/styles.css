@@ -3483,3 +3483,37 @@ textarea {
   font-size: 17px;
   letter-spacing: 0.02em;
 }
+
+/* Calendar weeks with multi-day event bars */
+.calendar-grid {
+  display: block;
+}
+.calendar-week {
+  border-bottom: 1px solid #eceee7;
+}
+.calendar-week:last-child {
+  border-bottom: 0;
+}
+.calendar-week-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.calendar-week-events {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: 23px;
+  gap: 3px;
+  padding: 0 6px 6px;
+}
+.calendar-event-bar {
+  grid-column: span 1;
+  overflow: hidden;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #dfe7d4;
+  color: #34402b;
+  font-size: 11px;
+  line-height: 17px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

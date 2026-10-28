@@ -66,7 +66,7 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await page.getByRole("button", { name: "儲存安排", exact: true }).click();
   await expect(
     page
-      .locator(".calendar-cell.has-events")
+      .locator(".calendar-event-bar")
       .filter({ hasText: "上午" }),
   ).toHaveCount(1);
   const itemRow = page
@@ -81,7 +81,7 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await page.getByRole("button", { name: "儲存安排", exact: true }).click();
   await expect(
     page
-      .locator(".calendar-cell.has-events")
+      .locator(".calendar-event-bar")
       .filter({ hasText: "下午" })
       .first(),
   ).toBeVisible();
@@ -103,7 +103,7 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   ).toContainText("2026-11-08");
   await expect(
     page
-      .locator(".calendar-cell.has-events")
+      .locator(".calendar-event-bar")
       .filter({ hasText: "度尺" })
       .first(),
   ).toBeVisible();
@@ -112,7 +112,7 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await expect(page.locator(".site-photo-thumb")).toHaveCount(2);
   await expect(
     page
-      .locator(".calendar-cell.has-events")
+      .locator(".calendar-event-bar")
       .filter({ hasText: "下午" })
       .first(),
   ).toBeVisible();
