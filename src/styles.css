@@ -1183,7 +1183,7 @@ textarea {
 .service-option:hover {
   background: #f5f8ef;
 }
-.service-option > span:nth-child(2) {
+.service-option-main {
   flex: 1;
 }
 .service-option small {

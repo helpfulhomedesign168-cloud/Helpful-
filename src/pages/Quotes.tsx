@@ -711,7 +711,6 @@ export function QuoteEditor() {
           )}
         </div>
         <aside className="quote-summary">
-          <span className="eyebrow">即時計價</span>
           <h2>報價摘要</h2>
           <div className="summary-row">
             <span>工程小計</span>
@@ -787,10 +786,6 @@ export function QuoteEditor() {
             <span>成交金額</span>
             <strong>{money(pricing.total)}</strong>
           </div>
-          <div className="summary-row">
-            <span>收款計劃</span>
-            <strong>開單員分類後確認</strong>
-          </div>
           <Button
             className="full-width"
             variant="primary"
@@ -798,9 +793,6 @@ export function QuoteEditor() {
           >
             前往預覽及成交 <ArrowRight size={20} />
           </Button>
-          <p className="summary-note">
-            只會先保存並前往成交流程，尚未提交Office。需要稍後再填可用上方「儲存草稿」。
-          </p>
         </aside>
       </div>
       {linkedPrompt && linkedSource && (
@@ -863,8 +855,7 @@ export function QuoteEditor() {
                   className="service-option"
                   onClick={() => add(s)}
                 >
-                  <span className="service-code">{s.code}</span>
-                  <span>
+                  <span className="service-option-main">
                     <strong>{s.name}</strong>
                     <small>
                       {s.category} · {s.details || s.notes}
@@ -874,7 +865,6 @@ export function QuoteEditor() {
                     {money(s.price)}
                     <small>／{s.unit}</small>
                   </span>
-                  <Plus size={22} />
                 </button>
               ))}
           </div>
