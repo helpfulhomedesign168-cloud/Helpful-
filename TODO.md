@@ -33,3 +33,4 @@
 - [x] Sales UI簡化：新增工程picker移除工程code及右邊＋；quote stepper只保留報價／客戶已簽／交Office三步；報價摘要移除「即時計價」、「收款計劃」及底部「僅先保存」細字。
 - [x] 全系統記錄列表pagination：分享用`usePagination`每頁12項，套用提交報價／報價／Invoice／收款核對／工程單／工程管理rail／客戶／工程價目／業績；列表按最新時間desc（提交日期、updatedAt、createdAt、releasedAt等）。提交報價：移除頁首頁尾細字、報價號下細字、證明文件column；新增日期column；付款核對＋操作合併為最右「狀態」，待核對為黑色核對收款，已核對可開單顯示已核對並開單；付款證明移入核對popup。
 - [x] CS工程單UI：invoice顯示短式「INV SHM...」並移除Q號；新增月份／Sales／跟進同事filter（未安排可選）；多日Assignment或額外工程在calendar以跨日event bar顯示（例如2–5號會由2號格橫跨至5號格），不逐日重複；跨月會分段；工程管理detail底部新增全寬「工程完成」button（暫無流程連接）。
+- [x] 工程師傅模組：12個demo師傅（工程判頭／師傅）、全部／工程判頭／師傅tabs、新增／修改／刪除；性質、名稱、電話、主項工程、詳細、收費方式（項目6成／日薪／固定價）及金額；收費方式建立後鎖定；CS主管／Admin可編輯，普通CS只讀；resource同時可供工程Assignment使用。

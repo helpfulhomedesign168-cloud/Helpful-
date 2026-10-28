@@ -1803,11 +1803,16 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   const compatible = resources.filter((resource) => {
     if (!selectedLine) return false;
     const execution = selectedLine.itemSnapshot.execution;
-    return resource.type === "contractor"
-      ? execution === "contractor"
-      : resource.type === "staff"
-        ? execution === "self"
-        : execution === "self" || execution === "service";
+    const typeMatches =
+      resource.type === "contractor"
+        ? execution === "contractor"
+        : resource.type === "staff"
+          ? execution === "self"
+          : execution === "self" || execution === "service";
+    return (
+      typeMatches &&
+      resource.trades.includes(selectedLine.itemSnapshot.category)
+    );
   });
   const openAssignment = (lineId: string, assignmentId?: string) => {
     const assignment = assignments.find((item) => item.id === assignmentId);

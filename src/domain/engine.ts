@@ -28,6 +28,8 @@ import {
   type QuoteLine,
   type QuoteVersion,
   type Resource,
+  type ResourceKind,
+  type ResourceFeeMode,
   type ServiceItem,
   type WorkOrder,
   type LineAmount,
@@ -697,6 +699,10 @@ export class Engine {
         refreshDemoEngineeringOrders(migrated);
         migrated.demoEngineeringVersion = 2;
       }
+      createMasterResources().forEach((resource) => {
+        if (!migrated.resources.some((item) => item.id === resource.id))
+          migrated.resources.push(resource);
+      });
       ensureDemoCsActors(migrated);
       const migrateCustomer = (customer: Customer) => {
         customer.street ??= "";
@@ -1312,6 +1318,77 @@ export class Engine {
       .map((item) =>
         actor.role === "admin" ? deepCopy(item) : removeCost(item),
       );
+  }
+  saveContractor(actorInput: Actor, resource: Resource): Resource {
+    const actor = this.actor(actorInput);
+    if (!(actor.role === "cs_supervisor" || actor.role === "admin"))
+      fail("只有CS主管或Super Admin可維護工程師傅。");
+    if (
+      !resource.id ||
+      !resource.name?.trim() ||
+      !resource.phone?.trim() ||
+      !resource.kind ||
+      !resource.mainWork
+    )
+      fail("請填寫師傅稱呼、聯絡電話、性質及主項工程。");
+    if (!["project60", "daily", "fixed"].includes(resource.feeMode ?? ""))
+      fail("請選擇有效的收費方式。");
+    if (
+      resource.feeMode !== "project60" &&
+      (!Number.isFinite(resource.feeAmount) || (resource.feeAmount ?? 0) < 0)
+    )
+      fail("請填寫有效的收費金額。");
+    let output!: Resource;
+    this.mutate((state) => {
+      const existing = state.resources.find((item) => item.id === resource.id);
+      if (
+        existing?.feeMode &&
+        existing.feeMode !== resource.feeMode
+      )
+        fail("收費方式建立後不可更改；請刪除後重新建立。");
+      const next: Resource = {
+        ...resource,
+        name: resource.name.trim(),
+        phone: resource.phone.trim(),
+        mainWork: resource.mainWork!.trim(),
+        specialty: resource.specialty?.trim() || resource.mainWork!.trim(),
+        scope: resource.scope?.trim() || resource.mainWork!.trim(),
+        trades: [...resource.trades],
+        type: resource.kind === "foreman" ? "contractor" : "staff",
+        active: true,
+        feeAmount:
+          resource.feeMode === "project60"
+            ? 0
+            : resource.feeAmount ?? 0,
+        createdAt: existing?.createdAt ?? resource.createdAt ?? NOW,
+      };
+      const index = state.resources.findIndex((item) => item.id === resource.id);
+      if (index >= 0) state.resources[index] = deepCopy(next);
+      else state.resources.push(deepCopy(next));
+      output = deepCopy(next);
+      this.audit(state, {
+        actorId: actor.id,
+        action: "contractor_saved",
+        detail: `儲存工程師傅 ${next.name}`,
+      });
+    });
+    return output;
+  }
+  deleteContractor(actorInput: Actor, id: string): void {
+    const actor = this.actor(actorInput);
+    if (!(actor.role === "cs_supervisor" || actor.role === "admin"))
+      fail("只有CS主管或Super Admin可刪除工程師傅。");
+    this.mutate((state) => {
+      const resource =
+        state.resources.find((item) => item.id === id) ??
+        fail("找不到工程師傅。");
+      resource.active = false;
+      this.audit(state, {
+        actorId: actor.id,
+        action: "contractor_deleted",
+        detail: `刪除工程師傅 ${resource.name}`,
+      });
+    });
   }
   listResources(actorInput: Actor): Resource[] {
     const actor = this.actor(actorInput);
@@ -3440,6 +3517,49 @@ function hydrateDemoCatalogServices(services: ServiceItem[]): void {
   });
 }
 
+function createMasterResources(): Resource[] {
+  const rows: Array<{
+    id: string;
+    name: string;
+    phone: string;
+    kind: ResourceKind;
+    specialty: string;
+    mainWork: string;
+    scope: string;
+    feeMode: ResourceFeeMode;
+    trades: string[];
+  }> = [
+    { id: "resource-master-danny", name: "黃日強 (Danny)", phone: "6686 6833", kind: "foreman", specialty: "工程判頭", mainWork: "判頭", scope: "打拆, 水喉, 電力, 泥水, 油漆", feeMode: "project60", trades: ["打拆", "水喉", "電力", "泥水", "油漆"] },
+    { id: "resource-master-kam", name: "金城", phone: "6210 2220", kind: "foreman", specialty: "工程判頭", mainWork: "判頭", scope: "打拆, 水喉, 電力, 泥水, 油漆", feeMode: "project60", trades: ["打拆", "水喉", "電力", "泥水", "油漆"] },
+    { id: "resource-master-lam", name: "林仔", phone: "9625 6036", kind: "worker", specialty: "油漆師傅", mainWork: "油漆", scope: "油漆", feeMode: "daily", trades: ["油漆"] },
+    { id: "resource-master-kan", name: "阿勤", phone: "6300 6183", kind: "worker", specialty: "傢俬師傅", mainWork: "傢俬安裝", scope: "傢俬安裝", feeMode: "fixed", trades: ["傢俬"] },
+    { id: "resource-master-ban", name: "阿斌", phone: "6111 5090", kind: "worker", specialty: "雜工師傅", mainWork: "雜工", scope: "執頭執尾", feeMode: "daily", trades: ["其他"] },
+    { id: "resource-master-lai", name: "黎生", phone: "6708 0009", kind: "foreman", specialty: "打拆判頭", mainWork: "打拆", scope: "打拆, 清泥頭", feeMode: "project60", trades: ["打拆"] },
+    { id: "resource-master-lau", name: "劉水姐", phone: "6335 0388", kind: "foreman", specialty: "打拆判頭", mainWork: "打拆", scope: "打拆, 清泥頭", feeMode: "project60", trades: ["打拆"] },
+    { id: "resource-master-kwan", name: "阿軍", phone: "5487 9218", kind: "worker", specialty: "水電師傅", mainWork: "水電", scope: "水喉, 電工", feeMode: "daily", trades: ["水喉", "電力"] },
+    { id: "resource-master-wah", name: "華哥", phone: "9019 6153", kind: "worker", specialty: "潔具師傅", mainWork: "潔具", scope: "座廁, 浴屏, 潔具, PD門", feeMode: "daily", trades: ["其他", "裝門"] },
+    { id: "resource-master-shek", name: "石仔", phone: "4415 7386", kind: "worker", specialty: "潔具師傅", mainWork: "潔具", scope: "座廁, 潔具, PD門", feeMode: "daily", trades: ["其他", "裝門"] },
+    { id: "resource-master-sam", name: "森仔", phone: "6633 2030", kind: "worker", specialty: "搭棚師傅", mainWork: "搭棚", scope: "搭棚", feeMode: "fixed", trades: ["其他"] },
+    { id: "resource-master-ken", name: "Ken", phone: "9377 7063", kind: "worker", specialty: "煤氣師傅", mainWork: "煤氣", scope: "煤氣喉, 煤氣爐", feeMode: "fixed", trades: ["其他"] },
+  ];
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    phone: row.phone,
+    type: row.kind === "foreman" ? "contractor" : "staff",
+    trades: row.trades,
+    active: true,
+    kind: row.kind,
+    specialty: row.specialty,
+    mainWork: row.mainWork,
+    scope: row.scope,
+    details: "",
+    feeMode: row.feeMode,
+    feeAmount: 0,
+    createdAt: NOW,
+  }));
+}
+
 /**
  * Demo-only data. Prices are representative examples, not a verified company price book.
  * It intentionally contains ordinary draft, submitted, ready-to-invoice, and issued sources.
@@ -3681,6 +3801,7 @@ export function createSeedState(): AppState {
     },
   ];
   const resources: Resource[] = [
+    ...createMasterResources(),
     {
       id: "resource-contractor",
       name: "Demo 判頭",

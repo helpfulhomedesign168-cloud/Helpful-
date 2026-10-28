@@ -261,6 +261,8 @@ export interface Receipt {
   issuedAt: string;
   actorId: string;
 }
+export type ResourceKind = "foreman" | "worker";
+export type ResourceFeeMode = "project60" | "daily" | "fixed";
 export interface Resource {
   id: string;
   name: string;
@@ -268,6 +270,18 @@ export interface Resource {
   type: "contractor" | "staff" | "service";
   trades: string[];
   active: boolean;
+  /** 工程判頭／師傅；現有 assignment-only demo resources 可沒有。 */
+  kind?: ResourceKind;
+  /** 顯示用職稱，例如「工程判頭」「油漆師傅」。 */
+  specialty?: string;
+  /** 新增表單的主項工程。 */
+  mainWork?: string;
+  /** 列表顯示的工程範圍。 */
+  scope?: string;
+  details?: string;
+  feeMode?: ResourceFeeMode;
+  feeAmount?: number;
+  createdAt?: string;
 }
 export interface Assignment {
   id: string;

@@ -14,11 +14,8 @@ import {
   OrderDetail,
 } from "./pages/Office";
 import { Customers, Services, Performance } from "./pages/Resources";
-import {
-  Contractors,
-  ProductStyles,
-  Suppliers,
-} from "./pages/Placeholders";
+import { Contractors } from "./pages/Contractors";
+import { ProductStyles, Suppliers } from "./pages/Placeholders";
 import { Documents } from "./pages/Documents";
 import { Button, Empty } from "./components/ui";
 import "./styles.css";
