@@ -1562,6 +1562,7 @@ export class Engine {
           csOwnerName: csOwner?.name,
           district: version.customer.district,
           address: version.customer.address,
+          salesId: quote.ownerId,
           salesName: owner?.name ?? "未知",
           stage: status.stage,
           label: status.label,

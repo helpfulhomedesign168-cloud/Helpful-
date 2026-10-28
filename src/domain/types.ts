@@ -443,6 +443,7 @@ export interface HandoffRow {
   csOwnerName?: string;
   district: string;
   address: string;
+  salesId: string;
   salesName: string;
   stage: Stage;
   label: string;

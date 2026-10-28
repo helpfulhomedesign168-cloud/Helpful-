@@ -1147,9 +1147,20 @@ export function InvoiceDetail() {
 export function Handoff() {
   const { actor, engine, run } = useApp();
   const [search, setSearch] = useState("");
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [salesFilter, setSalesFilter] = useState("all");
+  const [csFilter, setCsFilter] = useState("all");
   const [assigning, setAssigning] = useState<HandoffRow | null>(null);
   const [selectedCs, setSelectedCs] = useState("");
   const rows = engine.listHandoffs(actor);
+  const salesActors = engine
+    .listActors()
+    .filter((candidate) =>
+      ["sales", "supervisor", "head"].includes(candidate.role),
+    );
+  const months = [...new Set(rows.map((row) => row.releasedAt.slice(0, 7)))]
+    .sort()
+    .reverse();
   let csTeam = [] as ReturnType<typeof engine.listCsTeam>;
   try {
     csTeam = engine.listCsTeam(actor);
@@ -1158,22 +1169,72 @@ export function Handoff() {
     actor.role === "cs_supervisor" || actor.role === "admin";
   const shown = [...rows]
     .sort((a, b) => b.releasedAt.localeCompare(a.releasedAt))
-    .filter((row) =>
-      `${row.workOrderNumber} ${row.quoteNumber} ${row.invoiceNumber} ${row.customerName} ${row.phone} ${row.salesName} ${row.csOwnerName ?? ""}`.includes(
+    .filter((row) => {
+      if (monthFilter !== "all" && !row.releasedAt.startsWith(monthFilter))
+        return false;
+      if (salesFilter !== "all" && row.salesId !== salesFilter) return false;
+      if (
+        csFilter !== "all" &&
+        (row.csOwnerId ?? "unassigned") !== csFilter
+      )
+        return false;
+      return `${row.workOrderNumber} ${row.quoteNumber} ${row.invoiceNumber} ${row.customerName} ${row.phone} ${row.salesName} ${row.csOwnerName ?? ""}`.includes(
         search,
-      ),
-    );
-  const pager = usePagination(shown, search);
+      );
+    });
+  const pager = usePagination(
+    shown,
+    `${search}|${monthFilter}|${salesFilter}|${csFilter}`,
+  );
   return (
     <>
       <PageHead eyebrow="CS工程部" title="工程單" />
       <div className="list-panel">
-        <div className="list-toolbar">
+        <div className="submission-toolbar">
           <Search
             value={search}
             onChange={setSearch}
             placeholder="搜尋工程單、客戶、電話或Sales"
           />
+          <div className="submission-filters">
+            <select
+              aria-label="工程月份"
+              value={monthFilter}
+              onChange={(event) => setMonthFilter(event.target.value)}
+            >
+              <option value="all">全部月份</option>
+              {months.map((month) => (
+                <option key={month} value={month}>
+                  {formatMonthLabel(month)}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Sales"
+              value={salesFilter}
+              onChange={(event) => setSalesFilter(event.target.value)}
+            >
+              <option value="all">全部 Sales</option>
+              {salesActors.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.name}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="跟進同事"
+              value={csFilter}
+              onChange={(event) => setCsFilter(event.target.value)}
+            >
+              <option value="all">全部跟進同事</option>
+              <option value="unassigned">未安排</option>
+              {csTeam.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         {shown.length === 0 ? (
           <Empty
@@ -1201,9 +1262,7 @@ export function Handoff() {
                       <strong className="source-link">
                         {row.workOrderNumber}
                       </strong>
-                      <small>
-                        Invoice {row.invoiceNumber} · Q {row.quoteNumber}
-                      </small>
+                      <small>INV {row.invoiceNumber}</small>
                     </td>
                     <td>
                       <strong>{row.customerName}</strong>
@@ -1420,40 +1479,80 @@ function WorkOrderCalendar({
   const monthIndex = Number(month.slice(5, 7)) - 1;
   const days = new Date(year, monthIndex + 1, 0).getDate();
   const offset = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
-  const events = new Map<string, string[]>();
-  const addEvent = (startDate: string, endDate: string, label: string) => {
-    dateRange(startDate, endDate).forEach((date) => {
-      const list = events.get(date) ?? [];
-      list.push(label);
-      events.set(date, list);
-    });
-  };
+  const monthStart = `${month}-01`;
+  const monthEnd = `${month}-${String(days).padStart(2, "0")}`;
+  const events: Array<{ id: string; start: string; end: string; label: string }> =
+    [];
   assignments.forEach((assignment) => {
     const line = order.lines.find((item) =>
       assignment.lineIds.includes(item.id),
     );
-    addEvent(
-      assignment.date,
-      assignment.endDate ?? assignment.date,
-      `${line?.itemSnapshot.name ?? "施工"} · ${assignment.time}`,
-    );
+    events.push({
+      id: assignment.id,
+      start: assignment.date,
+      end: assignment.endDate ?? assignment.date,
+      label: `${line?.itemSnapshot.name ?? "施工"} · ${assignment.time}`,
+    });
   });
   extraWorks.forEach((extra) => {
-    addEvent(
-      extra.startDate,
-      extra.endDate,
-      `${EXTRA_WORK_LABELS[extra.kind]} · ${extra.time}`,
-    );
+    events.push({
+      id: extra.id,
+      start: extra.startDate,
+      end: extra.endDate,
+      label: `${EXTRA_WORK_LABELS[extra.kind]} · ${extra.time}`,
+    });
   });
   const cells: Array<string | null> = [
     ...Array.from({ length: offset }, () => null),
     ...Array.from(
       { length: days },
-      (_, index) =>
-        `${month}-${String(index + 1).padStart(2, "0")}`,
+      (_, index) => `${month}-${String(index + 1).padStart(2, "0")}`,
     ),
   ];
   while (cells.length % 7 !== 0) cells.push(null);
+  const weeks: Array<Array<string | null>> = [];
+  for (let index = 0; index < cells.length; index += 7)
+    weeks.push(cells.slice(index, index + 7));
+  const calendarStart = new Date(Date.UTC(year, monthIndex, 1 - offset));
+  const dateKey = (date: Date) => date.toISOString().slice(0, 10);
+  const addDays = (date: Date, amount: number) => {
+    const next = new Date(date);
+    next.setUTCDate(next.getUTCDate() + amount);
+    return next;
+  };
+  const diffDays = (start: string, end: string) =>
+    Math.round(
+      (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) /
+        86400000,
+    );
+  const weekBars = weeks.map((_, weekIndex) => {
+    const weekStart = dateKey(addDays(calendarStart, weekIndex * 7));
+    const weekEnd = dateKey(addDays(calendarStart, weekIndex * 7 + 6));
+    const bars = events
+      .map((event) => {
+        const start = [event.start, weekStart, monthStart].sort().at(-1)!;
+        const end = [event.end, weekEnd, monthEnd].sort()[0]!;
+        if (start > end) return null;
+        const startCol = diffDays(weekStart, start);
+        const endCol = diffDays(weekStart, end);
+        if (startCol < 0 || endCol > 6) return null;
+        return { event, startCol, endCol };
+      })
+      .filter(
+        (
+          bar,
+        ): bar is { event: (typeof events)[number]; startCol: number; endCol: number } =>
+          Boolean(bar),
+      )
+      .sort((a, b) => a.startCol - b.startCol || b.endCol - a.endCol);
+    const laneEnds: number[] = [];
+    return bars.map((bar) => {
+      let lane = laneEnds.findIndex((lastCol) => lastCol < bar.startCol);
+      if (lane < 0) lane = laneEnds.length;
+      laneEnds[lane] = bar.endCol;
+      return { ...bar, lane };
+    });
+  });
   const moveMonth = (delta: number) => {
     const next = new Date(year, monthIndex + delta, 1);
     setMonth(
@@ -1481,24 +1580,48 @@ function WorkOrderCalendar({
         ))}
       </div>
       <div className="calendar-grid">
-        {cells.map((date, index) => {
-          if (!date) return <div className="calendar-empty" key={`empty-${index}`} />;
-          const day = Number(date.slice(-2));
-          const inPeriod = date >= order.startDate && date <= order.endDate;
-          const dayEvents = events.get(date) ?? [];
-          return (
-            <div
-              className={`calendar-cell ${inPeriod ? "in-period" : ""} ${date === DEMO_TODAY ? "today" : ""} ${dayEvents.length ? "has-events" : ""}`}
-              key={date}
-            >
-              <span>{day}</span>
-              {dayEvents.slice(0, 2).map((label, eventIndex) => (
-                <small key={`${date}-${eventIndex}`}>{label}</small>
-              ))}
-              {dayEvents.length > 2 && <small>+{dayEvents.length - 2}</small>}
+        {weeks.map((week, weekIndex) => (
+          <div className="calendar-week" key={`week-${weekIndex}`}>
+            <div className="calendar-week-days">
+              {week.map((date, index) => {
+                if (!date)
+                  return (
+                    <div
+                      className="calendar-empty"
+                      key={`empty-${weekIndex}-${index}`}
+                    />
+                  );
+                const day = Number(date.slice(-2));
+                const inPeriod = date >= order.startDate && date <= order.endDate;
+                return (
+                  <div
+                    className={`calendar-cell ${inPeriod ? "in-period" : ""} ${date === DEMO_TODAY ? "today" : ""}`}
+                    key={date}
+                  >
+                    <span>{day}</span>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
+            {weekBars[weekIndex].length > 0 && (
+              <div className="calendar-week-events">
+                {weekBars[weekIndex].map((bar) => (
+                  <div
+                    className="calendar-event-bar"
+                    key={`${bar.event.id}-${weekIndex}`}
+                    style={{
+                      gridColumn: `${bar.startCol + 1} / span ${bar.endCol - bar.startCol + 1}`,
+                      gridRow: bar.lane + 1,
+                    }}
+                    title={bar.event.label}
+                  >
+                    {bar.event.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -1875,6 +1998,9 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         </div>
       </Section>
       <SitePhotos order={order} canEdit={canEdit} />
+      <Button className="full-width completion-button" variant="primary">
+        工程完成
+      </Button>
       {selectedLine && (
         <Dialog
           title={editingAssignmentId ? "更改安排" : "安排施工"}

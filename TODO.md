@@ -32,3 +32,4 @@
 - [x] Sales報價UX：完整地址樓層／單位自動補「樓」「室」；移除施工位置及尺寸單位輸入（位置自動用Service scope，單位預設呎）；工程詳細顯示於項目名稱下；現場要求改可收起details（預設關閉）；施工位置及備註不再是提交必填；當日主管及簽署主管允許head跨Team（Don可在Team B選擇），supervisor仍限定Team。
 - [x] Sales UI簡化：新增工程picker移除工程code及右邊＋；quote stepper只保留報價／客戶已簽／交Office三步；報價摘要移除「即時計價」、「收款計劃」及底部「僅先保存」細字。
 - [x] 全系統記錄列表pagination：分享用`usePagination`每頁12項，套用提交報價／報價／Invoice／收款核對／工程單／工程管理rail／客戶／工程價目／業績；列表按最新時間desc（提交日期、updatedAt、createdAt、releasedAt等）。提交報價：移除頁首頁尾細字、報價號下細字、證明文件column；新增日期column；付款核對＋操作合併為最右「狀態」，待核對為黑色核對收款，已核對可開單顯示已核對並開單；付款證明移入核對popup。
+- [x] CS工程單UI：invoice顯示短式「INV SHM...」並移除Q號；新增月份／Sales／跟進同事filter（未安排可選）；多日Assignment或額外工程在calendar以跨日event bar顯示（例如2–5號會由2號格橫跨至5號格），不逐日重複；跨月會分段；工程管理detail底部新增全寬「工程完成」button（暫無流程連接）。
