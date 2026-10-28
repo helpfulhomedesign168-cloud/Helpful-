@@ -42,6 +42,8 @@ import {
   Search,
   Section,
   UploadField,
+  Pagination,
+  usePagination,
 } from "../components/ui";
 const salesRoles = ["sales", "supervisor", "head"];
 export function quoteListPath(role: string) {
@@ -71,7 +73,9 @@ export function Quotes() {
       `${q.number} ${currentVersion(q).customer.name} ${currentVersion(q).customer.district} ${currentVersion(q).customer.phone}`
         .toLowerCase()
         .includes(search.toLowerCase()),
-    );
+    )
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const pager = usePagination(shown, `${tab}|${search}`);
   return (
     <>
       <PageHead
@@ -141,7 +145,7 @@ export function Quotes() {
                 </tr>
               </thead>
               <tbody>
-                {shown.map((q) => {
+                {pager.items.map((q) => {
                   const v = currentVersion(q),
                     p = engine.pricing(actor, q.id),
                     e = engine.eligibility(actor, q.id);
@@ -179,6 +183,14 @@ export function Quotes() {
               </tbody>
             </table>
           </div>
+        )}
+        {pager.total > 0 && (
+          <Pagination
+            page={pager.page}
+            pages={pager.pages}
+            total={pager.total}
+            onChange={pager.setPage}
+          />
         )}
       </div>
       <div className="list-footnote">

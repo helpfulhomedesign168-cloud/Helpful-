@@ -1554,6 +1554,7 @@ export class Engine {
           quoteNumber: quote.number,
           workOrderNumber: order.number,
           invoiceNumber: invoice?.number ?? "",
+          releasedAt: order.csReleasedAt ?? order.createdAt,
           customerName: version.customer.name,
           phone: version.customer.phone,
           category: invoice?.category ?? quote.officeCategory,
@@ -3145,7 +3146,10 @@ function appendDemoEngineeringOrders(seed: AppState): void {
     const quoteId = `quote-${number.toLowerCase()}`;
     const versionId = `version-${number.toLowerCase()}`;
     const invoiceId = `invoice-${number.toLowerCase()}`;
-    const createdAt = `2026-10-${String((index % 28) + 1).padStart(2, "0")}T09:00:00+08:00`;
+    const createdAt =
+      number === "D260099"
+        ? "2026-10-28T10:00:00+08:00"
+        : `2026-10-${String((index % 28) + 1).padStart(2, "0")}T09:00:00+08:00`;
     const invoice: Invoice = {
       id: invoiceId,
       number:

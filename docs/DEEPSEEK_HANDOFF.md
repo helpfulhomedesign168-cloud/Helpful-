@@ -166,3 +166,12 @@
 - Quote stepper只可有3步：報價、客戶已簽、交Office；不可顯示首期足額或已轉工程。
 - 報價摘要不可加回「即時計價」eyebrow、「收款計劃／開單員分類後確認」或底部「只會先保存並前往成交流程…」細字。
 - 保留報價摘要標題、工程小計、全單折扣、成交金額及前往預覽按鈕。
+
+## 2026-10-28 全系統列表pagination及提交報價（不得退化）
+
+- 所有**記錄列表**每頁最多12項；使用共用`usePagination`／`Pagination`。套用頁面：提交報價、報價管理、單據管理、收款核對、工程單、工程管理rail、客戶、工程價目、我的業績。詳情內line-item表（quote lines／invoice lines／engineering table）不是記錄列表，不套pagination。
+- 列表預設最新優先：Submissions用submission.createdAt、Quotes用updatedAt、Invoices/Finance用createdAt、Handoff/Orders用releasedAt或createdAt、Customers用profile/order時間、Performance用date。新filter/search/page時page重設1。
+- 提交報價不可加回PageHead eyebrow/description、Q號下的「已簽版本／Team」、證明文件column、付款核對badge及第一期門檻細字。
+- Submissions columns固定：報價單、日期、客戶／地區、Sales、成交額、首訂金額、分類、狀態（最右）。
+- 狀態：有pending payment → 黑色「核對收款」；已核對且可開單 → 黑色「已核對並開單」；未分類／未收款 → disabled「待分類／待收款」。
+- 付款證明不再在列表顯示；只可在核對收款popup內以圖片預覽（無證明顯示未上載）。

@@ -28,6 +28,8 @@ import {
   Search,
   Section,
   UploadField,
+  Pagination,
+  usePagination,
 } from "../components/ui";
 import {
   Attachment,
@@ -135,7 +137,8 @@ export function Finance() {
   const [notes, setNotes] = useState("");
   const payments = engine.listPayments(actor);
   const nav = useNavigate();
-  const shown = payments
+  const shown = [...payments]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .filter((p) => tab === "all" || p.status === "pending")
     .filter((p) => {
       let q;
@@ -146,6 +149,7 @@ export function Finance() {
         search,
       );
     });
+  const pager = usePagination(shown, `${tab}|${search}`);
   return (
     <>
       <PageHead eyebrow="會計工作區" title="收款核對" />
@@ -191,7 +195,7 @@ export function Finance() {
                 </tr>
               </thead>
               <tbody>
-                {shown.map((pay) => {
+                {pager.items.map((pay) => {
                   const q = engine.getQuote(actor, pay.quoteId),
                     e = engine.eligibility(actor, pay.quoteId);
                   return (
@@ -250,6 +254,14 @@ export function Finance() {
               </tbody>
             </table>
           </div>
+        )}
+        {pager.total > 0 && (
+          <Pagination
+            page={pager.page}
+            pages={pager.pages}
+            total={pager.total}
+            onChange={pager.setPage}
+          />
         )}
       </div>
       {active && (
@@ -389,20 +401,14 @@ function PaymentReviewDialog({
           <strong>{payment.reference || "未填／現金記錄"}</strong>
         </div>
       </div>
-      {payment.proof && (
-        <Button
-          onClick={() =>
-            showAttachment(payment.proof!).catch((error) =>
-              run(() => {
-                throw error;
-              }),
-            )
-          }
-        >
-          <FileText size={20} />
-          查看付款證明
-        </Button>
-      )}
+      <div className="payment-proof-preview">
+        <span>付款證明</span>
+        {payment.proof ? (
+          <ProofThumb attachment={payment.proof} />
+        ) : (
+          <p className="muted">未上載付款證明</p>
+        )}
+      </div>
       <Field label="有效收款日期" required>
         <input
           type="date"
@@ -487,6 +493,15 @@ export function Submissions() {
           search,
         ),
     );
+  const sortedSources = [...sources].sort((a, b) =>
+    (b.submission?.createdAt ?? b.updatedAt).localeCompare(
+      a.submission?.createdAt ?? a.updatedAt,
+    ),
+  );
+  const pager = usePagination(
+    sortedSources,
+    `${search}|${teamFilter}|${salesFilter}`,
+  );
   const payments = engine.listPayments(actor);
   const salesActors = engine
     .listActors()
@@ -495,11 +510,7 @@ export function Submissions() {
     );
   return (
     <>
-      <PageHead
-        eyebrow="開單工作區"
-        title="提交報價"
-        description="先核對付款及選擇分類；有已核有效付款後可開Invoice。"
-      />
+      <PageHead title="提交報價" />
       <div className="list-panel">
         <div className="submission-toolbar">
           <Search
@@ -544,18 +555,17 @@ export function Submissions() {
               <thead>
                 <tr>
                   <th scope="col">報價單</th>
+                  <th scope="col">日期</th>
                   <th scope="col">客戶／地區</th>
                   <th scope="col">Sales</th>
                   <th scope="col" className="numeric">成交額</th>
                   <th scope="col" className="numeric">首訂金額</th>
-                  <th scope="col">證明文件</th>
-                  <th scope="col">付款核對</th>
                   <th scope="col">分類</th>
-                  <th scope="col">操作</th>
+                  <th scope="col">狀態</th>
                 </tr>
               </thead>
               <tbody>
-                {sources.map((quote) => {
+                {pager.items.map((quote) => {
                   const version = currentVersion(quote);
                   const eligibility = engine.eligibility(actor, quote.id);
                   const sourcePayments = payments.filter(
@@ -569,9 +579,6 @@ export function Submissions() {
                   const sales = salesActors.find(
                     (candidate) => candidate.id === quote.ownerId,
                   );
-                  const proofs = sourcePayments.flatMap((payment) =>
-                    payment.proof ? [payment.proof] : [],
-                  );
                   const openInvoice = () => {
                     const invoice = run(
                       () => engine.issueInvoice(actor, quote.id),
@@ -583,9 +590,12 @@ export function Submissions() {
                     <tr key={quote.id}>
                       <td>
                         <strong>{quote.number}</strong>
-                        <small>
-                          已簽版本 {version.index} · Team {quote.team}
-                        </small>
+                      </td>
+                      <td>
+                        {(quote.submission?.createdAt ?? quote.updatedAt).slice(
+                          0,
+                          10,
+                        )}
                       </td>
                       <td>
                         <strong>{version.customer.name}</strong>
@@ -604,48 +614,6 @@ export function Submissions() {
                         ) : (
                           <span className="pending-value">待分類</span>
                         )}
-                      </td>
-                      <td>
-                        {proofs.length ? (
-                          <div className="proof-thumbs">
-                            {proofs.map((proof, index) => (
-                              <ProofThumb
-                                key={`${proof.id}-${index}`}
-                                attachment={proof}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="proof-empty">未上載</span>
-                        )}
-                      </td>
-                      <td>
-                        <Badge
-                          strong={
-                            pending.length === 0 && eligibility.validPaid > 0
-                          }
-                        >
-                          {pending.length
-                            ? `待核對 ${pending.length} 筆`
-                            : `已核 ${money(eligibility.validPaid)}`}
-                        </Badge>
-                        <small>
-                          {eligibility.officeCategory
-                            ? `第一期門檻 ${money(eligibility.firstDue)}${eligibility.balance > 0 ? ` · 尚欠 ${money(eligibility.balance)}` : ""}`
-                            : "請先選擇分類"}
-                        </small>
-                        {sourcePayments.map((payment) => (
-                          <div className="inline-actions" key={payment.id}>
-                            {payment.status === "pending" && (
-                              <button
-                                className="text-button"
-                                onClick={() => setActivePayment(payment)}
-                              >
-                                核對收款
-                              </button>
-                            )}
-                          </div>
-                        ))}
                       </td>
                       <td>
                         <select
@@ -675,18 +643,27 @@ export function Submissions() {
                         </select>
                       </td>
                       <td>
-                        <Button
-                          variant={
-                            eligibility.canIssue ? "primary" : "secondary"
-                          }
-                          disabled={!eligibility.canIssue}
-                          title={
-                            eligibility.canIssue ? "" : eligibility.nextAction
-                          }
-                          onClick={openInvoice}
-                        >
-                          已核對並開單 <ArrowRight size={18} />
-                        </Button>
+                        {pending.length > 0 ? (
+                          <Button
+                            variant="primary"
+                            onClick={() => setActivePayment(pending[0])}
+                          >
+                            核對收款
+                          </Button>
+                        ) : eligibility.canIssue ? (
+                          <Button
+                            variant="primary"
+                            onClick={openInvoice}
+                          >
+                            已核對並開單 <ArrowRight size={18} />
+                          </Button>
+                        ) : (
+                          <Button variant="secondary" disabled>
+                            {eligibility.officeCategory
+                              ? "待收款"
+                              : "待分類"}
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -694,6 +671,14 @@ export function Submissions() {
               </tbody>
             </table>
           </div>
+        )}
+        {pager.total > 0 && (
+          <Pagination
+            page={pager.page}
+            pages={pager.pages}
+            total={pager.total}
+            onChange={pager.setPage}
+          />
         )}
       </div>
       {activePayment && (
@@ -710,13 +695,14 @@ export function Invoices() {
   const { actor, engine } = useApp();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
-  const invoices = engine
-    .listInvoices(actor)
+  const invoices = [...engine.listInvoices(actor)]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .filter((invoice) =>
       `${invoice.number} ${invoice.customer.name} ${invoice.customer.address}`.includes(
         search,
       ),
     );
+  const pager = usePagination(invoices, search);
   const actors = engine.listActors();
   return (
     <>
@@ -753,7 +739,7 @@ export function Invoices() {
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((invoice) => {
+                {pager.items.map((invoice) => {
                   const status = engine.invoicePaymentStatus(actor, invoice.id);
                   const quote = engine.getQuote(actor, invoice.quoteId);
                   const sales = actors.find(
@@ -803,6 +789,14 @@ export function Invoices() {
               </tbody>
             </table>
           </div>
+        )}
+        {pager.total > 0 && (
+          <Pagination
+            page={pager.page}
+            pages={pager.pages}
+            total={pager.total}
+            onChange={pager.setPage}
+          />
         )}
       </div>
     </>
@@ -1162,11 +1156,14 @@ export function Handoff() {
   } catch {}
   const canAssign =
     actor.role === "cs_supervisor" || actor.role === "admin";
-  const shown = rows.filter((row) =>
-    `${row.workOrderNumber} ${row.quoteNumber} ${row.invoiceNumber} ${row.customerName} ${row.phone} ${row.salesName} ${row.csOwnerName ?? ""}`.includes(
-      search,
-    ),
-  );
+  const shown = [...rows]
+    .sort((a, b) => b.releasedAt.localeCompare(a.releasedAt))
+    .filter((row) =>
+      `${row.workOrderNumber} ${row.quoteNumber} ${row.invoiceNumber} ${row.customerName} ${row.phone} ${row.salesName} ${row.csOwnerName ?? ""}`.includes(
+        search,
+      ),
+    );
+  const pager = usePagination(shown, search);
   return (
     <>
       <PageHead eyebrow="CS工程部" title="工程單" />
@@ -1198,7 +1195,7 @@ export function Handoff() {
                 </tr>
               </thead>
               <tbody>
-                {shown.map((row) => (
+                {pager.items.map((row) => (
                   <tr key={row.quoteId}>
                     <td>
                       <strong className="source-link">
@@ -1241,6 +1238,14 @@ export function Handoff() {
               </tbody>
             </table>
           </div>
+        )}
+        {pager.total > 0 && (
+          <Pagination
+            page={pager.page}
+            pages={pager.pages}
+            total={pager.total}
+            onChange={pager.setPage}
+          />
         )}
       </div>
       {assigning && (
@@ -1303,13 +1308,21 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
   try {
     if (manager) team = engine.listCsTeam(actor);
   } catch {}
-  const orders = engine.listOrders(actor).filter((order) => {
-    const arrived = order.csReleasedAt ?? order.createdAt;
-    if (month && !arrived.startsWith(month)) return false;
-    if (manager && csFilter !== "all" && order.csOwnerId !== csFilter)
-      return false;
-    return true;
-  });
+  const orders = engine
+    .listOrders(actor)
+    .filter((order) => {
+      const arrived = order.csReleasedAt ?? order.createdAt;
+      if (month && !arrived.startsWith(month)) return false;
+      if (manager && csFilter !== "all" && order.csOwnerId !== csFilter)
+        return false;
+      return true;
+    })
+    .sort((a, b) =>
+      (b.csReleasedAt ?? b.createdAt).localeCompare(
+        a.csReleasedAt ?? a.createdAt,
+      ),
+    );
+  const pager = usePagination(orders, `${month}|${csFilter}`);
   return (
     <aside className="order-rail">
       <div className="order-rail-head">
@@ -1345,7 +1358,7 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
         {orders.length === 0 ? (
           <p className="section-empty">此月份沒有工程單。</p>
         ) : (
-          orders.map((order) => {
+          pager.items.map((order) => {
             let invoiceNumber = "";
             try {
               invoiceNumber = engine.getInvoice(actor, order.invoiceId).number;
@@ -1363,6 +1376,14 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
           })
         )}
       </div>
+      {pager.total > 12 && (
+        <Pagination
+          page={pager.page}
+          pages={pager.pages}
+          total={pager.total}
+          onChange={pager.setPage}
+        />
+      )}
     </aside>
   );
 }

@@ -435,6 +435,7 @@ export interface HandoffRow {
   quoteNumber: string;
   workOrderNumber: string;
   invoiceNumber: string;
+  releasedAt: string;
   customerName: string;
   phone: string;
   category?: InvoiceCategory;
