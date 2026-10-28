@@ -183,3 +183,14 @@
 - 工程單列表仍按releasedAt最新優先；分頁12項。
 - 多日Assignment／額外工程在calendar必須以跨欄event bar顯示：例如2號至5號要由2號格橫跨到5號格，不可逐日重複同一label。跨月event按週分段顯示；bar使用calendar week grid的gridColumn span。
 - 工程管理detail最底部要有全寬「工程完成」button；現階段沒有onClick／流程，不可假裝已完成或彈假成功訊息。
+
+## 2026-10-28 工程師傅主檔（不得退化）
+
+- 工程師傅頁取代placeholder；資料存於現有`Resource`，新增`kind`(foreman/worker)、`specialty`、`mainWork`、`scope`、`details`、`feeMode`、`feeAmount`、`createdAt`。
+- Tabs固定全部／工程判頭／師傅；12個demo師傅不可少。列表columns：師傅稱呼、聯絡電話、收費、工程範圍、編輯。
+- 新增／修改form：師傅性質radio、名稱、電話、主項工程、工程詳細、收費方式radio、條件金額（日薪／固定價）；項目6成顯示6成說明。
+- 收費方式只可在新增時選擇；修改時disabled，domain `saveContractor`亦必須拒絕feeMode變更。
+- 普通CS只讀；CS主管／Super Admin可新增、修改、刪除。刪除用active=false，不可hard delete（Assignment歷史要保留）。
+- 新增／修改只可改master fields；resource仍然要可供現有`listResources` assignment使用。
+- 列表需最新createdAt優先及12項pagination（與全系統一致）。
+- Assignment dialog必須同時按資源類型及`resource.trades.includes(service.category)`過濾；不可只按contractor/staff類型列出師傅，否則新增工程師傅後會出現不合工種選項。

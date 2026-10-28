@@ -23,7 +23,6 @@ test("CS及Super Admin menu加入工程師傅、供應商、產品款式及工�
     await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
 
   for (const [label, title] of [
-    ["工程師傅", "工程師傅"],
     ["供應商", "供應商"],
     ["產品款式", "產品款式"],
   ]) {
@@ -35,6 +34,12 @@ test("CS及Super Admin menu加入工程師傅、供應商、產品款式及工�
       page.getByText("此模組尚未建立", { exact: true }),
     ).toBeVisible();
   }
+
+  await nav.getByRole("link", { name: "工程師傅", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "工程師傅", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".contractor-table tbody tr")).toHaveCount(12);
 
   await nav.getByRole("link", { name: "工程價目", exact: true }).click();
   await expect(
