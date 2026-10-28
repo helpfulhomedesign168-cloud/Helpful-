@@ -3155,3 +3155,250 @@ textarea {
     padding-right: 12px;
   }
 }
+
+/* Service catalog form additions */
+.service-table td:first-child small {
+  max-width: 520px;
+  white-space: normal;
+  line-height: 1.35;
+}
+.service-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+.service-form-top {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 14px;
+}
+.service-details-input {
+  min-height: 150px;
+}
+.measure-section {
+  margin: 4px 0 18px;
+}
+.measure-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 13px;
+}
+.measure-head strong {
+  font-size: 17px;
+}
+.measure-head span {
+  color: #777d70;
+  font-size: 14px;
+  text-align: right;
+}
+.measure-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+.measure-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.measure-option input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  accent-color: #222;
+}
+.measure-option.locked {
+  color: #8b9185;
+  cursor: not-allowed;
+}
+.service-price-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.linked-services {
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  padding-top: 16px;
+}
+.linked-services > strong {
+  display: block;
+  margin-bottom: 9px;
+}
+.linked-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eceee7;
+}
+.linked-row strong,
+.linked-row small {
+  display: block;
+}
+.linked-row small {
+  margin-top: 2px;
+  color: #777d70;
+  font-size: 13px;
+}
+.linked-row button {
+  border: 0;
+  background: transparent;
+  color: #6e7569;
+  padding: 4px;
+}
+.linked-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  border: 0;
+  background: transparent;
+  color: #6f766a;
+  font-size: 16px;
+}
+.linked-add:hover {
+  color: #222;
+}
+.linked-picker {
+  display: grid;
+  gap: 17px;
+  max-height: 52vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+.linked-picker-group h4 {
+  margin: 0 0 7px;
+  font-size: 15px;
+}
+.linked-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 8px;
+  border-bottom: 1px solid #eceee7;
+  cursor: pointer;
+}
+.linked-option input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+.linked-option strong,
+.linked-option small {
+  display: block;
+}
+.linked-option small {
+  margin-top: 2px;
+  color: #777d70;
+  font-size: 13px;
+}
+@media (max-width: 800px) {
+  .service-form-top {
+    grid-template-columns: 1fr;
+  }
+  .measure-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .measure-head span {
+    text-align: left;
+  }
+  .measure-options {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+/* Sales linked works */
+.linked-quote-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: #4d5a45;
+  font-size: 15px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.quote-linked-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.quote-linked-row {
+  padding: 10px 12px;
+  border: 1px solid #e1e4da;
+  border-radius: 7px;
+  background: #fafbf7;
+}
+.quote-linked-row strong,
+.quote-linked-row small {
+  display: block;
+}
+.quote-linked-row small {
+  margin-top: 3px;
+  color: #777d70;
+  font-size: 13px;
+}
+
+.service-tags-edit {
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-height: 42px;
+  padding: 8px 13px;
+  border: 0;
+  background: transparent;
+  color: #222;
+  font-size: 16px;
+  font-weight: 600;
+}
+.service-tags-edit:hover {
+  background: #f3f4ef;
+}
+.tag-editor-add {
+  margin-bottom: 22px;
+}
+.tag-add-row {
+  display: flex;
+  gap: 8px;
+}
+.tag-add-row input {
+  flex: 1;
+}
+.tag-add-row .btn {
+  flex: 0 0 auto;
+}
+.tag-editor-delete h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.tag-delete-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 4px;
+  border-bottom: 1px solid #eceee7;
+  color: #777d70;
+  font-size: 16px;
+}
+.tag-delete-row input {
+  width: 19px;
+  height: 19px;
+}

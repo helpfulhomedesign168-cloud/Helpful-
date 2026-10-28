@@ -403,6 +403,7 @@ export function QuoteEditor() {
   const [customers, setCustomers] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
   const [cat, setCat] = useState("全部");
+  const [linkedPrompt, setLinkedPrompt] = useState<string | null>(null);
   const services = engine.listServices(actor).filter((s) => s.published);
   const categories = ["全部", ...new Set(services.map((s) => s.category))];
   let baseSubtotal = 0;
@@ -481,6 +482,37 @@ export function QuoteEditor() {
   }
   function update(index: number, values: Partial<QuoteLine>) {
     setLines(lines.map((l, i) => (i === index ? { ...l, ...values } : l)));
+  }
+  const linkedSource = linkedPrompt
+    ? lines.find((line) => line.id === linkedPrompt)
+    : undefined;
+  const linkedChoices = (linkedSource?.itemSnapshot.linkedServiceIds ?? [])
+    .map((id) => services.find((service) => service.id === id))
+    .filter((service): service is ServiceItem => Boolean(service))
+    .filter(
+      (service) => !lines.some((line) => line.itemId === service.id),
+    );
+  function addLinkedWorks() {
+    if (!linkedChoices.length) {
+      setLinkedPrompt(null);
+      return;
+    }
+    setLines([
+      ...lines,
+      ...linkedChoices.map((service) => ({
+        id: crypto.randomUUID(),
+        itemId: service.id,
+        itemSnapshot: structuredClone(service),
+        position: "",
+        length: 0,
+        width: 0,
+        dimensionUnit: "呎" as const,
+        quantity: 1,
+        style: service.allowPending ? "待選" : "",
+        notes: "",
+      })),
+    ]);
+    setLinkedPrompt(null);
   }
   const customerCandidates = engine
     .listCustomers(actor)
@@ -686,6 +718,18 @@ export function QuoteEditor() {
                         </span>
                         <strong>{money(a?.preDiscount || 0)}</strong>
                       </div>
+                      {(s.linkedServiceIds ?? []).some(
+                        (id) => !lines.some((line) => line.itemId === id),
+                      ) && (
+                        <button
+                          type="button"
+                          className="linked-quote-button"
+                          onClick={() => setLinkedPrompt(l.id)}
+                        >
+                          <Plus size={17} />
+                          需要加連貫工程？
+                        </button>
+                      )}
                     </article>
                   );
                 })}
@@ -797,6 +841,35 @@ export function QuoteEditor() {
           </p>
         </aside>
       </div>
+      {linkedPrompt && linkedSource && (
+        <Dialog title="連貫工程" onClose={() => setLinkedPrompt(null)}>
+          <p className="dialog-intro">
+            「{linkedSource.itemSnapshot.name}」有建議連貫工程。是否一併加入報價？
+          </p>
+          <div className="quote-linked-list">
+            {linkedChoices.length === 0 ? (
+              <p className="section-empty">所有連貫工程已加入此報價。</p>
+            ) : (
+              linkedChoices.map((service) => (
+                <div className="quote-linked-row" key={service.id}>
+                  <strong>{service.name}</strong>
+                  {service.details && <small>{service.details}</small>}
+                </div>
+              ))
+            )}
+          </div>
+          <div className="dialog-actions">
+            <Button onClick={() => setLinkedPrompt(null)}>暫不加入</Button>
+            <Button
+              variant="primary"
+              disabled={linkedChoices.length === 0}
+              onClick={addLinkedWorks}
+            >
+              加入連貫工程
+            </Button>
+          </div>
+        </Dialog>
+      )}
       {picker && (
         <Dialog wide title="新增工程項目" onClose={() => setPicker(false)}>
           <Search
@@ -832,7 +905,7 @@ export function QuoteEditor() {
                   <span>
                     <strong>{s.name}</strong>
                     <small>
-                      {s.category} · {s.notes}
+                      {s.category} · {s.details || s.notes}
                     </small>
                   </span>
                   <span className="numeric">

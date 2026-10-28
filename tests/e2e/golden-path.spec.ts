@@ -27,8 +27,8 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   const item = page.getByRole("dialog");
   await item.getByLabel("工程名稱", { exact: false }).fill("UI貫穿測試工程");
   await item.getByLabel("工程分類", { exact: false }).selectOption("打拆");
-  await item.getByLabel("怎樣計價", { exact: false }).selectOption("area");
-  await item.getByLabel("出街單價", { exact: false }).fill("1000");
+  await item.getByRole("radio", { name: "面積(長X闊)", exact: true }).check();
+  await item.getByLabel(/零售價/, { exact: false }).fill("1000");
   await item.getByRole("button", { name: "儲存工程項目", exact: true }).click();
   await expect(item).toBeHidden();
   await role(page, "文文B MM");

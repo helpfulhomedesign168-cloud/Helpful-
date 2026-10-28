@@ -64,6 +64,10 @@ export interface ServiceItem {
   category: string;
   /** 工程範圍，例如廚房／全屋；可留空。 */
   scope?: string;
+  /** 顯示於工程名稱下方的工程詳細。 */
+  details?: string;
+  /** 可選的連貫工程（引用同一個價目表的項目）。 */
+  linkedServiceIds?: string[];
   unit: string;
   price: number;
   measure: "area" | "length" | "quantity" | "fixed";
@@ -312,11 +316,24 @@ export interface Notification {
   read: boolean;
   createdAt: string;
 }
+export const DEFAULT_SERVICE_CATEGORIES = [
+  "打拆",
+  "水喉",
+  "電力",
+  "泥水",
+  "油漆",
+  "傢俬",
+  "裝門",
+  "鋁窗",
+  "防滑",
+  "其他",
+] as const;
 export interface AppState {
   schema: 1;
   actors: Actor[];
   customers: CustomerProfile[];
   services: ServiceItem[];
+  serviceCategories: string[];
   quotes: Quote[];
   payments: Payment[];
   invoices: Invoice[];
