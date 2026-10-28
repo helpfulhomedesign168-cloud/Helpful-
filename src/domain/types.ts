@@ -49,6 +49,35 @@ export interface Customer {
   precautions: string;
   attachment?: Attachment;
 }
+/** 將樓層／單位加上「樓」「室」，避免完整地址只顯示 22 08。 */
+export function composeCustomerAddress(
+  customer: Pick<
+    Customer,
+    "district" | "street" | "estate" | "block" | "floor" | "unit"
+  >,
+): string {
+  const part = (value?: string) => (value ?? "").trim();
+  const floorValue = part(customer.floor);
+  const unitValue = part(customer.unit);
+  const floor =
+    floorValue &&
+    !/[樓層]$/.test(floorValue) &&
+    !/^(地下|G\/F|GF)$/i.test(floorValue)
+      ? `${floorValue}樓`
+      : floorValue;
+  const unit =
+    unitValue && !/室$/.test(unitValue) ? `${unitValue}室` : unitValue;
+  return [
+    part(customer.district),
+    part(customer.street),
+    part(customer.estate),
+    part(customer.block),
+    floor,
+    unit,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 export interface CustomerProfile {
   id: string;
   ownerId: string;

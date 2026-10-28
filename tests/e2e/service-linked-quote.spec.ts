@@ -33,6 +33,7 @@ test("有連貫工程的項目在Sales報價會詢問是否加入", async ({ pag
   await page.getByRole("button", { name: "選擇工程", exact: true }).click();
   await page.locator(".service-option").filter({ hasText: "E2E 連貫主項" }).click();
   const line = page.locator(".line-card").filter({ hasText: "E2E 連貫主項" });
+  await expect(line).toContainText("主項詳細");
   await expect(
     line.getByRole("button", { name: "需要加連貫工程？", exact: true }),
   ).toBeVisible();
