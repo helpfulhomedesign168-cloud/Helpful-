@@ -231,8 +231,6 @@ export function Progress({ q, e }: { q: Quote; e: Eligibility }) {
     ["報價", true],
     ["客戶已簽", !!v.signature],
     ["交Office", e.hasSubmission],
-    ["首期足額", e.validPaid >= e.firstDue && e.firstDue > 0],
-    ["已轉工程", e.hasInvoice],
   ] as const;
   return (
     <ol className="source-progress">

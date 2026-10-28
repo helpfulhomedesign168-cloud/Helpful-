@@ -159,3 +159,10 @@
 - 工程項目名稱下面要顯示ServiceItem.details細字；不要只顯示價錢。
 - 當日主管／簽署主管：head角色可跨Team選擇（例如Don在Team B報價）；supervisor仍必須同Team。printPreparation及signature兩處validation都要一致，否則畫面可選但提交會失敗。
 - 地址自動補樓／室後，舊Customer/Quote/Invoice/WorkOrder地址在migration時會重算；已有的「12樓」「A室」不可重複加。
+
+## 2026-10-28 Sales picker／stepper／摘要簡化（不得退化）
+
+- 新增工程picker每行只顯示工程名稱、分類／詳細、價錢；不可加回工程code badge或右邊＋。
+- Quote stepper只可有3步：報價、客戶已簽、交Office；不可顯示首期足額或已轉工程。
+- 報價摘要不可加回「即時計價」eyebrow、「收款計劃／開單員分類後確認」或底部「只會先保存並前往成交流程…」細字。
+- 保留報價摘要標題、工程小計、全單折扣、成交金額及前往預覽按鈕。
