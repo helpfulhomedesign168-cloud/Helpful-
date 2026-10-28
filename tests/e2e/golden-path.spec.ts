@@ -54,10 +54,10 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
     .filter({ hasText: "UI貫穿測試工程" })
     .click();
   const line = page.locator(".line-card");
-  await line.getByLabel("施工位置", { exact: false }).fill("客廳");
+  await expect(line.getByLabel("施工位置", { exact: false })).toHaveCount(0);
+  await expect(line.getByLabel("尺寸單位", { exact: false })).toHaveCount(0);
   await line.getByLabel("長度", { exact: false }).fill("100");
   await line.getByLabel("闊度", { exact: false }).fill("1");
-  await line.getByLabel("現場要求及注意事項", { exact: true }).fill("無");
   await page
     .getByRole("button", { name: "前往預覽及成交", exact: true })
     .click();
@@ -72,9 +72,14 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
     .getByRole("button", { name: "準備列印報價單", exact: true })
     .click();
   const printDialog = page.getByRole("dialog", { name: "準備列印正式報價單" });
-  await printDialog
-    .getByRole("combobox", { name: "當日主管", exact: true })
-    .selectOption({ label: "世雄B SH" });
+  const supervisorSelect = printDialog.getByRole("combobox", {
+    name: "當日主管",
+    exact: true,
+  });
+  await expect(
+    supervisorSelect.getByRole("option", { name: /Don/ }),
+  ).toHaveCount(1);
+  await supervisorSelect.selectOption({ label: "Don A DN（測試碼）" });
   await printDialog
     .getByRole("button", { name: "確認並開啟報價單", exact: true })
     .click();
@@ -89,7 +94,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
     " · ",
   )[0];
   let row: Locator;
-  await expect(qNumber).toMatch(/^QSHMM2610\d{4}$/);
+  await expect(qNumber).toMatch(/^QDNMM2610\d{4}$/);
   await expect(
     page.getByRole("button", { name: "登記付款", exact: true }),
   ).toBeDisabled();
@@ -244,7 +249,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   const quote = stored.quotes.find((q: any) => q.number === qNumber);
   const invoices = stored.invoices.filter((i: any) => i.quoteId === quote.id);
   expect(invoices).toHaveLength(1);
-  expect(invoices[0].number).toMatch(/^SHMM2610\d{4}$/);
+  expect(invoices[0].number).toMatch(/^DNMM2610\d{4}$/);
   expect(invoices[0].category).toBe("self-pay");
   expect(stored.orders.filter((o: any) => o.quoteId === quote.id)).toHaveLength(
     1,

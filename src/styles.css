@@ -3402,3 +3402,27 @@ textarea {
   width: 19px;
   height: 19px;
 }
+
+/* Sales quote line details and optional notes */
+.line-service-details {
+  display: block;
+  margin: 2px 0 4px;
+  color: #73796d;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.line-notes {
+  margin-top: 10px;
+  border-top: 1px solid #eceee7;
+  padding-top: 2px;
+}
+.line-notes summary {
+  padding: 8px 0;
+  color: #596052;
+  font-size: 14px;
+  cursor: pointer;
+  list-style-position: inside;
+}
+.line-notes textarea {
+  margin-top: 7px;
+}

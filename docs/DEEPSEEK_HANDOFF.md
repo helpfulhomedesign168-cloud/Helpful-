@@ -149,3 +149,13 @@
 - `AppState.demoEngineeringVersion` = 2。舊state沒有2時，refresh 30張demo單為每張12項、D260099為20項，全部lines取自active catalog；清空demo work orders的assignments，不改csOwnerId；已為2時不可每次reload重刷。
 - Demo lines只更新WorkOrder snapshot；舊Invoice／Quote lines不應被反寫，避免破壞歷史。
 - 新seed直接由active catalog產生demo lines；30張單仍是D2600200–D2600229，D260099 unassigned。
+
+## 2026-10-28 Sales報價UX（不得退化）
+
+- 完整地址由`composeCustomerAddress`統一組合，樓層／單位若未帶「樓」「室」會自動補上，例如樓層22、單位08 → 22樓 08室；引擎migration及CustomerForm都必須用同一helper，避免兩處格式不同。
+- Sales加入工程後不再顯示「施工位置」及「尺寸單位」；新line的position用Service.scope，dimensionUnit固定呎。不要恢復成必填。
+- `validEngineering`不可再要求line.position或line.notes；施工位置及現場備註是選填。
+- 現場要求及注意事項用`<details>`收起，預設關閉；不要長期展開。
+- 工程項目名稱下面要顯示ServiceItem.details細字；不要只顯示價錢。
+- 當日主管／簽署主管：head角色可跨Team選擇（例如Don在Team B報價）；supervisor仍必須同Team。printPreparation及signature兩處validation都要一致，否則畫面可選但提交會失敗。
+- 地址自動補樓／室後，舊Customer/Quote/Invoice/WorkOrder地址在migration時會重算；已有的「12樓」「A室」不可重複加。

@@ -29,6 +29,7 @@ import {
   Pricing,
   DiscountMode,
   discountLabel,
+  composeCustomerAddress,
 } from "../domain/types";
 import {
   Badge,
@@ -194,31 +195,10 @@ export function CustomerForm({
   value: Customer;
   onChange: (v: Customer) => void;
 }) {
-  const address = [
-    value.district,
-    value.street,
-    value.estate,
-    value.block,
-    value.floor,
-    value.unit,
-  ]
-    .map((item) => item?.trim())
-    .filter(Boolean)
-    .join(" ");
+  const address = composeCustomerAddress(value);
   const set = (key: keyof Customer, val: string) => {
     const next = { ...value, [key]: val };
-    const nextAddress = [
-      next.district,
-      next.street,
-      next.estate,
-      next.block,
-      next.floor,
-      next.unit,
-    ]
-      .map((item) => item?.trim())
-      .filter(Boolean)
-      .join(" ");
-    onChange({ ...next, address: nextAddress });
+    onChange({ ...next, address: composeCustomerAddress(next) });
   };
   function name(val: string) {
     onChange({ ...value, name: val });
@@ -469,7 +449,7 @@ export function QuoteEditor() {
         id: crypto.randomUUID(),
         itemId: s.id,
         itemSnapshot: structuredClone(s),
-        position: "",
+        position: s.scope ?? "",
         length: 0,
         width: 0,
         dimensionUnit: "呎",
@@ -503,7 +483,7 @@ export function QuoteEditor() {
         id: crypto.randomUUID(),
         itemId: service.id,
         itemSnapshot: structuredClone(service),
-        position: "",
+        position: service.scope ?? "",
         length: 0,
         width: 0,
         dimensionUnit: "呎" as const,
@@ -594,6 +574,11 @@ export function QuoteEditor() {
                         </span>
                         <div>
                           <h3>{s.name}</h3>
+                          {s.details && (
+                            <small className="line-service-details">
+                              {s.details}
+                            </small>
+                          )}
                           <span className="muted">
                             {money(s.price)}／{s.unit}
                           </span>
@@ -609,15 +594,6 @@ export function QuoteEditor() {
                         </Button>
                       </div>
                       <div className="form-grid line-inputs">
-                        <Field label="施工位置" required>
-                          <input
-                            value={l.position}
-                            placeholder="例如：廚房、主人房"
-                            onChange={(e) =>
-                              update(i, { position: e.target.value })
-                            }
-                          />
-                        </Field>
                         {s.measure === "area" || s.measure === "length" ? (
                           <>
                             <Field
@@ -649,21 +625,6 @@ export function QuoteEditor() {
                                 />
                               </Field>
                             )}
-                            <Field label="尺寸單位">
-                              <select
-                                value={l.dimensionUnit}
-                                onChange={(e) =>
-                                  update(i, {
-                                    dimensionUnit: e.target.value as
-                                      | "呎"
-                                      | "寸",
-                                  })
-                                }
-                              >
-                                <option>呎</option>
-                                <option>寸</option>
-                              </select>
-                            </Field>
                           </>
                         ) : (
                           <Field
@@ -702,19 +663,20 @@ export function QuoteEditor() {
                           </Field>
                         )}
                       </div>
-                      <Field label="現場要求及注意事項">
+                      <details className="line-notes">
+                        <summary>現場要求及注意事項（選填）</summary>
                         <textarea
                           rows={2}
                           value={l.notes}
                           placeholder="客戶要求、施工難點或需要特別留意的位置"
                           onChange={(e) => update(i, { notes: e.target.value })}
                         />
-                      </Field>
+                      </details>
                       <div className="line-footer">
                         <span>
                           {a?.minApplied
                             ? `按最低 ${a.billedQty} ${s.unit}計費`
-                            : s.notes || "按現場實際範圍計價"}
+                            : s.details || "按現場實際範圍計價"}
                         </span>
                         <strong>{money(a?.preDiscount || 0)}</strong>
                       </div>
@@ -1100,8 +1062,10 @@ export function QuoteDetail() {
     payments.length === 0;
   const supervisors = engine
     .listActors()
-    .filter((a) =>
-      q!.team === "A" ? a.role === "head" : a.role === "supervisor",
+    .filter(
+      (a) =>
+        a.role === "head" ||
+        (a.role === "supervisor" && a.team === q!.team),
     );
   const audit = engine.listAudit(actor, id);
   return (

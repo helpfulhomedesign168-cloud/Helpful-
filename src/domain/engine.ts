@@ -37,6 +37,7 @@ import {
   type InvoicePaymentStatus,
   INVOICE_CATEGORY_NAMES,
   DEFAULT_SERVICE_CATEGORIES,
+  composeCustomerAddress,
   DEMO_TODAY,
   EMPTY_CUSTOMER,
   currentVersion,
@@ -126,17 +127,7 @@ function factor(discount: number): Decimal {
   return value;
 }
 function composeAddress(customer: Customer): string {
-  return [
-    customer.district,
-    customer.street,
-    customer.estate,
-    customer.block,
-    customer.floor,
-    customer.unit,
-  ]
-    .map((value) => value?.trim())
-    .filter(Boolean)
-    .join(" ");
+  return composeCustomerAddress(customer);
 }
 function normaliseCustomer(customer: Customer): Customer {
   const copy = deepCopy(customer);
@@ -529,9 +520,6 @@ function validEngineering(
       problems.push(`第 ${index + 1} 項工程目錄無效`);
       return;
     }
-    if (!line.position.trim()) problems.push(`第 ${index + 1} 項須填施工位置`);
-    if (!line.notes.trim())
-      problems.push(`第 ${index + 1} 項須填現場備註（沒有可填「無」）`);
     if (item.measure === "area" && !(line.length > 0 && line.width > 0))
       problems.push(`第 ${index + 1} 項須填長及闊`);
     if (item.measure === "length" && !(line.length > 0))
@@ -2129,8 +2117,8 @@ export class Engine {
         state.actors.find((item) => item.id === quote.ownerId) ??
         fail("找不到此報價的Sales。");
       if (
-        supervisor.team !== quote.team ||
-        !(supervisor.role === "supervisor" || supervisor.role === "head")
+        !(supervisor.role === "supervisor" || supervisor.role === "head") ||
+        (supervisor.role === "supervisor" && supervisor.team !== quote.team)
       )
         fail("當日主管與此報價 Team 不匹配。");
       const month = dateKey(input.date);
@@ -2243,8 +2231,8 @@ export class Engine {
         state.actors.find((item) => item.id === input.supervisorId) ??
         fail("找不到簽署日主管。");
       if (
-        supervisor.team !== quote.team ||
-        !(supervisor.role === "supervisor" || supervisor.role === "head")
+        !(supervisor.role === "supervisor" || supervisor.role === "head") ||
+        (supervisor.role === "supervisor" && supervisor.team !== quote.team)
       )
         fail("簽署日主管與此報價 Team 不匹配。");
       version.signature = {

@@ -29,3 +29,4 @@
 - [x] 工程價目第二階段：新增／修改form跟設計（名稱／分類／範圍／詳細／計算方式radio／零售價／低銷價／合併低銷價）；計算方式建立後鎖定；連貫工程picker及Sales報價詢問加連貫工程；工程詳細顯示於列表名稱下；新增刪除項目（archive保留舊單snapshot）。舊catalog已archive，六項demo補details及links欄位。
 - [x] 修正Dialog每次re-render重設focus導致輸入框打一個字即失焦的bug（onClose用ref，effect只在mount）。工程分類改為persisted serviceCategories；tag尾的＋改成「編輯」，可新增tag及勾選刪除tag，刪除時確認「是否確定真的要刪除…一旦刪除，工程項目入面的工程全部都會一齊刪除掉」，相關services會archive。
 - [x] 加入24項active catalog：水喉6（完整簪欖detail及修正scope）、泥水6（detail連工包料）、油漆6（廁所天花修正）、傢俬6；連同打拆6共30項。Demo工程版本2：30張單各12項、D260099 20項，全部line由active catalog自動分配，清空demo assignments；舊localStorage自動補24項及刷新demo lines。
+- [x] Sales報價UX：完整地址樓層／單位自動補「樓」「室」；移除施工位置及尺寸單位輸入（位置自動用Service scope，單位預設呎）；工程詳細顯示於項目名稱下；現場要求改可收起details（預設關閉）；施工位置及備註不再是提交必填；當日主管及簽署主管允許head跨Team（Don可在Team B選擇），supervisor仍限定Team。

@@ -44,15 +44,15 @@ test("Sales客戶表單只顯示核心欄位，街道及座數可以留空", asy
   await dialog.getByLabel(/^WhatsApp電話/).fill("91237788");
   await dialog.getByLabel("工程地區", { exact: false }).selectOption("黃大仙");
   await dialog.getByLabel(/^屋苑／大廈/).fill("測試苑");
-  await dialog.getByLabel(/^樓層/).fill("3樓");
-  await dialog.getByLabel(/^單位/).fill("C室");
+  await dialog.getByLabel(/^樓層/).fill("22");
+  await dialog.getByLabel(/^單位/).fill("08");
   // 街道、座數、身份證、長者、來源、緊急聯絡人全部留空。
   await dialog.getByRole("button", { name: "儲存客戶", exact: true }).click();
 
   await expect(dialog).toBeHidden();
   await expect(page.getByText("UI簡化客戶", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("黃大仙 測試苑 3樓 C室", { exact: true }).first(),
+    page.getByText("黃大仙 測試苑 22樓 08室", { exact: true }).first(),
   ).toBeVisible();
 
   await page.goto("/quotes/new");
