@@ -183,14 +183,30 @@ it("Demo工程CS有30張10項以上工程；阿花分派D260099後變31張", () 
   const engine = new Engine(undefined, createSeedState());
   const lead = actor(engine, "cs-lead-ahfa");
   const cs = actor(engine, "cs");
+  const activeServices = engine.listServices(actor(engine, "sales-mm"));
+  expect(activeServices).toHaveLength(30);
+  for (const category of ["打拆", "水喉", "泥水", "油漆", "傢俬"]) {
+    expect(activeServices.filter((service) => service.category === category)).toHaveLength(6);
+  }
   const demoOrders = engine.listOrders(cs);
   expect(demoOrders).toHaveLength(30);
-  demoOrders.forEach((order) =>
-    expect(order.lines.length).toBeGreaterThanOrEqual(10),
-  );
+  demoOrders.forEach((order) => {
+    expect(order.lines).toHaveLength(12);
+    expect(
+      order.lines.every((line) =>
+        activeServices.some((service) => service.id === line.itemId),
+      ),
+    ).toBe(true);
+  });
   expect(demoOrders.some((order) => order.number === "D260099")).toBe(false);
   const pending = engine.listOrders(lead).find((order) => order.number === "D260099");
   expect(pending?.lines).toHaveLength(20);
+  expect(
+    pending?.lines.every((line) =>
+      activeServices.some((service) => service.id === line.itemId),
+    ),
+  ).toBe(true);
   engine.assignCsOwner(lead, pending!.id, "cs");
   expect(engine.listOrders(cs)).toHaveLength(31);
+  expect(engine.listAssignments(lead, pending!.id)).toHaveLength(0);
 });

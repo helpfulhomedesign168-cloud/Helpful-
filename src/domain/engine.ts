@@ -700,7 +700,15 @@ export class Engine {
         });
         migrated.services.push(...createDemoCatalogServices());
       }
+      createAdditionalCatalogServices().forEach((service) => {
+        if (!migrated.services.some((item) => item.id === service.id))
+          migrated.services.push(service);
+      });
       hydrateDemoCatalogServices(migrated.services);
+      if ((migrated.demoEngineeringVersion ?? 0) < 2) {
+        refreshDemoEngineeringOrders(migrated);
+        migrated.demoEngineeringVersion = 2;
+      }
       ensureDemoCsActors(migrated);
       const migrateCustomer = (customer: Customer) => {
         customer.street ??= "";
@@ -3060,13 +3068,14 @@ function demoEngineeringLines(
   services: ServiceItem[],
   count: number,
   prefix: string,
+  offset = 0,
 ): QuoteLine[] {
   const positions = [
     "客廳", "飯廳", "主人房", "客房", "廚房", "浴室", "走廊", "露台",
     "書房", "工人房",
   ];
   return Array.from({ length: count }, (_, index) => {
-    const service = services[index % services.length];
+    const service = services[(offset + index) % services.length];
     return quoteLine(`${prefix}-line-${index + 1}`, service, {
       id: `${prefix}-line-${index + 1}`,
       position: positions[index % positions.length],
@@ -3081,9 +3090,40 @@ function demoEngineeringLines(
   });
 }
 
+const DEMO_ORDER_NUMBERS = new Set([
+  ...Array.from({ length: 30 }, (_, index) => `D2600${String(200 + index)}`),
+  "D260099",
+]);
+
+function refreshDemoEngineeringOrders(state: AppState): void {
+  const active = state.services.filter(
+    (service) => service.published && !service.archived,
+  );
+  if (!active.length) return;
+  const demoOrders = state.orders.filter((order) =>
+    DEMO_ORDER_NUMBERS.has(order.number),
+  );
+  const demoIds = new Set(demoOrders.map((order) => order.id));
+  demoOrders.forEach((order, index) => {
+    const count = order.number === "D260099" ? 20 : 12;
+    order.lines = demoEngineeringLines(
+      active,
+      count,
+      `${order.number.toLowerCase()}-v2`,
+      index * 3,
+    );
+    order.status = "pending";
+  });
+  state.assignments = state.assignments.filter(
+    (assignment) => !demoIds.has(assignment.workOrderId),
+  );
+}
+
 /** 30 張已分派給工程CS的demo工程，另加一張20項、待阿花分派的D260099。 */
 function appendDemoEngineeringOrders(seed: AppState): void {
-  const services = seed.services.filter((service) => service.published);
+  const services = seed.services.filter(
+    (service) => service.published && !service.archived,
+  );
   if (!services.length) return;
   const makeDemo = (
     index: number,
@@ -3107,7 +3147,12 @@ function appendDemoEngineeringOrders(seed: AppState): void {
     demoCustomer.unit = `${String.fromCharCode(65 + (index % 4))}室`;
     demoCustomer.street = "Demo 工程街";
     demoCustomer.address = `${district} Demo 工程街 Demo 屋苑 ${index + 1} ${demoCustomer.block} ${demoCustomer.floor} ${demoCustomer.unit}`;
-    const lines = demoEngineeringLines(services, lineCount, number.toLowerCase());
+    const lines = demoEngineeringLines(
+      services,
+      lineCount,
+      number.toLowerCase(),
+      index * 3,
+    );
     const total = lines.reduce((sum, line) => sum + demoLineAmount(line), 0);
     const quoteId = `quote-${number.toLowerCase()}`;
     const versionId = `version-${number.toLowerCase()}`;
@@ -3246,13 +3291,158 @@ function createDemoCatalogServices(): ServiceItem[] {
   }));
 }
 
+const DEMO_ADDITIONAL_SERVICE_IDS = [
+  "svc-demo-water-01", "svc-demo-water-02", "svc-demo-water-03",
+  "svc-demo-water-04", "svc-demo-water-05", "svc-demo-water-06",
+  "svc-demo-mud-01", "svc-demo-mud-02", "svc-demo-mud-03",
+  "svc-demo-mud-04", "svc-demo-mud-05", "svc-demo-mud-06",
+  "svc-demo-paint-01", "svc-demo-paint-02", "svc-demo-paint-03",
+  "svc-demo-paint-04", "svc-demo-paint-05", "svc-demo-paint-06",
+  "svc-demo-furniture-01", "svc-demo-furniture-02", "svc-demo-furniture-03",
+  "svc-demo-furniture-04", "svc-demo-furniture-05", "svc-demo-furniture-06",
+];
+function createAdditionalCatalogServices(): ServiceItem[] {
+  const waterDetails =
+    "連工包料和清走舊有喉管 來水喉管 舊有鐵喉更換包膠銅喉 (用簪欖做法)";
+  const base = (
+    id: string,
+    code: string,
+    name: string,
+    category: string,
+    details: string,
+  ): ServiceItem => ({
+    id,
+    code,
+    name,
+    category,
+    scope: "",
+    details,
+    linkedServiceIds: [],
+    unit: "平方呎",
+    price: 50,
+    measure: "area" as const,
+    minQty: 0,
+    minAmount: 0,
+    increment: 0.5,
+    minScope: "service" as const,
+    execution: "contractor" as const,
+    costMode: "ratio" as const,
+    costBasis: "line" as const,
+    options: [],
+    allowPending: false,
+    notes: "",
+    published: true,
+  });
+  const water: Array<[string, string, string, number, string]> = [
+    ["WTR-ALL-OPEN", "更換所有來水喉管 (明喉)", "全屋", 9000, "01"],
+    ["WTR-ALL-HIDDEN", "更換所有來水喉管 (暗喉)", "全屋", 13000, "02"],
+    ["WTR-KIT-OPEN", "廚房更換來水喉管 (明喉)", "廚房", 1800, "03"],
+    ["WTR-TOI-OPEN", "廁所更換來水喉管 (明喉)", "廁所", 1800, "04"],
+    ["WTR-KIT-HIDDEN", "廚房更換來水喉管 (暗喉)", "廚房", 2800, "05"],
+    ["WTR-TOI-HIDDEN", "廁所更換來水喉管 (暗喉)", "廁所", 2800, "06"],
+  ].map(([code, name, scope, price, suffix]) => [
+    code,
+    name,
+    scope,
+    price,
+    suffix,
+  ] as [string, string, string, number, string]);
+  const mud: Array<[string, string, string]> = [
+    ["MUD-KIT-WALL-CEIL", "廚房牆身/天花 批盪/地台做底", "廚房"],
+    ["MUD-KIT-WALL", "廚房牆身 批盪/地台做底", "廚房"],
+    ["MUD-TOI-WALL-CEIL", "廁所牆身/天花 批盪/地台做底", "廁所"],
+    ["MUD-TOI-FLOOR", "廁所地台 批盪/地台做底", "廁所"],
+    ["MUD-KIT-FLOOR-TILE", "廚房地台 鋪瓷磚 連工(包$20以下一呎瓷磚材料)", "廚房"],
+    ["MUD-KIT-WALL-TILE", "廚房牆身 鋪瓷磚 連工(包$20以下一呎瓷磚材料)", "廚房"],
+  ];
+  const paint: Array<[string, string, string]> = [
+    ["PNT-WHOLE", "全屋剷走鬆散底灰、批灰及髹油 (有傢俬和雜物)", "全屋"],
+    ["PNT-KIT-CEIL", "廚房天花剷走鬆散底灰、批灰及髹油 (有傢俬和雜物)", "廚房"],
+    ["PNT-KIT-WALL", "廚房牆身剷走鬆散底灰、批灰及髹油 (有傢俬和雜物)", "廚房"],
+    ["PNT-LIV-CEIL", "大廳天花剷走鬆散底灰、批灰及髹油 (有傢俬和雜物)", "廳房"],
+    ["PNT-ROOM-CEIL", "房間天花剷走鬆散底灰、批灰及髹油 (有傢俬和雜物)", "廳房"],
+    ["PNT-TOI-CEIL", "廁所天花剷走鬆散底灰、批灰及髹油 (有傢俬和雜物)", "廁所"],
+  ];
+  const furniture: Array<[string, string, string, number, "length" | "fixed"]> = [
+    ["FUR-KIT-HANG", "廚房生態夾板吊櫃", "廚房", 1500, "length"],
+    ["FUR-KIT-BASE", "廚房生態夾板地櫃連石英石面", "廚房", 1800, "length"],
+    ["FUR-KIT-HANG-BASE", "廚房生態夾板吊櫃及地櫃連石英石面", "廚房", 2700, "length"],
+    ["FUR-KIT-DRAWER", "廚房地櫃更換抽屜", "廚房", 480, "fixed"],
+    ["FUR-KIT-HINGE", "廚房地櫃更換門鉸位 包五金配件 清走舊有廢料", "廚房", 480, "fixed"],
+    ["FUR-WARDROBE-DOOR", "衣櫃更換木門 連門鉸 清走舊有櫃門", "廳房", 680, "fixed"],
+  ];
+  const rows: ServiceItem[] = [];
+  water.forEach(([code, name, scope, price, suffix]) => {
+    const service = base(
+      `svc-demo-water-${suffix}`,
+      code,
+      name,
+      "水喉",
+      waterDetails,
+    );
+    service.scope = scope;
+    service.price = price;
+    service.measure = "fixed";
+    service.unit = "項";
+    service.minQty = 0;
+    service.increment = 0;
+    service.minScope = "line";
+    rows.push(service);
+  });
+  mud.forEach(([code, name, scope], index) => {
+    const service = base(
+      `svc-demo-mud-${String(index + 1).padStart(2, "0")}`,
+      code,
+      name,
+      "泥水",
+      "連工包料",
+    );
+    service.scope = scope;
+    service.minQty = 100;
+    rows.push(service);
+  });
+  paint.forEach(([code, name, scope], index) => {
+    const service = base(
+      `svc-demo-paint-${String(index + 1).padStart(2, "0")}`,
+      code,
+      name,
+      "油漆",
+      "連工包料用立邦五合一油漆",
+    );
+    service.scope = scope;
+    service.minQty = 150;
+    rows.push(service);
+  });
+  furniture.forEach(([code, name, scope, price, measure], index) => {
+    const service = base(
+      `svc-demo-furniture-${String(index + 1).padStart(2, "0")}`,
+      code,
+      name,
+      "傢俬",
+      "包運輸及安裝和五金配件",
+    );
+    service.scope = scope;
+    service.price = price;
+    service.measure = measure;
+    service.unit = measure === "length" ? "直呎" : "項";
+    service.minQty = measure === "length" ? 3 : 0;
+    service.increment = measure === "length" ? 0.5 : 0;
+    service.minScope = "line";
+    rows.push(service);
+  });
+  return rows;
+}
+
 function hydrateDemoCatalogServices(services: ServiceItem[]): void {
-  const details =
-    "打鑿大約2-3寸，以見到石屎為盡；清拆後廢物另外收費";
-  DEMO_CATALOG_SERVICE_IDS.forEach((id) => {
-    const service = services.find((item) => item.id === id);
+  const defaults = [
+    ...createDemoCatalogServices(),
+    ...createAdditionalCatalogServices(),
+  ];
+  defaults.forEach((defaultItem) => {
+    const service = services.find((item) => item.id === defaultItem.id);
     if (!service) return;
-    service.details ??= details;
+    service.details ??= defaultItem.details;
+    service.scope ??= defaultItem.scope;
     service.linkedServiceIds ??= [];
   });
 }
@@ -3582,6 +3772,7 @@ export function createSeedState(): AppState {
     service.archived = true;
   });
   services.push(...createDemoCatalogServices());
+  services.push(...createAdditionalCatalogServices());
   const draft1: Quote = {
     id: "quote-draft-1",
     number: "QMM26100001",
@@ -3848,6 +4039,7 @@ export function createSeedState(): AppState {
     quoteSequences: { "2026-10": 6 },
     receiptSequences: {},
     workOrderSequences: { "26": 1 },
+    demoEngineeringVersion: 2,
   };
   appendDemoEngineeringOrders(seed);
   hydrateCustomerProfiles(seed);

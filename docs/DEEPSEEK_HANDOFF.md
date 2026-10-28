@@ -139,3 +139,13 @@
 - 「編輯」開分類editor：可新增分類；可勾選多個分類刪除。刪除前必須確認：「是否確定真的要刪除XXX工程項目？一旦刪除，工程項目入面的工程全部都會一齊刪除掉。」
 - 刪除分類時，相關`ServiceItem`一律`archived=true`，不可硬刪；舊Quote/Invoice/WorkOrder snapshot保留。刪除後如active tag被移除，回到全部。
 - 分類新增／刪除只限Super Admin。
+
+## 2026-10-27 第二十四項catalog及demo工程重建（不得退化）
+
+- Active catalog共30項：打拆6、水喉6、泥水6、油漆6、傢俬6。舊demo services仍archived。
+- 水喉detail完整句子：「連工包料和清走舊有喉管 來水喉管 舊有鐵喉更換包膠銅喉 (用簪欖做法)」；水喉scope已修正為廚房／廁所／全屋正確配對，全部fixed price，低銷無。
+- 泥水detail統一「連工包料」；油漆detail「連工包料用立邦五合一油漆」；油漆第6項是「廁所天花剷走鬆散底灰、批灰及髹油 (有傢俬和雜物)」，不是水喉。
+- 傢俬6項：三項length/直呎低銷3，三項fixed/項低銷無。
+- `AppState.demoEngineeringVersion` = 2。舊state沒有2時，refresh 30張demo單為每張12項、D260099為20項，全部lines取自active catalog；清空demo work orders的assignments，不改csOwnerId；已為2時不可每次reload重刷。
+- Demo lines只更新WorkOrder snapshot；舊Invoice／Quote lines不應被反寫，避免破壞歷史。
+- 新seed直接由active catalog產生demo lines；30張單仍是D2600200–D2600229，D260099 unassigned。
