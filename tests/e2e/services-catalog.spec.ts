@@ -21,7 +21,10 @@ test("工程價目只顯示新catalog六項，分類tag及新增項目可運作"
   await expect(page.locator(".service-table tbody tr")).toHaveCount(6);
   await expect(page.getByText("更換所有來水喉管 (明喉)", { exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "全部", exact: true }).click();
-  await expect(page.locator(".service-table tbody tr")).toHaveCount(30);
+  await expect(page.locator(".service-table tbody tr")).toHaveCount(12);
+  await expect(page.locator(".service-catalog .pagination")).toContainText(
+    "共 30 項",
+  );
 
   await page.getByRole("button", { name: "新增工程項目", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "新增工程項目" });

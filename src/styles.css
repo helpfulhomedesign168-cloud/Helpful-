@@ -3426,3 +3426,53 @@ textarea {
 .line-notes textarea {
   margin-top: 7px;
 }
+
+/* Shared record-list pagination (12 per page) */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+  color: #697066;
+  font-size: 14px;
+}
+.pagination-button {
+  min-height: 36px;
+  padding: 5px 12px;
+  border: 1px solid #d3d7cc;
+  border-radius: 6px;
+  background: #fff;
+  color: #333b2f;
+  font-size: 14px;
+}
+.pagination-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.payment-proof-preview {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+.payment-proof-preview > span {
+  color: #68705f;
+  font-size: 14px;
+}
+.payment-proof-preview .proof-thumb {
+  width: 180px;
+  height: 130px;
+}
+.order-rail .pagination {
+  justify-content: space-between;
+  gap: 5px;
+  padding: 9px;
+  font-size: 12px;
+}
+.order-rail .pagination-button {
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 12px;
+}

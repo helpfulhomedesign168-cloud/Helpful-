@@ -13,7 +13,8 @@ test("工程CS有30張demo工程；阿花分派D260099後有31張及20項工程"
   await page.goto("/");
   await switchRole(page, "工程CS");
   await page.goto("/orders");
-  await expect(page.locator(".order-rail-row")).toHaveCount(30);
+  await expect(page.locator(".order-rail-row")).toHaveCount(12);
+  await expect(page.locator(".order-rail .pagination")).toContainText("共 30 項");
   await expect(
     page.locator(".order-rail-row").filter({ hasText: "D260099" }),
   ).toHaveCount(0);
@@ -28,7 +29,8 @@ test("工程CS有30張demo工程；阿花分派D260099後有31張及20項工程"
 
   await switchRole(page, "工程CS");
   await page.goto("/orders");
-  await expect(page.locator(".order-rail-row")).toHaveCount(31);
+  await expect(page.locator(".order-rail-row")).toHaveCount(12);
+  await expect(page.locator(".order-rail .pagination")).toContainText("共 31 項");
   await page.locator(".order-rail-row").filter({ hasText: "D260099" }).click();
   await expect(
     page.getByRole("heading", { name: "D260099", exact: true }),

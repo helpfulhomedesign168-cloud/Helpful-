@@ -31,3 +31,4 @@
 - [x] 加入24項active catalog：水喉6（完整簪欖detail及修正scope）、泥水6（detail連工包料）、油漆6（廁所天花修正）、傢俬6；連同打拆6共30項。Demo工程版本2：30張單各12項、D260099 20項，全部line由active catalog自動分配，清空demo assignments；舊localStorage自動補24項及刷新demo lines。
 - [x] Sales報價UX：完整地址樓層／單位自動補「樓」「室」；移除施工位置及尺寸單位輸入（位置自動用Service scope，單位預設呎）；工程詳細顯示於項目名稱下；現場要求改可收起details（預設關閉）；施工位置及備註不再是提交必填；當日主管及簽署主管允許head跨Team（Don可在Team B選擇），supervisor仍限定Team。
 - [x] Sales UI簡化：新增工程picker移除工程code及右邊＋；quote stepper只保留報價／客戶已簽／交Office三步；報價摘要移除「即時計價」、「收款計劃」及底部「僅先保存」細字。
+- [x] 全系統記錄列表pagination：分享用`usePagination`每頁12項，套用提交報價／報價／Invoice／收款核對／工程單／工程管理rail／客戶／工程價目／業績；列表按最新時間desc（提交日期、updatedAt、createdAt、releasedAt等）。提交報價：移除頁首頁尾細字、報價號下細字、證明文件column；新增日期column；付款核對＋操作合併為最右「狀態」，待核對為黑色核對收款，已核對可開單顯示已核對並開單；付款證明移入核對popup。

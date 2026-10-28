@@ -129,7 +129,9 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
 
   await role(page, "開單員");
   row = page.locator("tbody tr").filter({ hasText: qNumber });
-  const proofThumb = row.getByRole("button", {
+  await row.getByRole("button", { name: "核對收款", exact: true }).click();
+  const review = page.getByRole("dialog");
+  const proofThumb = review.getByRole("button", {
     name: "開啟 首訂證明.svg",
     exact: true,
   });
@@ -141,14 +143,12 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   ]);
   await expect(proofPage).toHaveURL(/^blob:/);
   await proofPage.close();
-  await row.getByRole("button", { name: "核對收款", exact: true }).click();
-  await page
-    .getByRole("dialog")
+  await review
     .getByRole("button", { name: "確認有效收款", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(
-    row.getByRole("button", { name: /已核對並開單/ }),
+    row.getByRole("button", { name: "待分類", exact: true }),
   ).toBeDisabled();
   await row
     .getByRole("combobox", { name: `${qNumber} 分類` })
@@ -156,7 +156,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   await expect(
     row.getByRole("button", { name: /已核對並開單/ }),
   ).toBeEnabled();
-  await expect(row).toContainText("HK$28,500.00");
+  await expect(row).toContainText("HK$30,000.00");
   await row.getByRole("button", { name: /已核對並開單/ }).click();
   await expect(
     page.getByRole("heading", { name: "UI測試新客戶的單據", exact: true }),

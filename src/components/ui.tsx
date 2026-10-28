@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   X,
   Check,
@@ -187,6 +187,62 @@ export function Dialog({
     </div>
   );
 }
+export const LIST_PAGE_SIZE = 12;
+
+export function usePagination<T>(items: T[], resetKey?: string) {
+  const [page, setPage] = useState(1);
+  useEffect(() => {
+    setPage(1);
+  }, [resetKey]);
+  const pages = Math.max(1, Math.ceil(items.length / LIST_PAGE_SIZE));
+  const current = Math.min(page, pages);
+  return {
+    page: current,
+    pages,
+    total: items.length,
+    items: items.slice((current - 1) * LIST_PAGE_SIZE, current * LIST_PAGE_SIZE),
+    setPage,
+  };
+}
+
+export function Pagination({
+  page,
+  pages,
+  total,
+  onChange,
+}: {
+  page: number;
+  pages: number;
+  total: number;
+  onChange: (page: number) => void;
+}) {
+  if (pages <= 1) return null;
+  return (
+    <div className="pagination">
+      <span>共 {total} 項</span>
+      <button
+        type="button"
+        className="pagination-button"
+        disabled={page <= 1}
+        onClick={() => onChange(page - 1)}
+      >
+        上一頁
+      </button>
+      <span>
+        第 {page} / {pages} 頁
+      </span>
+      <button
+        type="button"
+        className="pagination-button"
+        disabled={page >= pages}
+        onClick={() => onChange(page + 1)}
+      >
+        下一頁
+      </button>
+    </div>
+  );
+}
+
 export function PageHead({
   eyebrow,
   title,

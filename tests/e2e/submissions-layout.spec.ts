@@ -35,20 +35,31 @@ test("提交報價：搜尋及兩個篩選同一行，首訂金額及證明文�
     page.getByRole("columnheader", { name: "首訂金額", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("columnheader", { name: "證明文件", exact: true }),
+    page.getByRole("columnheader", { name: "日期", exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "狀態", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "證明文件", exact: true }),
+  ).toHaveCount(0);
 
   const classified = page
     .locator("tbody tr")
     .filter({ hasText: "QSHKK26100005" });
   await expect(classified).toContainText("HK$4,200.00");
-  await expect(classified).toContainText("未上載");
+  await expect(classified).toContainText("8萬資助");
+  await expect(
+    classified.getByRole("button", { name: /已核對並開單/ }),
+  ).toBeVisible();
 
   const unclassified = page
     .locator("tbody tr")
     .filter({ hasText: "QSHMM26100004" });
   await expect(unclassified).toContainText("待分類");
-  await expect(unclassified).toContainText("未上載");
+  await expect(
+    unclassified.getByRole("button", { name: "核對收款", exact: true }),
+  ).toBeVisible();
 
   await page.setViewportSize({ width: 1600, height: 900 });
   expect(

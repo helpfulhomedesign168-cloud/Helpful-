@@ -69,7 +69,7 @@ test("開單員在提交報價頁核對Sales付款，分類前開單按鈕保持
     .click();
   await expect(dialog).toBeHidden();
   await expect(
-    row.getByRole("button", { name: /已核對並開單/ }),
+    row.getByRole("button", { name: "待分類", exact: true }),
   ).toBeDisabled();
   await expect(row.getByRole("combobox", { name: /分類/ })).toHaveValue("");
 });

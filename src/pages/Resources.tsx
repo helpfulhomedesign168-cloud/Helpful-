@@ -11,6 +11,8 @@ import {
   PageHead,
   Search,
   Section,
+  Pagination,
+  usePagination,
 } from "../components/ui";
 import {
   Customer,
@@ -84,6 +86,10 @@ export function Services() {
   }
   const set = (data: Partial<ServiceItem>) =>
     setEditing((current) => (current ? { ...current, ...data } : null));
+  const pager = usePagination(
+    visible,
+    `${activeCategory}|${search}`,
+  );
   const linked = (editing?.linkedServiceIds ?? [])
     .map((id) => allItems.find((service) => service.id === id))
     .filter((service): service is ServiceItem => Boolean(service));
@@ -172,7 +178,7 @@ export function Services() {
                 </tr>
               </thead>
               <tbody>
-                {visible.map((service) => (
+                {pager.items.map((service) => (
                   <tr key={service.id}>
                     <td>
                       <strong>{service.name}</strong>
@@ -218,6 +224,14 @@ export function Services() {
               </tbody>
             </table>
           </div>
+        )}
+        {pager.total > 0 && (
+          <Pagination
+            page={pager.page}
+            pages={pager.pages}
+            total={pager.total}
+            onChange={pager.setPage}
+          />
         )}
       </div>
       {editing && (
@@ -587,7 +601,22 @@ export function Customers() {
     if (!csRole) profiles = engine.listCustomers(actor);
   } catch {}
   let clients: Customer[] = profiles.map((profile) => profile.customer);
-  if (csRole) clients = engine.listOrders(actor).map((o) => o.customer);
+  const customerDates = new Map<string, string>();
+  profiles.forEach((profile) => {
+    const key = profile.customer.id || profile.customer.phone;
+    customerDates.set(key, profile.createdAt);
+    customerDates.set(profile.customer.phone, profile.createdAt);
+  });
+  if (csRole) {
+    const customerOrders = engine.listOrders(actor);
+    clients = customerOrders.map((order) => order.customer);
+    customerOrders.forEach((order) => {
+      const key = order.customer.id || order.customer.phone;
+      const date = order.csReleasedAt ?? order.createdAt;
+      customerDates.set(key, date);
+      customerDates.set(order.customer.phone, date);
+    });
+  }
   const ownerByCustomer = new Map<string, string>();
   profiles.forEach((profile) => {
     ownerByCustomer.set(
@@ -619,7 +648,19 @@ export function Customers() {
         ownerByCustomer.get(c.phone);
       return ownerId === salesFilter;
     })
-    .filter((c) => `${c.name}${c.phone}${c.address}`.includes(search));
+    .filter((c) => `${c.name}${c.phone}${c.address}`.includes(search))
+    .sort((a, b) => {
+      const aDate =
+        customerDates.get(a.id || a.phone) ??
+        customerDates.get(a.phone) ??
+        "";
+      const bDate =
+        customerDates.get(b.id || b.phone) ??
+        customerDates.get(b.phone) ??
+        "";
+      return bDate.localeCompare(aDate);
+    });
+  const pager = usePagination(list, `${salesFilter}|${search}`);
   return (
     <>
       <PageHead
@@ -696,7 +737,7 @@ export function Customers() {
                 </tr>
               </thead>
               <tbody>
-                {list.map((c) => (
+                {pager.items.map((c) => (
                   <tr key={c.id || c.phone}>
                     <td>
                       <strong>{c.name}</strong>
@@ -721,6 +762,14 @@ export function Customers() {
               </tbody>
             </table>
           </div>
+        )}
+        {pager.total > 0 && (
+          <Pagination
+            page={pager.page}
+            pages={pager.pages}
+            total={pager.total}
+            onChange={pager.setPage}
+          />
         )}
       </div>
       {creating && (
@@ -813,6 +862,8 @@ export function Performance() {
   const [month, setMonth] = useState("2026-10");
   const [info, setInfo] = useState(false);
   const p = engine.performance(actor, month);
+  const entries = [...p.entries].sort((a, b) => b.date.localeCompare(a.date));
+  const pager = usePagination(entries, month);
   const nav = useNavigate();
   const management = actor.role === "head" || actor.role === "supervisor";
   return (
@@ -877,7 +928,7 @@ export function Performance() {
         )}
       </Section>
       <Section title="本月合資格來源">
-        {p.entries.length === 0 ? (
+        {pager.total === 0 ? (
           <Empty
             title="本月暫無合資格來源"
             description="會計核足適用首期後，業績及佣金才會計入。"
@@ -895,7 +946,7 @@ export function Performance() {
                 </tr>
               </thead>
               <tbody>
-                {p.entries.map((e, i) => (
+                {pager.items.map((e, i) => (
                   <tr key={e.quoteId + i}>
                     <td>
                       <button
@@ -917,6 +968,14 @@ export function Performance() {
               </tbody>
             </table>
           </div>
+        )}
+        {pager.total > 0 && (
+          <Pagination
+            page={pager.page}
+            pages={pager.pages}
+            total={pager.total}
+            onChange={pager.setPage}
+          />
         )}
       </Section>
       <p className="muted">合資格金額不等已發放薪金；月結及發放由會計處理。</p>
