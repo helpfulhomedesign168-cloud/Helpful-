@@ -25,7 +25,11 @@ test("CS主管可安排及更改跟進同事，普通CS只讀", async ({ page })
   await expect(row).toContainText("文文B MM");
   await expect(row).toContainText("自費");
   await expect(row).toContainText("未安排");
-  await expect(row).toContainText("Invoice SHMM26100001");
+  await expect(row).toContainText("INV SHMM26100001");
+  await expect(row).not.toContainText("Q Q");
+  await expect(page.getByLabel("工程月份", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Sales", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("跟進同事", { exact: true })).toBeVisible();
 
   await row.getByRole("button", { name: "安排工程", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "安排CS跟進" });

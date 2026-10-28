@@ -175,3 +175,11 @@
 - Submissions columns固定：報價單、日期、客戶／地區、Sales、成交額、首訂金額、分類、狀態（最右）。
 - 狀態：有pending payment → 黑色「核對收款」；已核對且可開單 → 黑色「已核對並開單」；未分類／未收款 → disabled「待分類／待收款」。
 - 付款證明不再在列表顯示；只可在核對收款popup內以圖片預覽（無證明顯示未上載）。
+
+## 2026-10-28 CS工程單及calendar（不得退化）
+
+- 工程單每行invoice只可顯示短式「INV {invoiceNumber}」；不可顯示quote number或「Q ...」。
+- 工程單toolbar必須有月份、Sales、跟進同事filter；跟進同事包括「未安排」。Filter/search/page都要正確重置。
+- 工程單列表仍按releasedAt最新優先；分頁12項。
+- 多日Assignment／額外工程在calendar只可在開始日顯示一個event；label帶日期range（例如11-05–11-07），不可逐日重複同一方格。
+- 工程管理detail最底部要有全寬「工程完成」button；現階段沒有onClick／流程，不可假裝已完成或彈假成功訊息。

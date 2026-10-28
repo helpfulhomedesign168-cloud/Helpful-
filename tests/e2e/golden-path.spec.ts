@@ -216,17 +216,29 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
     .click();
 
   await role(page, "阿花");
-  row = page.locator("tbody tr").filter({ hasText: qNumber });
+  await page
+    .getByPlaceholder("搜尋工程單、客戶、電話或Sales")
+    .fill(qNumber);
+  row = page.locator("tbody tr").filter({ hasText: "UI測試新客戶" });
   await expect(row).toBeVisible();
   // CS supervisor can see all engineering orders; contractor Assignment is separate.
   const workOrderNumber = (
     await row.locator("td").first().innerText()
   ).split("\n")[0].trim();
   await page.getByRole("link", { name: "工程管理", exact: true }).click();
-  await page
+  const railRow = page
     .locator(".order-rail-row")
-    .filter({ hasText: workOrderNumber })
-    .click();
+    .filter({ hasText: workOrderNumber });
+  for (let pageIndex = 0; pageIndex < 6; pageIndex += 1) {
+    if (await railRow.count()) break;
+    const next = page
+      .locator(".order-rail .pagination-button")
+      .filter({ hasText: "下一頁" });
+    if (!(await next.count()) || (await next.isDisabled())) break;
+    await next.click();
+  }
+  await expect(railRow).toBeVisible();
+  await railRow.click();
   await expect(page.locator(".workorder-head h1")).toHaveText(/^D26\d{5}$/);
   await page.getByRole("button", { name: "安排", exact: true }).first().click();
   await page

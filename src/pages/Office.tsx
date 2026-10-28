@@ -1147,9 +1147,20 @@ export function InvoiceDetail() {
 export function Handoff() {
   const { actor, engine, run } = useApp();
   const [search, setSearch] = useState("");
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [salesFilter, setSalesFilter] = useState("all");
+  const [csFilter, setCsFilter] = useState("all");
   const [assigning, setAssigning] = useState<HandoffRow | null>(null);
   const [selectedCs, setSelectedCs] = useState("");
   const rows = engine.listHandoffs(actor);
+  const salesActors = engine
+    .listActors()
+    .filter((candidate) =>
+      ["sales", "supervisor", "head"].includes(candidate.role),
+    );
+  const months = [...new Set(rows.map((row) => row.releasedAt.slice(0, 7)))]
+    .sort()
+    .reverse();
   let csTeam = [] as ReturnType<typeof engine.listCsTeam>;
   try {
     csTeam = engine.listCsTeam(actor);
@@ -1158,22 +1169,72 @@ export function Handoff() {
     actor.role === "cs_supervisor" || actor.role === "admin";
   const shown = [...rows]
     .sort((a, b) => b.releasedAt.localeCompare(a.releasedAt))
-    .filter((row) =>
-      `${row.workOrderNumber} ${row.quoteNumber} ${row.invoiceNumber} ${row.customerName} ${row.phone} ${row.salesName} ${row.csOwnerName ?? ""}`.includes(
+    .filter((row) => {
+      if (monthFilter !== "all" && !row.releasedAt.startsWith(monthFilter))
+        return false;
+      if (salesFilter !== "all" && row.salesId !== salesFilter) return false;
+      if (
+        csFilter !== "all" &&
+        (row.csOwnerId ?? "unassigned") !== csFilter
+      )
+        return false;
+      return `${row.workOrderNumber} ${row.quoteNumber} ${row.invoiceNumber} ${row.customerName} ${row.phone} ${row.salesName} ${row.csOwnerName ?? ""}`.includes(
         search,
-      ),
-    );
-  const pager = usePagination(shown, search);
+      );
+    });
+  const pager = usePagination(
+    shown,
+    `${search}|${monthFilter}|${salesFilter}|${csFilter}`,
+  );
   return (
     <>
       <PageHead eyebrow="CS工程部" title="工程單" />
       <div className="list-panel">
-        <div className="list-toolbar">
+        <div className="submission-toolbar">
           <Search
             value={search}
             onChange={setSearch}
             placeholder="搜尋工程單、客戶、電話或Sales"
           />
+          <div className="submission-filters">
+            <select
+              aria-label="工程月份"
+              value={monthFilter}
+              onChange={(event) => setMonthFilter(event.target.value)}
+            >
+              <option value="all">全部月份</option>
+              {months.map((month) => (
+                <option key={month} value={month}>
+                  {formatMonthLabel(month)}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Sales"
+              value={salesFilter}
+              onChange={(event) => setSalesFilter(event.target.value)}
+            >
+              <option value="all">全部 Sales</option>
+              {salesActors.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.name}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="跟進同事"
+              value={csFilter}
+              onChange={(event) => setCsFilter(event.target.value)}
+            >
+              <option value="all">全部跟進同事</option>
+              <option value="unassigned">未安排</option>
+              {csTeam.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         {shown.length === 0 ? (
           <Empty
@@ -1201,9 +1262,7 @@ export function Handoff() {
                       <strong className="source-link">
                         {row.workOrderNumber}
                       </strong>
-                      <small>
-                        Invoice {row.invoiceNumber} · Q {row.quoteNumber}
-                      </small>
+                      <small>INV {row.invoiceNumber}</small>
                     </td>
                     <td>
                       <strong>{row.customerName}</strong>
@@ -1422,11 +1481,13 @@ function WorkOrderCalendar({
   const offset = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
   const events = new Map<string, string[]>();
   const addEvent = (startDate: string, endDate: string, label: string) => {
-    dateRange(startDate, endDate).forEach((date) => {
-      const list = events.get(date) ?? [];
-      list.push(label);
-      events.set(date, list);
-    });
+    const list = events.get(startDate) ?? [];
+    list.push(
+      startDate !== endDate
+        ? `${label} · ${startDate.slice(5)}–${endDate.slice(5)}`
+        : label,
+    );
+    events.set(startDate, list);
   };
   assignments.forEach((assignment) => {
     const line = order.lines.find((item) =>
@@ -1875,6 +1936,9 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         </div>
       </Section>
       <SitePhotos order={order} canEdit={canEdit} />
+      <Button className="full-width completion-button" variant="primary">
+        工程完成
+      </Button>
       {selectedLine && (
         <Dialog
           title={editingAssignmentId ? "更改安排" : "安排施工"}

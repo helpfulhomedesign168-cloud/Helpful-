@@ -3476,3 +3476,10 @@ textarea {
   padding: 4px 8px;
   font-size: 12px;
 }
+
+.completion-button {
+  min-height: 54px;
+  margin-top: 20px;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+}

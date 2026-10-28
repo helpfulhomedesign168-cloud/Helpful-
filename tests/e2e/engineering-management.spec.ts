@@ -67,9 +67,8 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await expect(
     page
       .locator(".calendar-cell.has-events")
-      .filter({ hasText: "上午" })
-      .first(),
-  ).toBeVisible();
+      .filter({ hasText: "上午" }),
+  ).toHaveCount(1);
   const itemRow = page
     .locator(".engineering-table tbody tr")
     .filter({ hasText: "木門" });
