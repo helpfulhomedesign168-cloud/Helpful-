@@ -201,3 +201,10 @@
 - 12個demo工程師傅中，feeMode=`daily`一律feeAmount=1600；feeMode=`fixed`一律feeAmount=3000；project60維持0（按報價6成計）。
 - Seed建立及舊localStorage migration都必須套用此規則；migration只可按12個`resource-master-*` IDs補回，不可覆蓋用戶自行新增的師傅或其收費。
 - 工程內容「師傅收費」column對daily/fixed顯示feeAmount；project60顯示quote line amount×60%。
+
+## 2026-10-29 工程成本總和及師傅選項label
+
+- Assignment及額外工程資源dropdown label必須係`名稱（mainWork）`，例如`林仔（油漆）`、`黃日強 (Danny)（判頭）`。無mainWork的舊demo資源可只顯示名稱。
+- 工程管理detail必須在「工程內容」card與「現場環境」card之間顯示成本總和card；不可放到page底或現場環境下面。
+- 成本總和至少顯示：報價單總額（invoice.netTotal）、成本支出總和、成本比率、淨賺、未安排項數。
+- 成本只計已安排師傅收費：project60=quote line amount×60%；daily=feeAmount×inclusive日數；fixed=feeAmount×項目數；額外工程同樣按daily/fixed計。未安排報價工程不可估成本，card必須註明。
