@@ -1794,11 +1794,13 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   }, [order.id]);
   const invoice = engine.getInvoice(actor, order.invoiceId);
   let lineAmounts = new Map<string, number>();
+  let lineAmountsByIndex: number[] = [];
   try {
     const pricing = engine.invoicePricing(actor, invoice.id);
     lineAmounts = new Map(
       pricing.lineAmounts.map((amount) => [amount.id, amount.amount]),
     );
+    lineAmountsByIndex = pricing.lineAmounts.map((amount) => amount.amount);
   } catch {}
   const assignments = engine.listAssignments(actor, order.id);
   const extraWorks = engine.listExtraWorks(actor, order.id);
@@ -1929,8 +1931,12 @@ function OrderPanel({ order }: { order: WorkOrder }) {
               </tr>
             </thead>
             <tbody>
-              {order.lines.map((line) => {
+              {order.lines.map((line, lineIndex) => {
                 const assignment = assigned.get(line.id);
+                const lineAmount =
+                  (lineAmounts.get(line.id) ?? 0) > 0
+                    ? lineAmounts.get(line.id)
+                    : lineAmountsByIndex[lineIndex];
                 const resource = resources.find(
                   (item) => item.id === assignment?.resourceId,
                 );
@@ -1962,10 +1968,9 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                               : "—"}
                           </strong>
                           {resource.feeMode === "project60" &&
-                            lineAmounts.has(line.id) && (
-                              <small>
-                                {money((lineAmounts.get(line.id) ?? 0) * 0.6)}
-                              </small>
+                            lineAmount !== undefined &&
+                            lineAmount > 0 && (
+                              <small>{money(lineAmount * 0.6)}</small>
                             )}
                           {resource.feeMode !== "project60" &&
                             resource.feeAmount && (
