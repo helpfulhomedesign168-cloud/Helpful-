@@ -48,6 +48,7 @@ import {
   EXTRA_WORK_LABELS,
   ExtraWorkKind,
   ExtraWork,
+  Resource,
   ResourceFeeMode,
 } from "../domain/types";
 
@@ -61,6 +62,12 @@ const RESOURCE_FEE_LABELS: Record<ResourceFeeMode, string> = {
   daily: "日薪",
   fixed: "固定價",
 };
+
+function resourceOptionLabel(resource: Resource) {
+  return resource.mainWork
+    ? `${resource.name}（${resource.mainWork}）`
+    : resource.name;
+}
 
 function ProofThumb({ attachment }: { attachment: Attachment }) {
   const { run } = useApp();
@@ -1825,6 +1832,58 @@ function OrderPanel({ order }: { order: WorkOrder }) {
     // resources stay out of the 執行師傅 list.
     return resource.active && resource.type !== "service";
   });
+  const lineAmountFor = (lineId: string, lineIndex: number) =>
+    quoteLineAmounts[lineId] ??
+    ((lineAmounts.get(lineId) ?? 0) > 0
+      ? lineAmounts.get(lineId)
+      : lineAmountsByIndex[lineIndex]);
+  const quoteTotal = invoice.netTotal;
+  const unassignedCount = order.lines.filter(
+    (line) => !assigned.has(line.id),
+  ).length;
+  const assignedCost = assignments.reduce((total, assignment) => {
+    const resource = resources.find(
+      (item) => item.id === assignment.resourceId,
+    );
+    if (!resource?.feeMode) return total;
+    const days = Math.max(
+      1,
+      dateRange(
+        assignment.date,
+        assignment.endDate ?? assignment.date,
+      ).length,
+    );
+    if (resource.feeMode === "daily")
+      return total + (resource.feeAmount ?? 0) * days;
+    if (resource.feeMode === "fixed")
+      return total + (resource.feeAmount ?? 0) * assignment.lineIds.length;
+    return (
+      total +
+      assignment.lineIds.reduce((sum, lineId) => {
+        const lineIndex = order.lines.findIndex((line) => line.id === lineId);
+        return sum + (lineAmountFor(lineId, lineIndex) ?? 0) * 0.6;
+      }, 0)
+    );
+  }, 0);
+  const extraCost = extraWorks.reduce((total, extra) => {
+    const resource = resources.find(
+      (item) => item.id === extra.resourceId,
+    );
+    if (!resource?.feeMode) return total;
+    if (resource.feeMode === "daily") {
+      const days = Math.max(
+        1,
+        dateRange(extra.startDate, extra.endDate).length,
+      );
+      return total + (resource.feeAmount ?? 0) * days;
+    }
+    if (resource.feeMode === "fixed")
+      return total + (resource.feeAmount ?? 0);
+    return total;
+  }, 0);
+  const costTotal = assignedCost + extraCost;
+  const costPercent =
+    quoteTotal > 0 ? ((costTotal / quoteTotal) * 100).toFixed(1) : "0.0";
   const openAssignment = (lineId: string, assignmentId?: string) => {
     const assignment = assignments.find((item) => item.id === assignmentId);
     setSelectedLineId(lineId);
@@ -1937,11 +1996,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
             <tbody>
               {order.lines.map((line, lineIndex) => {
                 const assignment = assigned.get(line.id);
-                const lineAmount =
-                  quoteLineAmounts[line.id] ??
-                  ((lineAmounts.get(line.id) ?? 0) > 0
-                    ? lineAmounts.get(line.id)
-                    : lineAmountsByIndex[lineIndex]);
+                const lineAmount = lineAmountFor(line.id, lineIndex);
                 const resource = resources.find(
                   (item) => item.id === assignment?.resourceId,
                 );
@@ -2056,6 +2111,35 @@ function OrderPanel({ order }: { order: WorkOrder }) {
           </table>
         </div>
       </Section>
+      <section className="cost-summary" aria-label="成本總和">
+        <div className="cost-summary-head">
+          <div>
+            <h2>成本總和</h2>
+            <p>只計已安排師傅的收費；未安排工程未計入成本。</p>
+          </div>
+          <span>未安排 {unassignedCount} 項</span>
+        </div>
+        <div className="cost-summary-grid">
+          <div>
+            <span>報價單總額</span>
+            <strong>{money(quoteTotal)}</strong>
+          </div>
+          <div>
+            <span>成本支出總和</span>
+            <strong>{money(costTotal)}</strong>
+          </div>
+          <div>
+            <span>成本比率</span>
+            <strong>{costPercent}%</strong>
+          </div>
+          <div>
+            <span>淨賺</span>
+            <strong className={quoteTotal - costTotal < 0 ? "negative" : ""}>
+              {money(quoteTotal - costTotal)}
+            </strong>
+          </div>
+        </div>
+      </section>
       <SitePhotos order={order} canEdit={canEdit} />
       <Button className="full-width completion-button" variant="primary">
         工程完成
@@ -2077,7 +2161,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                 <option value="">選擇判頭或公司師傅</option>
                 {compatible.map((resource) => (
                   <option key={resource.id} value={resource.id}>
-                    {resource.name}
+                    {resourceOptionLabel(resource)}
                   </option>
                 ))}
               </select>
@@ -2176,7 +2260,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                   .filter((resource) => resource.active)
                   .map((resource) => (
                     <option key={resource.id} value={resource.id}>
-                      {resource.name}
+                      {resourceOptionLabel(resource)}
                     </option>
                   ))}
               </select>

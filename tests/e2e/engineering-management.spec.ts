@@ -59,10 +59,10 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await page.getByRole("button", { name: "安排", exact: true }).first().click();
   const resourceSelect = page.getByLabel("執行師傅", { exact: false });
   const resourceOptions = await resourceSelect.locator("option").allTextContents();
-  expect(resourceOptions).toContain("黃日強 (Danny)");
-  expect(resourceOptions).toContain("林仔");
+  expect(resourceOptions).toContain("黃日強 (Danny)（判頭）");
+  expect(resourceOptions).toContain("林仔（油漆）");
   expect(resourceOptions).toContain("Demo 判頭");
-  await resourceSelect.selectOption({ label: "黃日強 (Danny)" });
+  await resourceSelect.selectOption({ label: "黃日強 (Danny)（判頭）" });
   await page.getByLabel("開工日期", { exact: false }).fill("2026-11-05");
   await page.getByLabel("完工日期", { exact: false }).fill("2026-11-07");
   await page.getByLabel("時段", { exact: false }).selectOption("上午");
@@ -80,6 +80,11 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await expect(itemRow).toContainText("2026-11-07");
   await expect(itemRow).toContainText("項目6成");
   await expect(itemRow).toContainText(/HK\$/);
+  const cost = page.getByRole("region", { name: "成本總和" });
+  await expect(cost).toContainText("報價單總額");
+  await expect(cost).toContainText("成本支出總和");
+  await expect(cost).toContainText("60.0%");
+  await expect(cost).toContainText("淨賺");
 
   await page.getByRole("button", { name: "更改安排", exact: true }).click();
   await expect(page.getByLabel("時段", { exact: false })).toHaveValue("上午");

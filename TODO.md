@@ -37,3 +37,4 @@
 - [x] 工程Assignment收費顯示：每張工程單的執行師傅dropdown列出所有active師傅／判頭（不再按工種／類型限制）；工程內容表新增「師傅收費」，項目6成按該Invoice line報價×60%顯示，日薪／固定價顯示設定金額。
 - [x] 師傅項目6成金額改由工程單所屬報價版本line amount計算（orderLineAmounts），Invoice line amount作fallback；避免ID不一致時只顯示「項目6成」或0.00。
 - [x] Demo工程師傅收費hard code：所有日薪=HK$1,600/工，所有固定價=HK$3,000；seed及舊localStorage migration同時補回（只限12個demo master IDs，不覆蓋用戶新增師傅）。
+- [x] 工程管理：執行師傅選項顯示「名稱（主項工程）」；工程內容與現場環境之間新增成本總和卡（報價單總額、成本支出總和、成本比率、淨賺、未安排項數）。成本按已安排師傅：項目6成、日薪×日數、固定價；只計已安排師傅，未安排工程不計。
