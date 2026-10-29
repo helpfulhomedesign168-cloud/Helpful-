@@ -3010,21 +3010,35 @@ textarea {
   vertical-align: middle;
 }
 .engineering-table td:first-child {
-  width: 23%;
+  width: 22%;
 }
 .engineering-table td:nth-child(2) {
-  width: 14%;
-}
-.engineering-table td:nth-child(3),
-.engineering-table td:nth-child(4) {
   width: 12%;
+}
+.engineering-table td:nth-child(3) {
+  width: 16%;
+}
+.engineering-table td:nth-child(4),
+.engineering-table td:nth-child(5) {
+  width: 10%;
   white-space: nowrap;
 }
-.engineering-table td:nth-child(5) {
-  width: 23%;
-}
 .engineering-table td:nth-child(6) {
-  width: 16%;
+  width: 18%;
+}
+.engineering-table td:nth-child(7) {
+  width: 12%;
+}
+.engineering-table .resource-fee-mode {
+  display: block;
+  font-size: 14px;
+}
+.engineering-table .resource-fee-mode + small {
+  display: block;
+  margin-top: 2px;
+  color: #5f6759;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 .engineering-table td:first-child strong {
   display: block;

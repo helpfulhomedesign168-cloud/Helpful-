@@ -78,7 +78,7 @@ it("儲存容量不足不能假稱已保存；損壞資料需明確重設", () =
   expect(JSON.parse(raw).schema).toBe(1);
 });
 
-it("未來有效日期不可提前放行；工種不符不能分派", () => {
+it("未來有效日期不可提前放行；所有已輸入師傅均可分派", () => {
   const seed = createSeedState();
   seed.resources.push({
     id: "wrong-trade",
@@ -107,15 +107,22 @@ it("未來有效日期不可提前放行；工種不符不能分派", () => {
     }),
   ).toThrow("已發生");
   const order = e.getOrder(csLead, "workorder-issued");
-  expect(() =>
-    e.assign(csLead, order.id, {
-      resourceId: "wrong-trade",
-      lineIds: [order.lines[0].id],
-      date: "2026-11-01",
-      time: "上午",
-      notes: "",
-    }),
-  ).toThrow();
+  const assignment = e.assign(csLead, order.id, {
+    resourceId: "wrong-trade",
+    lineIds: [order.lines[0].id],
+    date: "2026-11-01",
+    time: "上午",
+    notes: "",
+  });
+  expect(assignment.resourceId).toBe("wrong-trade");
+});
+
+it("CS可讀取工程單所屬報價版本的line金額，供6成師傅費計算", () => {
+  const e = new Engine(undefined, createSeedState());
+  const csLead = actor(e, "cs-lead-ahfa");
+  const amounts = e.orderLineAmounts(csLead, "workorder-issued");
+  expect(Object.keys(amounts).length).toBeGreaterThan(0);
+  expect(Object.values(amounts).every((amount) => amount > 0)).toBe(true);
 });
 
 it("自訂扣減保存金額與模式，並由正式列印鎖定主管及報價號", () => {
