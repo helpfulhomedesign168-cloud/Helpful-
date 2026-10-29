@@ -225,3 +225,10 @@
 - `hasProductStyles`必須保存，供下一步產品款式module使用；現階段不要假裝已建product styles supplier records。
 - 8個demo suppliers及舊localStorage migration都要有；不可覆蓋用戶新增/修改的supplier。
 - 造貨row的「執行師傅」欄顯示供應商名稱及category小字；不要顯示空白或合作資源。Supplier停用後舊record仍要可讀，找不到時顯示—。
+
+## 2026-10-29 供應商地址及Logo
+
+- Supplier新增optional `address`及`logo`（Attachment）；新增/修改form必須有公司地址input及公司Logo UploadField。
+- Logo用現有`saveAttachment`/IndexedDB保存，列表在供應商名稱前顯示32x32 thumbnail；沒有logo的供應商只顯示名稱，不可顯示假logo。
+- Logo只是metadata在AppState，blob在homeflow-files；preserve attachment id。
+- 測試必須覆蓋上載logo、列表顯示及edit保留地址。
