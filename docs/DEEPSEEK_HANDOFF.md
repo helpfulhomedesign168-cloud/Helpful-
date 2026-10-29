@@ -195,3 +195,9 @@
 - 列表需最新createdAt優先及12項pagination（與全系統一致）。
 - Assignment dialog必須列出所有已輸入、active的師傅／判頭（`type !== "service"`），不可再按工種或contractor/staff類型限制；CS要求每張單都可選全部師傅／判頭。Domain `assign`／`updateAssignment`亦不可再用trades或execution阻擋。
 - 工程內容表必須有「師傅收費」column：選定資源的feeMode；project60要以該工程單所屬**報價版本**的lineAmounts×60%顯示金額（Engine `orderLineAmounts`，CS可讀但不暴露整張報價），再fallback Invoice line amounts；日薪／固定價顯示feeAmount（如有）。不可只靠Invoice line ID，否則demo／歷史單會顯示0.00或只有「項目6成」。
+
+## 2026-10-29 Demo師傅收費固定值
+
+- 12個demo工程師傅中，feeMode=`daily`一律feeAmount=1600；feeMode=`fixed`一律feeAmount=3000；project60維持0（按報價6成計）。
+- Seed建立及舊localStorage migration都必須套用此規則；migration只可按12個`resource-master-*` IDs補回，不可覆蓋用戶自行新增的師傅或其收費。
+- 工程內容「師傅收費」column對daily/fixed顯示feeAmount；project60顯示quote line amount×60%。
