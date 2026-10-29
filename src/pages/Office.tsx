@@ -1789,6 +1789,8 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   const [extraEnd, setExtraEnd] = useState(order.startDate);
   const [extraTime, setExtraTime] = useState("未定");
   const [extraNotes, setExtraNotes] = useState("");
+  const [extraPrice, setExtraPrice] = useState("");
+  const [extraFree, setExtraFree] = useState(false);
   const [dates, setDates] = useState(false);
   const [start, setStart] = useState(order.startDate);
   const [end, setEnd] = useState(order.endDate);
@@ -1837,51 +1839,39 @@ function OrderPanel({ order }: { order: WorkOrder }) {
     ((lineAmounts.get(lineId) ?? 0) > 0
       ? lineAmounts.get(lineId)
       : lineAmountsByIndex[lineIndex]);
-  const quoteTotal = invoice.netTotal;
-  const unassignedCount = order.lines.filter(
-    (line) => !assigned.has(line.id),
-  ).length;
-  const assignedCost = assignments.reduce((total, assignment) => {
-    const resource = resources.find(
-      (item) => item.id === assignment.resourceId,
-    );
-    if (!resource?.feeMode) return total;
-    const days = Math.max(
+  const assignmentDays = (assignment: Assignment) =>
+    Math.max(
       1,
       dateRange(
         assignment.date,
         assignment.endDate ?? assignment.date,
       ).length,
     );
-    if (resource.feeMode === "daily")
-      return total + (resource.feeAmount ?? 0) * days;
-    if (resource.feeMode === "fixed")
-      return total + (resource.feeAmount ?? 0) * assignment.lineIds.length;
-    return (
-      total +
-      assignment.lineIds.reduce((sum, lineId) => {
-        const lineIndex = order.lines.findIndex((line) => line.id === lineId);
-        return sum + (lineAmountFor(lineId, lineIndex) ?? 0) * 0.6;
-      }, 0)
-    );
-  }, 0);
-  const extraCost = extraWorks.reduce((total, extra) => {
+  const lineCostFor = (line: WorkOrder["lines"][number], lineIndex: number) => {
+    const assignment = assigned.get(line.id);
+    if (!assignment) return 0;
     const resource = resources.find(
-      (item) => item.id === extra.resourceId,
+      (item) => item.id === assignment.resourceId,
     );
-    if (!resource?.feeMode) return total;
-    if (resource.feeMode === "daily") {
-      const days = Math.max(
-        1,
-        dateRange(extra.startDate, extra.endDate).length,
-      );
-      return total + (resource.feeAmount ?? 0) * days;
-    }
-    if (resource.feeMode === "fixed")
-      return total + (resource.feeAmount ?? 0);
-    return total;
-  }, 0);
-  const costTotal = assignedCost + extraCost;
+    if (!resource?.feeMode) return 0;
+    if (resource.feeMode === "daily")
+      return (resource.feeAmount ?? 0) * assignmentDays(assignment);
+    if (resource.feeMode === "fixed") return resource.feeAmount ?? 0;
+    return (lineAmountFor(line.id, lineIndex) ?? 0) * 0.6;
+  };
+  const quoteTotal = invoice.netTotal;
+  const unassignedCount = order.lines.filter(
+    (line) => !assigned.has(line.id),
+  ).length;
+  const extraCost = extraWorks.reduce(
+    (total, extra) => total + (extra.price ?? 0),
+    0,
+  );
+  const costTotal =
+    order.lines.reduce(
+      (total, line, lineIndex) => total + lineCostFor(line, lineIndex),
+      0,
+    ) + extraCost;
   const costPercent =
     quoteTotal > 0 ? ((costTotal / quoteTotal) * 100).toFixed(1) : "0.0";
   const openAssignment = (lineId: string, assignmentId?: string) => {
@@ -1912,6 +1902,8 @@ function OrderPanel({ order }: { order: WorkOrder }) {
     setExtraEnd(existing?.endDate ?? order.startDate);
     setExtraTime(existing?.time ?? "未定");
     setExtraNotes(existing?.notes ?? "");
+    setExtraPrice(existing?.price ? String(existing.price) : "");
+    setExtraFree(existing ? (existing.price ?? 0) === 0 : false);
   };
   const closeExtra = () => setExtraKind(null);
   return (
@@ -1960,8 +1952,27 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         <div className="extra-works">
           <strong>額外工程</strong>
           <div className="extra-work-actions">
-            {(["measure", "delivery", "transport"] as ExtraWorkKind[]).map(
-              (kind) => {
+            {(
+              [
+                "measure",
+                "delivery",
+                "transport",
+                "fabrication",
+              ] as ExtraWorkKind[]
+            ).map((kind) => {
+                if (kind === "fabrication") {
+                  return (
+                    <button
+                      type="button"
+                      key={kind}
+                      className="extra-work-button"
+                      disabled
+                      title="造貨供應商流程稍後建立"
+                    >
+                      造貨
+                    </button>
+                  );
+                }
                 const existing = extraWorks.find(
                   (extra) => extra.kind === kind,
                 );
@@ -1976,8 +1987,8 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                     {EXTRA_WORK_LABELS[kind]}
                   </button>
                 );
-              },
-            )}
+              })}
+
           </div>
         </div>
         <div className="engineering-table-wrap">
@@ -1997,6 +2008,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
               {order.lines.map((line, lineIndex) => {
                 const assignment = assigned.get(line.id);
                 const lineAmount = lineAmountFor(line.id, lineIndex);
+                const lineCost = lineCostFor(line, lineIndex);
                 const resource = resources.find(
                   (item) => item.id === assignment?.resourceId,
                 );
@@ -2027,15 +2039,15 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                               ? RESOURCE_FEE_LABELS[resource.feeMode]
                               : "—"}
                           </strong>
-                          {resource.feeMode === "project60" &&
-                            lineAmount !== undefined &&
-                            lineAmount > 0 && (
-                              <small>{money(lineAmount * 0.6)}</small>
-                            )}
-                          {resource.feeMode !== "project60" &&
-                            resource.feeAmount && (
-                              <small>{money(resource.feeAmount)}</small>
-                            )}
+                          {lineCost !== undefined && (
+                            <small>{money(lineCost)}</small>
+                          )}
+                          {resource.feeMode === "daily" && assignment && (
+                            <small className="fee-breakdown">
+                              {money(resource.feeAmount ?? 0)} ×{" "}
+                              {assignmentDays(assignment)}日
+                            </small>
+                          )}
                         </>
                       ) : (
                         "—"
@@ -2074,19 +2086,10 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                     </td>
                     <td>{resource?.name ?? "—"}</td>
                     <td>
-                      {resource?.feeMode ? (
-                        <>
-                          <strong className="resource-fee-mode">
-                            {RESOURCE_FEE_LABELS[resource.feeMode]}
-                          </strong>
-                          {resource.feeMode !== "project60" &&
-                            resource.feeAmount && (
-                              <small>{money(resource.feeAmount)}</small>
-                            )}
-                        </>
-                      ) : (
-                        "—"
-                      )}
+                      <strong className="resource-fee-mode">
+                        {extra.price ? money(extra.price) : "免費"}
+                      </strong>
+                      <small>自訂收費</small>
                     </td>
                     <td>{extra.startDate}</td>
                     <td>{extra.endDate}</td>
@@ -2115,7 +2118,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         <div className="cost-summary-head">
           <div>
             <h2>成本總和</h2>
-            <p>只計已安排師傅的收費；未安排工程未計入成本。</p>
+            <p>只計已安排工程及額外工程；未安排工程未計入成本。</p>
           </div>
           <span>未安排 {unassignedCount} 項</span>
         </div>
@@ -2297,6 +2300,29 @@ function OrderPanel({ order }: { order: WorkOrder }) {
               </select>
             </Field>
           </div>
+          <Field label="額外收費">
+            <div className="extra-price-row">
+              <input
+                type="number"
+                min="0"
+                disabled={extraFree}
+                value={extraFree ? "0" : extraPrice}
+                onChange={(event) => setExtraPrice(event.target.value)}
+                placeholder="0 代表不收費"
+              />
+              <label className="extra-free">
+                <input
+                  type="checkbox"
+                  checked={extraFree}
+                  onChange={(event) => {
+                    setExtraFree(event.target.checked);
+                    if (event.target.checked) setExtraPrice("0");
+                  }}
+                />
+                不收費
+              </label>
+            </div>
+          </Field>
           <Field label="安排備註">
             <input
               value={extraNotes}
@@ -2324,6 +2350,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                       endDate: extraEnd,
                       time: extraTime,
                       notes: extraNotes,
+                      price: extraFree ? 0 : Number(extraPrice || 0),
                     }),
                   "額外工程安排已保存；日曆已更新。",
                 );

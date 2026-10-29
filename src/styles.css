@@ -3686,3 +3686,29 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Extra work custom price */
+.extra-price-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.extra-price-row input[type="number"] {
+  max-width: 260px;
+}
+.extra-free {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #4f574b;
+  font-size: 15px;
+  white-space: nowrap;
+}
+.extra-work-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.engineering-table .fee-breakdown {
+  color: #8a9082;
+  font-size: 12px;
+}

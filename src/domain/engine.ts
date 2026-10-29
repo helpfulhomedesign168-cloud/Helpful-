@@ -42,6 +42,7 @@ import {
   composeCustomerAddress,
   DEMO_TODAY,
   EMPTY_CUSTOMER,
+  EXTRA_WORK_LABELS,
   currentVersion,
   money,
 } from "./types";
@@ -2895,7 +2896,12 @@ export class Engine {
       if (!order.csReleasedAt) fail("此工程尚未發到CS。");
       if (!this.orderReadable(actor, order))
         fail("你沒有安排此額外工程的權限。");
-      const kinds: ExtraWorkKind[] = ["measure", "delivery", "transport"];
+      const kinds: ExtraWorkKind[] = [
+        "measure",
+        "delivery",
+        "transport",
+        "fabrication",
+      ];
       if (!kinds.includes(input.kind)) fail("請選擇有效的額外工程。");
       const resource =
         state.resources.find((item) => item.id === input.resourceId) ??
@@ -2905,6 +2911,8 @@ export class Engine {
         fail("請填寫額外工程的開工、完工日期及時間。");
       if (input.endDate < input.startDate)
         fail("完工日期不可早於開工日期。");
+      if (input.price !== undefined && (!Number.isFinite(input.price) || input.price < 0))
+        fail("請填寫有效的額外工程收費。");
       const existing = state.extraWorks.find(
         (item) => item.workOrderId === order.id && item.kind === input.kind,
       );
@@ -2917,6 +2925,7 @@ export class Engine {
         endDate: input.endDate,
         time: input.time,
         notes: input.notes ?? "",
+        price: input.price ?? 0,
         actorId: actor.id,
         createdAt: NOW,
       };
@@ -2925,6 +2934,7 @@ export class Engine {
       record.endDate = input.endDate;
       record.time = input.time;
       record.notes = input.notes ?? "";
+      record.price = input.price ?? 0;
       record.updatedAt = NOW;
       if (!existing) state.extraWorks.push(record);
       this.audit(state, {
@@ -2932,7 +2942,7 @@ export class Engine {
         workOrderId: order.id,
         actorId: actor.id,
         action: "extra_work_scheduled",
-        detail: `安排${input.kind === "measure" ? "度尺" : input.kind === "delivery" ? "送貨" : "搬運"}：${input.startDate} 至 ${input.endDate}`,
+        detail: `安排${EXTRA_WORK_LABELS[input.kind]}：${input.startDate} 至 ${input.endDate}`,
       });
       output = deepCopy(record);
     });

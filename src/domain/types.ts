@@ -57,6 +57,9 @@ export function composeCustomerAddress(
   >,
 ): string {
   const part = (value?: string) => (value ?? "").trim();
+  const blockValue = part(customer.block);
+  const block =
+    blockValue && !/[座]$/.test(blockValue) ? `${blockValue}座` : blockValue;
   const floorValue = part(customer.floor);
   const unitValue = part(customer.unit);
   const floor =
@@ -71,7 +74,7 @@ export function composeCustomerAddress(
     part(customer.district),
     part(customer.street),
     part(customer.estate),
-    part(customer.block),
+    block,
     floor,
     unit,
   ]
@@ -296,11 +299,16 @@ export interface Assignment {
   actorId: string;
   createdAt: string;
 }
-export type ExtraWorkKind = "measure" | "delivery" | "transport";
+export type ExtraWorkKind =
+  | "measure"
+  | "delivery"
+  | "transport"
+  | "fabrication";
 export const EXTRA_WORK_LABELS: Record<ExtraWorkKind, string> = {
   measure: "度尺",
   delivery: "送貨",
   transport: "搬運",
+  fabrication: "造貨",
 };
 export interface ExtraWork {
   id: string;
@@ -311,6 +319,8 @@ export interface ExtraWork {
   endDate: string;
   time: string;
   notes: string;
+  /** 額外工程由CS自由輸入；0代表不收費。 */
+  price?: number;
   actorId: string;
   createdAt: string;
   updatedAt?: string;
@@ -554,6 +564,7 @@ export interface ExtraWorkInput {
   endDate: string;
   time: string;
   notes: string;
+  price?: number;
 }
 export const EMPTY_CUSTOMER: Customer = {
   name: "",
