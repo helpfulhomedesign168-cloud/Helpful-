@@ -21,6 +21,12 @@ test("工程師傅列表、tabs、新增、收費鎖定及刪除", async ({ page
   await expect(page.locator(".contractor-table tbody tr")).toHaveCount(8);
   await expect(page.getByText("林仔", { exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "全部", exact: true }).click();
+  await page.getByRole("button", { name: "修改林仔" }).click();
+  const seeded = page.getByRole("dialog", { name: "修改師傅" });
+  await expect(seeded.getByLabel("日工價錢", { exact: false })).toHaveValue(
+    "1600",
+  );
+  await seeded.getByRole("button", { name: "取消", exact: true }).click();
 
   await page.getByRole("button", { name: "新增", exact: true }).click();
   const add = page.getByRole("dialog", { name: "新增師傅" });

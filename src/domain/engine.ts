@@ -700,8 +700,20 @@ export class Engine {
         migrated.demoEngineeringVersion = 2;
       }
       createMasterResources().forEach((resource) => {
-        if (!migrated.resources.some((item) => item.id === resource.id))
+        const existing = migrated.resources.find(
+          (item) => item.id === resource.id,
+        );
+        if (!existing) {
           migrated.resources.push(resource);
+          return;
+        }
+        // Keep the demo fixed rates authoritative, including older local data
+        // created before the rates were entered. Never touch user-created rows.
+        if (
+          resource.feeMode !== "project60" &&
+          existing.feeMode === resource.feeMode
+        )
+          existing.feeAmount = resource.feeAmount;
       });
       ensureDemoCsActors(migrated);
       const migrateCustomer = (customer: Customer) => {
@@ -3551,7 +3563,8 @@ function createMasterResources(): Resource[] {
     scope: row.scope,
     details: "",
     feeMode: row.feeMode,
-    feeAmount: 0,
+    feeAmount:
+      row.feeMode === "daily" ? 1600 : row.feeMode === "fixed" ? 3000 : 0,
     createdAt: NOW,
   }));
 }
