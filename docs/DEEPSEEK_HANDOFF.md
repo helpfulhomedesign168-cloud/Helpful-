@@ -194,4 +194,4 @@
 - 新增／修改只可改master fields；resource仍然要可供現有`listResources` assignment使用。
 - 列表需最新createdAt優先及12項pagination（與全系統一致）。
 - Assignment dialog必須列出所有已輸入、active的師傅／判頭（`type !== "service"`），不可再按工種或contractor/staff類型限制；CS要求每張單都可選全部師傅／判頭。Domain `assign`／`updateAssignment`亦不可再用trades或execution阻擋。
-- 工程內容表必須有「師傅收費」column：選定資源的feeMode；project60要以該Invoice line實際報價×60%顯示金額（用`invoicePricing`的lineAmounts），日薪／固定價顯示feeAmount（如有）。
+- 工程內容表必須有「師傅收費」column：選定資源的feeMode；project60要以該工程單所屬**報價版本**的lineAmounts×60%顯示金額（Engine `orderLineAmounts`，CS可讀但不暴露整張報價），再fallback Invoice line amounts；日薪／固定價顯示feeAmount（如有）。不可只靠Invoice line ID，否則demo／歷史單會顯示0.00或只有「項目6成」。

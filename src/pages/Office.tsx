@@ -1793,6 +1793,10 @@ function OrderPanel({ order }: { order: WorkOrder }) {
     setNotes("");
   }, [order.id]);
   const invoice = engine.getInvoice(actor, order.invoiceId);
+  let quoteLineAmounts: Record<string, number> = {};
+  try {
+    quoteLineAmounts = engine.orderLineAmounts(actor, order.id);
+  } catch {}
   let lineAmounts = new Map<string, number>();
   let lineAmountsByIndex: number[] = [];
   try {
@@ -1934,9 +1938,10 @@ function OrderPanel({ order }: { order: WorkOrder }) {
               {order.lines.map((line, lineIndex) => {
                 const assignment = assigned.get(line.id);
                 const lineAmount =
-                  (lineAmounts.get(line.id) ?? 0) > 0
+                  quoteLineAmounts[line.id] ??
+                  ((lineAmounts.get(line.id) ?? 0) > 0
                     ? lineAmounts.get(line.id)
-                    : lineAmountsByIndex[lineIndex];
+                    : lineAmountsByIndex[lineIndex]);
                 const resource = resources.find(
                   (item) => item.id === assignment?.resourceId,
                 );

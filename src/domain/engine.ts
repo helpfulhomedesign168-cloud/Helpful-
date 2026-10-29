@@ -1825,6 +1825,33 @@ export class Engine {
       fail("你沒有查看此工程單的權限。");
     return sanitiseOrder(order, actor.role === "admin");
   }
+  /** Quote-version line amounts for a released engineering order, without
+   * exposing quote pricing to CS. */
+  orderLineAmounts(
+    actorInput: Actor,
+    workOrderId: string,
+  ): Record<string, number> {
+    const actor = this.actor(actorInput);
+    const order =
+      this.state.orders.find((item) => item.id === workOrderId) ??
+      fail("找不到工程單。");
+    if (!this.orderReadable(actor, order))
+      fail("你沒有查看此工程單的權限。");
+    const quote = this.state.quotes.find((item) => item.id === order.quoteId);
+    if (!quote) return {};
+    const version =
+      quote.versions.find((item) => item.id === order.versionId) ??
+      currentVersion(quote);
+    const raw = calculatePricing(
+      version.lines,
+      version.discount,
+      this.state.services,
+      true,
+    );
+    return Object.fromEntries(
+      raw.lineAmounts.map((amount) => [amount.id, amount.amount]),
+    );
+  }
   listAssignments(actorInput: Actor, workOrderId: string): Assignment[] {
     const actor = this.actor(actorInput);
     const order =

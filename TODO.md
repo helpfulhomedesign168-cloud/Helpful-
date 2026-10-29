@@ -35,3 +35,4 @@
 - [x] CS工程單UI：invoice顯示短式「INV SHM...」並移除Q號；新增月份／Sales／跟進同事filter（未安排可選）；多日Assignment或額外工程在calendar以跨日event bar顯示（例如2–5號會由2號格橫跨至5號格），不逐日重複；跨月會分段；工程管理detail底部新增全寬「工程完成」button（暫無流程連接）。
 - [x] 工程師傅模組：12個demo師傅（工程判頭／師傅）、全部／工程判頭／師傅tabs、新增／修改／刪除；性質、名稱、電話、主項工程、詳細、收費方式（項目6成／日薪／固定價）及金額；收費方式建立後鎖定；CS主管／Admin可編輯，普通CS只讀；resource同時可供工程Assignment使用。
 - [x] 工程Assignment收費顯示：每張工程單的執行師傅dropdown列出所有active師傅／判頭（不再按工種／類型限制）；工程內容表新增「師傅收費」，項目6成按該Invoice line報價×60%顯示，日薪／固定價顯示設定金額。
+- [x] 師傅項目6成金額改由工程單所屬報價版本line amount計算（orderLineAmounts），Invoice line amount作fallback；避免ID不一致時只顯示「項目6成」或0.00。
