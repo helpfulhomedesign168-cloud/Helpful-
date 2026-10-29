@@ -29,6 +29,7 @@ import {
   type QuoteVersion,
   type Resource,
   type ResourceKind,
+  type Supplier,
   type ResourceFeeMode,
   type ServiceItem,
   type WorkOrder,
@@ -43,6 +44,7 @@ import {
   DEMO_TODAY,
   EMPTY_CUSTOMER,
   EXTRA_WORK_LABELS,
+  SUPPLIER_CATEGORIES,
   currentVersion,
   money,
 } from "./types";
@@ -700,6 +702,11 @@ export class Engine {
         refreshDemoEngineeringOrders(migrated);
         migrated.demoEngineeringVersion = 2;
       }
+      migrated.suppliers ??= [];
+      createDemoSuppliers().forEach((supplier) => {
+        if (!migrated.suppliers.some((item) => item.id === supplier.id))
+          migrated.suppliers.push(supplier);
+      });
       createMasterResources().forEach((resource) => {
         const existing = migrated.resources.find(
           (item) => item.id === resource.id,
@@ -1331,6 +1338,70 @@ export class Engine {
       .map((item) =>
         actor.role === "admin" ? deepCopy(item) : removeCost(item),
       );
+  }
+  listSuppliers(actorInput: Actor): Supplier[] {
+    const actor = this.actor(actorInput);
+    if (!(isCsActor(actor) || actor.role === "admin"))
+      fail("你沒有查看供應商的權限。");
+    return deepCopy(
+      this.state.suppliers
+        .filter((supplier) => supplier.active)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    );
+  }
+  saveSupplier(actorInput: Actor, supplier: Supplier): Supplier {
+    const actor = this.actor(actorInput);
+    if (!(actor.role === "cs_supervisor" || actor.role === "admin"))
+      fail("只有CS主管或Super Admin可維護供應商。");
+    if (!supplier.id || !supplier.name?.trim() || !supplier.phone?.trim() || !supplier.contact?.trim())
+      fail("請填寫供應商名稱、聯絡人及聯絡電話。");
+    if (!supplier.categories?.length)
+      fail("請選擇至少一項工程詳細。");
+    if (
+      supplier.categories.some((category) => !SUPPLIER_CATEGORIES.includes(category as (typeof SUPPLIER_CATEGORIES)[number]))
+    )
+      fail("供應商工程分類無效。");
+    let output!: Supplier;
+    this.mutate((state) => {
+      const existing = state.suppliers.find((item) => item.id === supplier.id);
+      const next: Supplier = {
+        ...supplier,
+        name: supplier.name.trim(),
+        phone: supplier.phone.trim(),
+        contact: supplier.contact.trim(),
+        categories: [...supplier.categories],
+        supply: supplier.supply?.trim() || supplier.categories.join(", "),
+        hasProductStyles: Boolean(supplier.hasProductStyles),
+        active: true,
+        createdAt: existing?.createdAt ?? supplier.createdAt ?? NOW,
+      };
+      const index = state.suppliers.findIndex((item) => item.id === supplier.id);
+      if (index >= 0) state.suppliers[index] = deepCopy(next);
+      else state.suppliers.push(deepCopy(next));
+      output = deepCopy(next);
+      this.audit(state, {
+        actorId: actor.id,
+        action: "supplier_saved",
+        detail: `儲存供應商 ${next.name}`,
+      });
+    });
+    return output;
+  }
+  deleteSupplier(actorInput: Actor, id: string): void {
+    const actor = this.actor(actorInput);
+    if (!(actor.role === "cs_supervisor" || actor.role === "admin"))
+      fail("只有CS主管或Super Admin可刪除供應商。");
+    this.mutate((state) => {
+      const supplier =
+        state.suppliers.find((item) => item.id === id) ??
+        fail("找不到供應商。");
+      supplier.active = false;
+      this.audit(state, {
+        actorId: actor.id,
+        action: "supplier_deleted",
+        detail: `刪除供應商 ${supplier.name}`,
+      });
+    });
   }
   saveContractor(actorInput: Actor, resource: Resource): Resource {
     const actor = this.actor(actorInput);
@@ -3535,6 +3606,32 @@ function hydrateDemoCatalogServices(services: ServiceItem[]): void {
   });
 }
 
+function createDemoSuppliers(): Supplier[] {
+  const rows: Array<{
+    id: string;
+    name: string;
+    phone: string;
+    contact: string;
+    categories: string[];
+    supply: string;
+  }> = [
+    { id: "supplier-onfai", name: "安輝傢俬廠", phone: "5645 7789", contact: "蘇生", categories: ["生態板傢俬"], supply: "生態板傢俬" },
+    { id: "supplier-yat-tung", name: "逸東傢俬廠", phone: "6210 2220", contact: "阿良", categories: ["生態板傢俬"], supply: "生態板傢俬" },
+    { id: "supplier-fung-shing", name: "豐盛木門廠", phone: "9825 6036", contact: "林小姐", categories: ["木門", "PD門"], supply: "木門, PD門, 鐵閘" },
+    { id: "supplier-yan-tai", name: "鑫泰鋁材", phone: "6307 6183", contact: "張師傅", categories: ["PD門", "鋁窗", "鋁材", "浴屏"], supply: "PD門, 鋁窗, 鋁材, 浴屏" },
+    { id: "supplier-on-tung", name: "安東戶外工程公司", phone: "6341 5090", contact: "權哥", categories: ["戶外板", "太陽能"], supply: "戶外木, 太陽能板" },
+    { id: "supplier-fu-wah", name: "富華潔具家品", phone: "6767 0009", contact: "黎小姐", categories: ["座廁", "浴屏", "潔具", "PD門"], supply: "座廁, 浴屏, 潔具, PD門" },
+    { id: "supplier-tai-chung-wa", name: "大中華鏡廠", phone: "6123 0388", contact: "陳總", categories: ["玻璃"], supply: "玻璃, 鏡" },
+    { id: "supplier-kin-sang", name: "健生雲石廠", phone: "5487 9465", contact: "張小姐", categories: ["雲石", "石英石"], supply: "雲石, 吸咀, 石英石" },
+  ];
+  return rows.map((row) => ({
+    ...row,
+    hasProductStyles: true,
+    active: true,
+    createdAt: NOW,
+  }));
+}
+
 function createMasterResources(): Resource[] {
   const rows: Array<{
     id: string;
@@ -4156,6 +4253,7 @@ export function createSeedState(): AppState {
     assignments: [],
     extraWorks: [],
     resources,
+    suppliers: createDemoSuppliers(),
     audits: [
       {
         id: "audit-seed-issued",

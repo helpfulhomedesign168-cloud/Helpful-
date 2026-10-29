@@ -264,6 +264,36 @@ export interface Receipt {
   issuedAt: string;
   actorId: string;
 }
+export const SUPPLIER_CATEGORIES = [
+  "生態板傢俬",
+  "木門",
+  "PD門",
+  "鋁窗",
+  "鋁材",
+  "戶外板",
+  "太陽能",
+  "浴屏",
+  "座廁",
+  "潔具",
+  "玻璃",
+  "石英石",
+  "雲石",
+] as const;
+
+export interface Supplier {
+  id: string;
+  name: string;
+  phone: string;
+  contact: string;
+  categories: string[];
+  /** 列表顯示的「主理供應」；新供應商由categories派生。 */
+  supply?: string;
+  /** 產品款式module下一步會用此flag建立供應商款式。 */
+  hasProductStyles: boolean;
+  active: boolean;
+  createdAt: string;
+}
+
 export type ResourceKind = "foreman" | "worker";
 export type ResourceFeeMode = "project60" | "daily" | "fixed";
 export interface Resource {
@@ -397,6 +427,7 @@ export interface AppState {
   assignments: Assignment[];
   extraWorks: ExtraWork[];
   resources: Resource[];
+  suppliers: Supplier[];
   audits: AuditEvent[];
   notifications: Notification[];
   monthlySequences: Record<string, number>;
