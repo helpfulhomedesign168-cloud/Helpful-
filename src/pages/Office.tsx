@@ -1512,7 +1512,10 @@ function WorkOrderCalendar({
       id: extra.id,
       start: extra.startDate,
       end: extra.endDate,
-      label: `${EXTRA_WORK_LABELS[extra.kind]} · ${extra.time}`,
+      label:
+        extra.kind === "fabrication"
+          ? "造貨"
+          : `${EXTRA_WORK_LABELS[extra.kind]} · ${extra.time}`,
     });
   });
   const cells: Array<string | null> = [
@@ -1791,6 +1794,8 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   const [extraNotes, setExtraNotes] = useState("");
   const [extraPrice, setExtraPrice] = useState("");
   const [extraFree, setExtraFree] = useState(false);
+  const [extraSupplierId, setExtraSupplierId] = useState("");
+  const [extraCategory, setExtraCategory] = useState("");
   const [dates, setDates] = useState(false);
   const [start, setStart] = useState(order.startDate);
   const [end, setEnd] = useState(order.endDate);
@@ -1820,6 +1825,10 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   let resources = [] as ReturnType<typeof engine.listResources>;
   try {
     resources = engine.listResources(actor);
+  } catch {}
+  let suppliers = [] as ReturnType<typeof engine.listSuppliers>;
+  try {
+    suppliers = engine.listSuppliers(actor);
   } catch {}
   const canEdit = ["cs", "cs_supervisor", "admin"].includes(actor.role);
   const selectedLine = order.lines.find((line) => line.id === selectedLineId);
@@ -1904,6 +1913,8 @@ function OrderPanel({ order }: { order: WorkOrder }) {
     setExtraNotes(existing?.notes ?? "");
     setExtraPrice(existing?.price ? String(existing.price) : "");
     setExtraFree(existing ? (existing.price ?? 0) === 0 : false);
+    setExtraSupplierId(existing?.supplierId ?? "");
+    setExtraCategory(existing?.category ?? "");
   };
   const closeExtra = () => setExtraKind(null);
   return (
@@ -1960,34 +1971,21 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                 "fabrication",
               ] as ExtraWorkKind[]
             ).map((kind) => {
-                if (kind === "fabrication") {
-                  return (
-                    <button
-                      type="button"
-                      key={kind}
-                      className="extra-work-button"
-                      disabled
-                      title="造貨供應商流程稍後建立"
-                    >
-                      造貨
-                    </button>
-                  );
-                }
-                const existing = extraWorks.find(
-                  (extra) => extra.kind === kind,
-                );
-                return (
-                  <button
-                    type="button"
-                    key={kind}
-                    className={`extra-work-button ${existing ? "scheduled" : ""}`}
-                    onClick={() => openExtra(kind)}
-                  >
-                    {existing ? "更改" : "安排"}
-                    {EXTRA_WORK_LABELS[kind]}
-                  </button>
-                );
-              })}
+              const existing = extraWorks.find(
+                (extra) => extra.kind === kind,
+              );
+              return (
+                <button
+                  type="button"
+                  key={kind}
+                  className={`extra-work-button ${existing ? "scheduled" : ""}`}
+                  onClick={() => openExtra(kind)}
+                >
+                  {existing ? "更改" : "安排"}
+                  {EXTRA_WORK_LABELS[kind]}
+                </button>
+              );
+            })}
 
           </div>
         </div>
@@ -2084,7 +2082,14 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                       <strong>{EXTRA_WORK_LABELS[extra.kind]}</strong>
                       <small>額外工程</small>
                     </td>
-                    <td>{resource?.name ?? "—"}</td>
+                    <td>
+                      {extra.kind === "fabrication"
+                        ? suppliers.find((supplier) => supplier.id === extra.supplierId)?.name ?? "—"
+                        : resource?.name ?? "—"}
+                      {extra.kind === "fabrication" && extra.category && (
+                        <small>{extra.category}</small>
+                      )}
+                    </td>
                     <td>
                       <strong className="resource-fee-mode">
                         {extra.price ? money(extra.price) : "免費"}
@@ -2252,54 +2257,117 @@ function OrderPanel({ order }: { order: WorkOrder }) {
           <p className="dialog-intro">
             額外工程不屬於報價單，只用作CS施工安排。
           </p>
-          <div className="form-grid two">
-            <Field label="執行師傅" required>
-              <select
-                value={extraResourceId}
-                onChange={(event) => setExtraResource(event.target.value)}
-              >
-                <option value="">選擇判頭或公司師傅</option>
-                {resources
-                  .filter((resource) => resource.active)
-                  .map((resource) => (
-                    <option key={resource.id} value={resource.id}>
-                      {resourceOptionLabel(resource)}
-                    </option>
-                  ))}
-              </select>
-            </Field>
-            <Field label="開工日期" required>
-              <input
-                type="date"
-                value={extraStart}
-                onChange={(event) => {
-                  setExtraStart(event.target.value);
-                  if (event.target.value > extraEnd)
-                    setExtraEnd(event.target.value);
-                }}
-              />
-            </Field>
-          </div>
-          <div className="form-grid two">
-            <Field label="完工日期" required>
-              <input
-                type="date"
-                min={extraStart}
-                value={extraEnd}
-                onChange={(event) => setExtraEnd(event.target.value)}
-              />
-            </Field>
-            <Field label="時段">
-              <select
-                value={extraTime}
-                onChange={(event) => setExtraTime(event.target.value)}
-              >
-                {["未定", "上午", "下午", "全天"].map((slot) => (
-                  <option key={slot}>{slot}</option>
-                ))}
-              </select>
-            </Field>
-          </div>
+          {extraKind === "fabrication" ? (
+            <>
+              <div className="form-grid two">
+                <Field label="供應商" required>
+                  <select
+                    value={extraSupplierId}
+                    onChange={(event) => {
+                      setExtraSupplierId(event.target.value);
+                      setExtraCategory("");
+                    }}
+                  >
+                    <option value="">選擇供應商</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="造貨項目" required>
+                  <select
+                    value={extraCategory}
+                    onChange={(event) => setExtraCategory(event.target.value)}
+                    disabled={!extraSupplierId}
+                  >
+                    <option value="">選擇造貨項目</option>
+                    {(
+                      suppliers.find((supplier) => supplier.id === extraSupplierId)
+                        ?.categories ?? []
+                    ).map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <div className="form-grid two">
+                <Field label="造貨日期" required>
+                  <input
+                    type="date"
+                    value={extraStart}
+                    onChange={(event) => {
+                      setExtraStart(event.target.value);
+                      if (event.target.value > extraEnd)
+                        setExtraEnd(event.target.value);
+                    }}
+                  />
+                </Field>
+                <Field label="起貨日期" required>
+                  <input
+                    type="date"
+                    min={extraStart}
+                    value={extraEnd}
+                    onChange={(event) => setExtraEnd(event.target.value)}
+                  />
+                </Field>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="form-grid two">
+                <Field label="執行師傅" required>
+                  <select
+                    value={extraResourceId}
+                    onChange={(event) => setExtraResource(event.target.value)}
+                  >
+                    <option value="">選擇判頭或公司師傅</option>
+                    {resources
+                      .filter((resource) => resource.active)
+                      .map((resource) => (
+                        <option key={resource.id} value={resource.id}>
+                          {resourceOptionLabel(resource)}
+                        </option>
+                      ))}
+                  </select>
+                </Field>
+                <Field label="開工日期" required>
+                  <input
+                    type="date"
+                    value={extraStart}
+                    onChange={(event) => {
+                      setExtraStart(event.target.value);
+                      if (event.target.value > extraEnd)
+                        setExtraEnd(event.target.value);
+                    }}
+                  />
+                </Field>
+              </div>
+              <div className="form-grid two">
+                <Field label="完工日期" required>
+                  <input
+                    type="date"
+                    min={extraStart}
+                    value={extraEnd}
+                    onChange={(event) => setExtraEnd(event.target.value)}
+                  />
+                </Field>
+                <Field label="時段">
+                  <select
+                    value={extraTime}
+                    onChange={(event) => setExtraTime(event.target.value)}
+                  >
+                    {["未定", "上午", "下午", "全天"].map((slot) => (
+                      <option key={slot}>{slot}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            </>
+          )}
           <Field label="額外收費">
             <div className="extra-price-row">
               <input
@@ -2335,7 +2403,9 @@ function OrderPanel({ order }: { order: WorkOrder }) {
             <Button
               variant="primary"
               disabled={
-                !extraResourceId ||
+                (extraKind === "fabrication"
+                  ? !extraSupplierId || !extraCategory
+                  : !extraResourceId) ||
                 !extraStart ||
                 !extraEnd ||
                 extraEnd < extraStart
@@ -2345,10 +2415,20 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                   () =>
                     engine.scheduleExtraWork(actor, order.id, {
                       kind: extraKind,
-                      resourceId: extraResourceId,
+                      resourceId:
+                        extraKind === "fabrication" ? "" : extraResourceId,
+                      supplierId:
+                        extraKind === "fabrication"
+                          ? extraSupplierId
+                          : undefined,
+                      category:
+                        extraKind === "fabrication"
+                          ? extraCategory
+                          : undefined,
                       startDate: extraStart,
                       endDate: extraEnd,
-                      time: extraTime,
+                      time:
+                        extraKind === "fabrication" ? "未定" : extraTime,
                       notes: extraNotes,
                       price: extraFree ? 0 : Number(extraPrice || 0),
                     }),

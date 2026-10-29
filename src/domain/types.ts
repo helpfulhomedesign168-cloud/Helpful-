@@ -351,6 +351,9 @@ export interface ExtraWork {
   notes: string;
   /** 額外工程由CS自由輸入；0代表不收費。 */
   price?: number;
+  /** 造貨專用：供應商及其分類。 */
+  supplierId?: string;
+  category?: string;
   actorId: string;
   createdAt: string;
   updatedAt?: string;
@@ -596,6 +599,8 @@ export interface ExtraWorkInput {
   time: string;
   notes: string;
   price?: number;
+  supplierId?: string;
+  category?: string;
 }
 export const EMPTY_CUSTOMER: Customer = {
   name: "",
