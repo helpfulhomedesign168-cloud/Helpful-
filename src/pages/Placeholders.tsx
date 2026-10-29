@@ -21,10 +21,6 @@ function ModulePlaceholder({
   );
 }
 
-export function Suppliers() {
-  return <ModulePlaceholder eyebrow="工程營運" title="供應商" />;
-}
-
 export function ProductStyles() {
   return <ModulePlaceholder eyebrow="工程營運" title="產品款式" />;
 }

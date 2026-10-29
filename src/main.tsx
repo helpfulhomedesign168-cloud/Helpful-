@@ -15,7 +15,8 @@ import {
 } from "./pages/Office";
 import { Customers, Services, Performance } from "./pages/Resources";
 import { Contractors } from "./pages/Contractors";
-import { ProductStyles, Suppliers } from "./pages/Placeholders";
+import { Suppliers } from "./pages/Suppliers";
+import { ProductStyles } from "./pages/Placeholders";
 import { Documents } from "./pages/Documents";
 import { Button, Empty } from "./components/ui";
 import "./styles.css";

@@ -215,3 +215,12 @@
 - Cost summary不可再按資源總fee或獨立公式計算；必須逐條Assignment用與工程內容row相同的lineCost計算：project60=quote line×60%、daily=feeAmount×inclusive日數、fixed=feeAmount；成本總和=所有已安排lineCost+額外工程price。
 - 未安排報價line不可計成本；row顯示「—」。額外工程不可自動套用師傅feeMode；ExtraWork.price由CS自由輸入，0=不收費。
 - ExtraWorkKind固定measure/delivery/transport/fabrication；buttons顯示度尺／送貨／搬運／造貨。造貨現階段disabled placeholder，等供應商流程。
+
+## 2026-10-29 供應商主檔
+
+- 供應商頁取代placeholder；`Supplier`獨立於Resource，欄位name/phone/contact/categories/supply/hasProductStyles/active/createdAt。
+- Tabs固定13個SUPPLIER_CATEGORIES：生態板傢俬、木門、PD門、鋁窗、鋁材、戶外板、太陽能、浴屏、座廁、潔具、玻璃、石英石、雲石；篩選用categories，supply只作seed顯示文案。
+- 列表columns：供應商、聯絡電話、聯絡人、主理供應、編輯；新增/修改/刪除CS主管或admin，普通CS只讀。
+- 新增/修改form：供應商名稱、聯絡人、聯絡電話、工程詳細checkbox、產品款式有/沒有。儲存最少一個categories。
+- `hasProductStyles`必須保存，供下一步產品款式module使用；現階段不要假裝已建product styles supplier records。
+- 8個demo suppliers及舊localStorage migration都要有；不可覆蓋用戶新增/修改的supplier。
