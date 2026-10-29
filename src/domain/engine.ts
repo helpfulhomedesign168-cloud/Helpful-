@@ -2721,23 +2721,8 @@ export class Engine {
       );
       if (selected.some((line) => used.has(line.id)))
         fail("所選明細已有安排，不可重複分派。");
-      const executions = [
-        ...new Set(selected.map((line) => line.itemSnapshot.execution)),
-      ];
-      if (executions.length !== 1) fail("不同執行方式的明細不可放在同一安排。");
-      const execution = executions[0];
-      const allowed =
-        (resource.type === "contractor" && execution === "contractor") ||
-        (resource.type === "staff" && execution === "self") ||
-        (resource.type === "service" &&
-          (execution === "self" || execution === "service"));
-      if (!allowed) fail("此合作資源不可承接所選執行方式的明細。");
-      if (
-        selected.some(
-          (line) => !resource.trades.includes(line.itemSnapshot.category),
-        )
-      )
-        fail("此判頭／師傅工種不符合所選工程分類。");
+      // CS needs every entered 師傅／判頭 available on every demo order.
+      // Resource type/trade is descriptive only; do not block assignments by it.
       output = {
         id: uid("assignment"),
         workOrderId: order.id,
@@ -2794,23 +2779,7 @@ export class Engine {
       const selected = order.lines.filter((line) =>
         assignment.lineIds.includes(line.id),
       );
-      const executions = [
-        ...new Set(selected.map((line) => line.itemSnapshot.execution)),
-      ];
-      if (executions.length !== 1) fail("此安排涉及不同執行方式，未可修改。");
-      const execution = executions[0];
-      const allowed =
-        (resource.type === "contractor" && execution === "contractor") ||
-        (resource.type === "staff" && execution === "self") ||
-        (resource.type === "service" &&
-          (execution === "self" || execution === "service"));
-      if (!allowed) fail("此合作資源不可承接所選執行方式的明細。");
-      if (
-        selected.some(
-          (line) => !resource.trades.includes(line.itemSnapshot.category),
-        )
-      )
-        fail("此判頭／師傅工種不符合所選工程分類。");
+      // Resource type/trade is descriptive only; do not block assignments by it.
       assignment.resourceId = input.resourceId;
       assignment.date = input.date;
       assignment.endDate = endDate;

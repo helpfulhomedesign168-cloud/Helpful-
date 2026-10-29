@@ -193,4 +193,5 @@
 - 普通CS只讀；CS主管／Super Admin可新增、修改、刪除。刪除用active=false，不可hard delete（Assignment歷史要保留）。
 - 新增／修改只可改master fields；resource仍然要可供現有`listResources` assignment使用。
 - 列表需最新createdAt優先及12項pagination（與全系統一致）。
-- Assignment dialog必須同時按資源類型及`resource.trades.includes(service.category)`過濾；不可只按contractor/staff類型列出師傅，否則新增工程師傅後會出現不合工種選項。
+- Assignment dialog必須列出所有已輸入、active的師傅／判頭（`type !== "service"`），不可再按工種或contractor/staff類型限制；CS要求每張單都可選全部師傅／判頭。Domain `assign`／`updateAssignment`亦不可再用trades或execution阻擋。
+- 工程內容表必須有「師傅收費」column：選定資源的feeMode；project60要以該Invoice line實際報價×60%顯示金額（用`invoicePricing`的lineAmounts），日薪／固定價顯示feeAmount（如有）。

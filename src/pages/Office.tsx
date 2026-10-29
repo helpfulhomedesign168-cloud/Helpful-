@@ -48,6 +48,7 @@ import {
   EXTRA_WORK_LABELS,
   ExtraWorkKind,
   ExtraWork,
+  ResourceFeeMode,
 } from "../domain/types";
 
 type ProofPreview =
@@ -55,6 +56,11 @@ type ProofPreview =
   | { kind: "image"; url: string }
   | { kind: "file" }
   | { kind: "missing" };
+const RESOURCE_FEE_LABELS: Record<ResourceFeeMode, string> = {
+  project60: "項目6成",
+  daily: "日薪",
+  fixed: "固定價",
+};
 
 function ProofThumb({ attachment }: { attachment: Attachment }) {
   const { run } = useApp();
@@ -1787,6 +1793,13 @@ function OrderPanel({ order }: { order: WorkOrder }) {
     setNotes("");
   }, [order.id]);
   const invoice = engine.getInvoice(actor, order.invoiceId);
+  let lineAmounts = new Map<string, number>();
+  try {
+    const pricing = engine.invoicePricing(actor, invoice.id);
+    lineAmounts = new Map(
+      pricing.lineAmounts.map((amount) => [amount.id, amount.amount]),
+    );
+  } catch {}
   const assignments = engine.listAssignments(actor, order.id);
   const extraWorks = engine.listExtraWorks(actor, order.id);
   let resources = [] as ReturnType<typeof engine.listResources>;
@@ -1802,17 +1815,9 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   );
   const compatible = resources.filter((resource) => {
     if (!selectedLine) return false;
-    const execution = selectedLine.itemSnapshot.execution;
-    const typeMatches =
-      resource.type === "contractor"
-        ? execution === "contractor"
-        : resource.type === "staff"
-          ? execution === "self"
-          : execution === "self" || execution === "service";
-    return (
-      typeMatches &&
-      resource.trades.includes(selectedLine.itemSnapshot.category)
-    );
+    // All entered 師傅／判頭 are selectable on every order; service-only
+    // resources stay out of the 執行師傅 list.
+    return resource.active && resource.type !== "service";
   });
   const openAssignment = (lineId: string, assignmentId?: string) => {
     const assignment = assignments.find((item) => item.id === assignmentId);
@@ -1916,6 +1921,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
               <tr>
                 <th scope="col">工程項目</th>
                 <th scope="col">執行師傅</th>
+                <th scope="col">師傅收費</th>
                 <th scope="col">開工時間</th>
                 <th scope="col">完工時間</th>
                 <th scope="col">備註</th>
@@ -1947,6 +1953,29 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                       </small>
                     </td>
                     <td>{resource?.name ?? "—"}</td>
+                    <td>
+                      {resource ? (
+                        <>
+                          <strong className="resource-fee-mode">
+                            {resource.feeMode
+                              ? RESOURCE_FEE_LABELS[resource.feeMode]
+                              : "—"}
+                          </strong>
+                          {resource.feeMode === "project60" &&
+                            lineAmounts.has(line.id) && (
+                              <small>
+                                {money((lineAmounts.get(line.id) ?? 0) * 0.6)}
+                              </small>
+                            )}
+                          {resource.feeMode !== "project60" &&
+                            resource.feeAmount && (
+                              <small>{money(resource.feeAmount)}</small>
+                            )}
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td>{assignment?.date ?? "—"}</td>
                     <td>{assignment?.endDate ?? assignment?.date ?? "—"}</td>
                     <td>{assignment?.notes || "—"}</td>
@@ -1979,6 +2008,21 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                       <small>額外工程</small>
                     </td>
                     <td>{resource?.name ?? "—"}</td>
+                    <td>
+                      {resource?.feeMode ? (
+                        <>
+                          <strong className="resource-fee-mode">
+                            {RESOURCE_FEE_LABELS[resource.feeMode]}
+                          </strong>
+                          {resource.feeMode !== "project60" &&
+                            resource.feeAmount && (
+                              <small>{money(resource.feeAmount)}</small>
+                            )}
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td>{extra.startDate}</td>
                     <td>{extra.endDate}</td>
                     <td>{extra.notes || "—"}</td>
