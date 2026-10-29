@@ -83,6 +83,7 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   const cost = page.getByRole("region", { name: "成本總和" });
   await expect(cost).toContainText("報價單總額");
   await expect(cost).toContainText("成本支出總和");
+  await expect(cost).toContainText("HK$2,280.00");
   await expect(cost).toContainText("60.0%");
   await expect(cost).toContainText("淨賺");
 
@@ -108,10 +109,14 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await extraDialog
     .getByLabel("安排備註", { exact: false })
     .fill("E2E 度尺安排");
+  await extraDialog.getByLabel("額外收費", { exact: false }).fill("500");
   await extraDialog.getByRole("button", { name: "儲存安排", exact: true }).click();
   await expect(
     page.locator(".engineering-table tbody tr").filter({ hasText: "度尺" }),
-  ).toContainText("2026-11-08");
+  ).toContainText("HK$500.00");
+  await expect(
+    page.getByRole("button", { name: "造貨", exact: true }),
+  ).toBeDisabled();
   await expect(
     page
       .locator(".calendar-event-bar")

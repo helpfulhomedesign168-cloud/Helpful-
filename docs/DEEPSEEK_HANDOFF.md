@@ -208,3 +208,10 @@
 - 工程管理detail必須在「工程內容」card與「現場環境」card之間顯示成本總和card；不可放到page底或現場環境下面。
 - 成本總和至少顯示：報價單總額（invoice.netTotal）、成本支出總和、成本比率、淨賺、未安排項數。
 - 成本只計已安排師傅收費：project60=quote line amount×60%；daily=feeAmount×inclusive日數；fixed=feeAmount×項目數；額外工程同樣按daily/fixed計。未安排報價工程不可估成本，card必須註明。
+
+## 2026-10-29 地址、成本一致性及額外工程收費
+
+- `composeCustomerAddress`必須為block補「座」：輸入8→8座；已有「座」不可重複。
+- Cost summary不可再按資源總fee或獨立公式計算；必須逐條Assignment用與工程內容row相同的lineCost計算：project60=quote line×60%、daily=feeAmount×inclusive日數、fixed=feeAmount；成本總和=所有已安排lineCost+額外工程price。
+- 未安排報價line不可計成本；row顯示「—」。額外工程不可自動套用師傅feeMode；ExtraWork.price由CS自由輸入，0=不收費。
+- ExtraWorkKind固定measure/delivery/transport/fabrication；buttons顯示度尺／送貨／搬運／造貨。造貨現階段disabled placeholder，等供應商流程。

@@ -8,6 +8,7 @@ import type {
   ServiceItem,
 } from "../src/domain/types";
 import { Engine, createSeedState } from "../src/domain/engine";
+import { composeCustomerAddress } from "../src/domain/types";
 
 class MemoryStorage implements Storage {
   private readonly rows = new Map<string, string>();
@@ -45,6 +46,19 @@ const paymentProof: Attachment = {
   size: 512,
   createdAt: "2026-10-22T12:00:00+08:00",
 };
+
+it("完整地址會為座數補上「座」", () => {
+  expect(
+    composeCustomerAddress({
+      district: "屯門",
+      street: "屯順街",
+      estate: "Vcity",
+      block: "8",
+      floor: "22",
+      unit: "08",
+    }),
+  ).toBe("屯門 屯順街 Vcity 8座 22樓 08室");
+});
 
 function actor(engine: Engine, id: string): Actor {
   const found = engine.listActors().find((item) => item.id === id);
