@@ -214,7 +214,7 @@
 - `composeCustomerAddress`必須為block補「座」：輸入8→8座；已有「座」不可重複。
 - Cost summary不可再按資源總fee或獨立公式計算；必須逐條Assignment用與工程內容row相同的lineCost計算：project60=quote line×60%、daily=feeAmount×inclusive日數、fixed=feeAmount；成本總和=所有已安排lineCost+額外工程price。
 - 未安排報價line不可計成本；row顯示「—」。額外工程不可自動套用師傅feeMode；ExtraWork.price由CS自由輸入，0=不收費。
-- ExtraWorkKind固定measure/delivery/transport/fabrication；buttons顯示度尺／送貨／搬運／造貨。造貨必須選active供應商、只可選該供應商categories內的造貨項目、自訂price及start/end日期；不可套用師傅feeMode，也不可再disabled。ExtraWork存supplierId/category，成本按price計。
+- ExtraWorkKind固定measure/delivery/transport/fabrication；buttons顯示度尺／送貨／搬運／造貨。造貨必須選active供應商、只可選該供應商categories內的造貨項目、自訂price及「造貨日期／起貨日期」；造貨form不可顯示時段欄。不可套用師傅feeMode，也不可再disabled。ExtraWork存supplierId/category，成本按price計；日曆label只顯示「造貨」，不顯示未定時段。
 
 ## 2026-10-29 供應商主檔
 

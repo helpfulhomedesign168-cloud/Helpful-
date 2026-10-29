@@ -1512,7 +1512,10 @@ function WorkOrderCalendar({
       id: extra.id,
       start: extra.startDate,
       end: extra.endDate,
-      label: `${EXTRA_WORK_LABELS[extra.kind]} · ${extra.time}`,
+      label:
+        extra.kind === "fabrication"
+          ? "造貨"
+          : `${EXTRA_WORK_LABELS[extra.kind]} · ${extra.time}`,
     });
   });
   const cells: Array<string | null> = [
@@ -2292,7 +2295,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                 </Field>
               </div>
               <div className="form-grid two">
-                <Field label="開工日期" required>
+                <Field label="造貨日期" required>
                   <input
                     type="date"
                     value={extraStart}
@@ -2303,7 +2306,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                     }}
                   />
                 </Field>
-                <Field label="完工日期" required>
+                <Field label="起貨日期" required>
                   <input
                     type="date"
                     min={extraStart}
@@ -2312,16 +2315,6 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                   />
                 </Field>
               </div>
-              <Field label="時段">
-                <select
-                  value={extraTime}
-                  onChange={(event) => setExtraTime(event.target.value)}
-                >
-                  {["未定", "上午", "下午", "全天"].map((slot) => (
-                    <option key={slot}>{slot}</option>
-                  ))}
-                </select>
-              </Field>
             </>
           ) : (
             <>
@@ -2434,7 +2427,8 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                           : undefined,
                       startDate: extraStart,
                       endDate: extraEnd,
-                      time: extraTime,
+                      time:
+                        extraKind === "fabrication" ? "未定" : extraTime,
                       notes: extraNotes,
                       price: extraFree ? 0 : Number(extraPrice || 0),
                     }),

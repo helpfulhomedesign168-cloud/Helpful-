@@ -122,9 +122,8 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await fabrication
     .getByLabel("造貨項目", { exact: false })
     .selectOption({ label: "PD門" });
-  await fabrication.getByLabel("開工日期", { exact: false }).fill("2026-11-10");
-  await fabrication.getByLabel("完工日期", { exact: false }).fill("2026-11-11");
-  await fabrication.getByLabel("時段", { exact: false }).selectOption("下午");
+  await fabrication.getByLabel("造貨日期", { exact: false }).fill("2026-11-10");
+  await fabrication.getByLabel("起貨日期", { exact: false }).fill("2026-11-11");
   await fabrication.getByLabel("額外收費", { exact: false }).fill("900");
   await fabrication
     .getByRole("button", { name: "儲存安排", exact: true })
