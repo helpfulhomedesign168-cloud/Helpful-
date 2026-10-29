@@ -114,9 +114,27 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await expect(
     page.locator(".engineering-table tbody tr").filter({ hasText: "度尺" }),
   ).toContainText("HK$500.00");
-  await expect(
-    page.getByRole("button", { name: "造貨", exact: true }),
-  ).toBeDisabled();
+  await page.getByRole("button", { name: "安排造貨", exact: true }).click();
+  const fabrication = page.getByRole("dialog", { name: "安排造貨" });
+  await fabrication
+    .getByLabel("供應商", { exact: false })
+    .selectOption({ label: "鑫泰鋁材" });
+  await fabrication
+    .getByLabel("造貨項目", { exact: false })
+    .selectOption({ label: "PD門" });
+  await fabrication.getByLabel("開工日期", { exact: false }).fill("2026-11-10");
+  await fabrication.getByLabel("完工日期", { exact: false }).fill("2026-11-11");
+  await fabrication.getByLabel("時段", { exact: false }).selectOption("下午");
+  await fabrication.getByLabel("額外收費", { exact: false }).fill("900");
+  await fabrication
+    .getByRole("button", { name: "儲存安排", exact: true })
+    .click();
+  const fabricationRow = page
+    .locator(".engineering-table tbody tr")
+    .filter({ hasText: "造貨" });
+  await expect(fabricationRow).toContainText("鑫泰鋁材");
+  await expect(fabricationRow).toContainText("PD門");
+  await expect(fabricationRow).toContainText("HK$900.00");
   await expect(
     page
       .locator(".calendar-event-bar")

@@ -2974,10 +2974,25 @@ export class Engine {
         "fabrication",
       ];
       if (!kinds.includes(input.kind)) fail("請選擇有效的額外工程。");
-      const resource =
-        state.resources.find((item) => item.id === input.resourceId) ??
-        fail("找不到合作資源。");
-      if (!resource.active) fail("此合作資源已停用。");
+      const isFabrication = input.kind === "fabrication";
+      let resource: Resource | undefined;
+      let supplier: Supplier | undefined;
+      if (isFabrication) {
+        supplier =
+          state.suppliers.find((item) => item.id === input.supplierId) ??
+          fail("找不到造貨供應商。");
+        if (!supplier.active) fail("此供應商已停用。");
+        if (
+          !input.category ||
+          !supplier.categories.includes(input.category)
+        )
+          fail("請選擇該供應商提供的造貨項目。");
+      } else {
+        resource =
+          state.resources.find((item) => item.id === input.resourceId) ??
+          fail("找不到合作資源。");
+        if (!resource.active) fail("此合作資源已停用。");
+      }
       if (!input.startDate || !input.endDate || !input.time)
         fail("請填寫額外工程的開工、完工日期及時間。");
       if (input.endDate < input.startDate)
@@ -2991,21 +3006,25 @@ export class Engine {
         id: uid("extra-work"),
         workOrderId: order.id,
         kind: input.kind,
-        resourceId: resource.id,
+        resourceId: resource?.id ?? "",
         startDate: input.startDate,
         endDate: input.endDate,
         time: input.time,
         notes: input.notes ?? "",
         price: input.price ?? 0,
+        supplierId: input.supplierId,
+        category: input.category,
         actorId: actor.id,
         createdAt: NOW,
       };
-      record.resourceId = resource.id;
+      record.resourceId = resource?.id ?? "";
       record.startDate = input.startDate;
       record.endDate = input.endDate;
       record.time = input.time;
       record.notes = input.notes ?? "";
       record.price = input.price ?? 0;
+      record.supplierId = input.supplierId;
+      record.category = input.category;
       record.updatedAt = NOW;
       if (!existing) state.extraWorks.push(record);
       this.audit(state, {
