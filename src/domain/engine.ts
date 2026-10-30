@@ -1602,6 +1602,28 @@ export class Engine {
       .filter((quote) => this.quoteReadable(actor, quote))
       .map((quote) => sanitiseQuote(quote, actor.role === "admin"));
   }
+  quoteParentSummary(
+    actorInput: Actor,
+    quoteId: string,
+  ): { number: string; customerName: string } | undefined {
+    const actor = this.actor(actorInput);
+    const quote = this.findQuote(quoteId);
+    if (
+      !this.quoteReadable(actor, quote) &&
+      !this.canWriteQuote(actor, quote) &&
+      actor.role !== "admin"
+    )
+      fail("你沒有查看此報價的權限。");
+    if (!quote.parentQuoteId) return undefined;
+    const parent = this.state.quotes.find(
+      (item) => item.id === quote.parentQuoteId,
+    );
+    if (!parent) return undefined;
+    return {
+      number: parent.number,
+      customerName: currentVersion(parent).customer.name,
+    };
+  }
   updateQuoteOrderMeta(
     actorInput: Actor,
     quoteId: string,

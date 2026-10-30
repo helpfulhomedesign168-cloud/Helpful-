@@ -521,14 +521,17 @@ export function Submissions() {
   const [teamFilter, setTeamFilter] = useState<"all" | "A" | "B">("all");
   const [salesFilter, setSalesFilter] = useState("all");
   const [activePayment, setActivePayment] = useState<Payment | null>(null);
-  const sources = engine
-    .listQuotes(actor)
+  const parentSummaryOf = (quote: Quote) =>
+    quote.parentQuoteId
+      ? engine.quoteParentSummary(actor, quote.id)
+      : undefined;
+  const sources = engine.listQuotes(actor)
     .filter((quote) => quote.submission && !quote.invoiceId && !quote.archived)
     .filter(
       (quote) =>
         (teamFilter === "all" || quote.team === teamFilter) &&
         (salesFilter === "all" || quote.ownerId === salesFilter) &&
-        `${quote.number} ${currentVersion(quote).customer.name} ${currentVersion(quote).customer.address}`.includes(
+        `${quote.number} ${currentVersion(quote).customer.name} ${currentVersion(quote).customer.address} ${parentSummaryOf(quote)?.number ?? ""}`.includes(
           search,
         ),
     );
@@ -629,6 +632,18 @@ export function Submissions() {
                     <tr key={quote.id}>
                       <td>
                         <strong>{quote.number}</strong>
+                        {quote.isAdditionalOrder && (
+                          <div className="additional-order-mark">
+                            <Badge strong>加單</Badge>
+                            <small>
+                              原單{" "}
+                              {parentSummaryOf(quote)?.number ?? "未能讀取"}
+                              {parentSummaryOf(quote)
+                                ? ` · ${parentSummaryOf(quote)!.customerName}`
+                                : ""}
+                            </small>
+                          </div>
+                        )}
                       </td>
                       <td>
                         {(quote.submission?.createdAt ?? quote.updatedAt).slice(

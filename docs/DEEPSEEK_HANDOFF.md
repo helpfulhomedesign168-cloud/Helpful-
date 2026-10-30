@@ -266,3 +266,4 @@
 - `updateQuoteOrderMeta`必須處理parentQuoteId寫入後才驗證；不可只驗證未寫入（已修）。
 - UploadField不可再顯示「使用示例檔」；有attachment可提供onClear顯示「刪除」。已簽文件在signature後不可刪，engine clearSignedDocument會拒絕。
 - 刪除只清attachment metadata／state，不可刪IndexedDB共用blob（其他文件可能引用）。
+- 開單員Submissions必須在加單quote的報價單cell顯示「加單」badge及原單number＋customerName；parent summary由`quoteParentSummary`安全提供，不可只靠clerk listQuotes（parent可能draft/archived而不可讀）。

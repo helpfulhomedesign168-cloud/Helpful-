@@ -4319,3 +4319,16 @@ textarea {
   width: 100%;
   margin-top: 2px;
 }
+
+/* Additional order marker in Office submissions */
+.additional-order-mark {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+.additional-order-mark small {
+  color: #6f7669;
+  font-size: 12px;
+}
