@@ -45,3 +45,4 @@
 - [x] Sales角色產品款式唯讀視角：所有Sales roles menu可見產品款式；只顯示已設定catalogueName的工廠卡，click後只看到顏色系列/相簿，不顯示供應商contact/地址，不提供新增系列或上載圖片。
 - [x] 報價尺寸單位UI：每行可切換呎／寸，切換時自動換算已輸入長度/闊度；即時顯示換算後直呎/平方呎及計費數量。報價明細同時顯示原本尺寸及換算。
 - [x] 報價產品款式：Sales可從產品款式工廠/系列/圖片picker選款，QuoteLine存productStyle snapshot（factory/series/productCode/attachment），報價明細及列印顯示；款式不影響價錢。
+- [x] Sales報價成交摘要：移除收款分類／會計已核，加可多選訂單分類（團購／8萬資助／自費）；加「是否加單」默認不是，是時可選自己過往報價作原本單據。UploadField移除使用示例檔，支援已上載附件刪除（已簽後不可刪）。

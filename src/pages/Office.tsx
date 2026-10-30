@@ -1135,9 +1135,9 @@ export function InvoiceDetail() {
           >
             <UploadField
               label="上載付款證明"
-              sample
               attachment={proof}
               onSave={setProof}
+              onClear={() => setProof(undefined)}
             />
           </Field>
           <Field label="備註">

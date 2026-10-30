@@ -1602,6 +1602,53 @@ export class Engine {
       .filter((quote) => this.quoteReadable(actor, quote))
       .map((quote) => sanitiseQuote(quote, actor.role === "admin"));
   }
+  updateQuoteOrderMeta(
+    actorInput: Actor,
+    quoteId: string,
+    input: {
+      orderCategories?: InvoiceCategory[];
+      isAdditionalOrder?: boolean;
+      parentQuoteId?: string;
+    },
+  ): void {
+    const actor = this.actor(actorInput);
+    this.mutate((state) => {
+      const quote = this.findQuote(quoteId, state);
+      if (!this.canWriteQuote(actor, quote) && actor.role !== "admin")
+        fail("你沒有修改此報價訂單資料的權限。");
+      if (quote.archived) fail("已封存報價不可修改訂單資料。");
+      if (quote.invoiceId) fail("已轉 Invoice 的來源不可修改訂單資料。");
+      if (input.orderCategories !== undefined) {
+        const valid = input.orderCategories.filter((category) =>
+          Object.hasOwn(INVOICE_CATEGORY_NAMES, category),
+        );
+        quote.orderCategories = [...new Set(valid)];
+      }
+      if (input.isAdditionalOrder !== undefined) {
+        quote.isAdditionalOrder = Boolean(input.isAdditionalOrder);
+        if (!quote.isAdditionalOrder) {
+          quote.parentQuoteId = undefined;
+        }
+      }
+      if (input.parentQuoteId !== undefined) {
+        quote.parentQuoteId = input.parentQuoteId || undefined;
+      }
+      if (quote.isAdditionalOrder) {
+        const parent = state.quotes.find((item) => item.id === quote.parentQuoteId);
+        if (!parent) fail("請選擇原本的報價單。");
+        if (parent.ownerId !== quote.ownerId)
+          fail("只可選擇自己之前的報價單。");
+        if (parent.id === quote.id) fail("不可選擇目前報價作為原本單據。");
+      }
+      quote.updatedAt = NOW;
+      this.audit(state, {
+        quoteId,
+        actorId: actor.id,
+        action: "quote_order_meta_updated",
+        detail: "更新訂單分類／加單資料",
+      });
+    });
+  }
   setOfficeCategory(
     actorInput: Actor,
     quoteId: string,
@@ -2469,6 +2516,26 @@ export class Engine {
         actorId: actor.id,
         action: "signed_document_uploaded",
         detail: "上載已簽報價文件",
+      });
+    });
+  }
+  clearSignedDocument(actorInput: Actor, quoteId: string): void {
+    const actor = this.actor(actorInput);
+    this.mutate((state) => {
+      const quote = this.findQuote(quoteId, state);
+      if (!this.canWriteQuote(actor, quote) && actor.role !== "admin")
+        fail("你沒有刪除已簽文件的權限。");
+      if (quote.archived) fail("已封存報價不可刪除文件。");
+      if (quote.invoiceId) fail("已轉 Invoice 的來源不可刪除文件。");
+      const version = currentVersion(quote);
+      if (version.signature) fail("已確認簽署後不可刪除已簽文件。");
+      version.signedDocument = undefined;
+      quote.updatedAt = NOW;
+      this.audit(state, {
+        quoteId,
+        actorId: actor.id,
+        action: "signed_document_removed",
+        detail: "刪除已簽報價文件",
       });
     });
   }

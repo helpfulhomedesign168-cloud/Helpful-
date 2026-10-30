@@ -258,3 +258,11 @@
 - 沒有catalogueName的supplier不可在Sales picker出現；picker factory名稱用catalogueName（工廠A/B）。
 - CS工程管理OrderPanel必須顯示QuoteLine.productStyle snapshot（圖片＋factory/series/productCode）；Invoice/WorkOrder由quote line deepCopy，productStyle不可在issue/release時丟失。
 - InvoiceDetail必須顯示CS release gate：未達50%時清楚說明需累計有效收款多少及會自動發CS；不可靜默沒有工程單。
+
+## 2026-10-30 Sales訂單分類、加單及上載刪除
+
+- Quote新增`orderCategories: InvoiceCategory[]`（多選，僅Sales metadata）及`isAdditionalOrder`/`parentQuoteId`。不可用單一officeCategory取代；officeCategory仍由開單員決定Invoice收款計劃。
+- Sales成交摘要移除「收款分類／會計已核」顯示，改為多選訂單分類及是否加單。加單默認false；是時只可選同一owner的歷史quote（engine驗證，不可自己）。
+- `updateQuoteOrderMeta`必須處理parentQuoteId寫入後才驗證；不可只驗證未寫入（已修）。
+- UploadField不可再顯示「使用示例檔」；有attachment可提供onClear顯示「刪除」。已簽文件在signature後不可刪，engine clearSignedDocument會拒絕。
+- 刪除只清attachment metadata／state，不可刪IndexedDB共用blob（其他文件可能引用）。

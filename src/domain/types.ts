@@ -206,6 +206,11 @@ export interface Quote {
   submission?: Submission;
   /** 開單員在正式開Invoice前確認；Invoice建立後以Invoice快照為準。 */
   officeCategory?: InvoiceCategory;
+  /** Sales的多選訂單分類；不影響開單員的單一收款分類。 */
+  orderCategories?: InvoiceCategory[];
+  /** Sales標記此報價是否加單，並可指向自己之前的報價。 */
+  isAdditionalOrder?: boolean;
+  parentQuoteId?: string;
   invoiceId?: string;
 }
 export interface Payment {
