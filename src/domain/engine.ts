@@ -1044,6 +1044,16 @@ export class Engine {
         .reduce((sum, payment) => sum + cents(payment.amount), 0),
     );
   }
+  private effectiveOrderCategory(
+    categories: InvoiceCategory[] | undefined,
+  ): InvoiceCategory | undefined {
+    const priority: InvoiceCategory[] = [
+      "self-pay",
+      "grant-80k",
+      "group-buy",
+    ];
+    return priority.find((category) => categories?.includes(category));
+  }
   private installmentPlan(
     category: InvoiceCategory,
     total: number,
@@ -1058,7 +1068,10 @@ export class Engine {
       InvoiceCategory,
       Array<{ label: string; percentage: number }>
     > = {
-      "group-buy": [{ label: "全數訂金", percentage: 100 }],
+      "group-buy": [
+        { label: "第一期訂金", percentage: 50 },
+        { label: "尾數", percentage: 50 },
+      ],
       "grant-80k": [
         { label: "第一期訂金", percentage: 30 },
         { label: "第二期訂金", percentage: 20 },
@@ -1647,11 +1660,9 @@ export class Engine {
         quote.orderCategories = [...new Set(valid)];
         // Sales now owns classification. The first selected category drives
         // the single invoice/payment-plan category; all selections are kept.
-        if (quote.orderCategories.length > 0) {
-          quote.officeCategory = quote.orderCategories[0];
-        } else {
-          quote.officeCategory = undefined;
-        }
+        quote.officeCategory = this.effectiveOrderCategory(
+          quote.orderCategories,
+        );
       }
       if (input.isAdditionalOrder !== undefined) {
         quote.isAdditionalOrder = Boolean(input.isAdditionalOrder);
@@ -2814,7 +2825,8 @@ export class Engine {
       const version = currentVersion(quote);
       const signature = version.signature;
       const category =
-        quote.officeCategory ?? quote.orderCategories?.[0];
+        this.effectiveOrderCategory(quote.orderCategories) ??
+        quote.officeCategory;
       if (!category) fail("Sales尚未選擇訂單分類，未能開Invoice。");
       if (
         !quote.submission ||

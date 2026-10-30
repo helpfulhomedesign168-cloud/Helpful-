@@ -186,7 +186,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
 
   await role(page, "工程CS");
   await expect(
-    page.locator("tbody tr").filter({ hasText: qNumber }),
+    page.locator("tbody tr").filter({ hasText: "UI測試新客戶" }),
   ).toHaveCount(0);
 
   await role(page, "開單員");

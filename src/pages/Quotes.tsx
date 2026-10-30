@@ -1763,7 +1763,7 @@ export function QuoteDetail() {
             </div>
             {(q.orderCategories?.length ?? 0) > 1 && (
               <small className="summary-order-hint">
-                多於一個分類時，收款計劃以第一個分類計算。
+                多於一個分類時，收款計劃按自費 ＞ 8萬資助 ＞ 團購的優先次序計算。
               </small>
             )}
           </div>
