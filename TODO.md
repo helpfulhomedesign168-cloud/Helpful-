@@ -46,3 +46,5 @@
 - [x] 報價尺寸單位UI：每行可切換呎／寸，切換時自動換算已輸入長度/闊度；即時顯示換算後直呎/平方呎及計費數量。報價明細同時顯示原本尺寸及換算。
 - [x] 報價產品款式：Sales可從產品款式工廠/系列/圖片picker選款，QuoteLine存productStyle snapshot（factory/series/productCode/attachment），報價明細及列印顯示；款式不影響價錢。
 - [x] Sales報價成交摘要：移除收款分類／會計已核，加可多選訂單分類（團購／8萬資助／自費）；加「是否加單」默認不是，是時可選自己過往報價作原本單據。UploadField移除使用示例檔，支援已上載附件刪除（已簽後不可刪）。
+- [x] 8萬資助雙單：Sales分類含8萬時，開Invoice即建立正單（base+A）及市政單（base+B）。正單以Invoice number+A保留真實交易並按50%釋放CS；市政單以同一Invoice base+B獨立module，不計會計／不進CS，可自由改項目、數量、單價、金額。
+- [x] 開單員可於提交報價列表以鉛筆開啟完整報價編輯器（客戶、項目、數量、折扣、產品款式），建立帶原因的更正version；舊簽署version保留，付款轉移，需Sales重新簽署提交；Invoice後不可改。市政單module在Office menu。

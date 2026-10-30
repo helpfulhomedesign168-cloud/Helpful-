@@ -20,7 +20,7 @@ it("CS可讀Invoice而不可讀原Q；已簽價及期款不被Admin加價反改"
   expect(() => e.pricing(csLead, "quote-issued")).toThrow();
   const invoice = e.issueInvoice(clerk, "quote-ready-invoice");
   expect(invoice.netTotal).toBe(14000);
-  expect(invoice.number).toBe("SHKK26100002");
+  expect(invoice.number).toBe("SHKK26100002A");
   expect(() =>
     e.uploadDocument(sales, "quote-pending-office", {
       id: "new",

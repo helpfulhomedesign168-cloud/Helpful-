@@ -323,6 +323,30 @@ export interface ProductStyleSupplier {
   categories: string[];
 }
 
+export interface MunicipalOrderLine {
+  id: string;
+  sourceLineId?: string;
+  name: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  amount: number;
+}
+export interface MunicipalOrder {
+  id: string;
+  number: string;
+  quoteId: string;
+  invoiceId: string;
+  principalOrderId: string;
+  principalOrderNumber: string;
+  customer: Customer;
+  lines: MunicipalOrderLine[];
+  createdAt: string;
+  updatedAt?: string;
+  actorId: string;
+}
+
 export interface ProductStyleImage {
   id: string;
   attachment: Attachment;
@@ -476,6 +500,7 @@ export interface AppState {
   resources: Resource[];
   suppliers: Supplier[];
   productStyles: ProductStyleSeries[];
+  municipalOrders: MunicipalOrder[];
   audits: AuditEvent[];
   notifications: Notification[];
   monthlySequences: Record<string, number>;

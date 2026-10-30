@@ -11,6 +11,7 @@ import {
   Plus,
   Hammer,
   Printer,
+  PenLine,
 } from "lucide-react";
 import {
   useApp,
@@ -631,7 +632,18 @@ export function Submissions() {
                   return (
                     <tr key={quote.id}>
                       <td>
-                        <strong>{quote.number}</strong>
+                        <div className="submission-quote-heading">
+                          <strong>{quote.number}</strong>
+                          {!quote.invoiceId && (
+                            <Button
+                              variant="ghost"
+                              aria-label={`編輯${quote.number}報價單`}
+                              onClick={() => nav("/quotes/" + quote.id + "/edit")}
+                            >
+                              <PenLine size={16} />
+                            </Button>
+                          )}
+                        </div>
                         {quote.isAdditionalOrder && (
                           <div className="additional-order-mark">
                             <Badge strong>加單</Badge>

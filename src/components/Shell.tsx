@@ -4,6 +4,7 @@ import {
   Bell,
   Plus,
   Files,
+  FileText,
   Users,
   Receipt,
   Hammer,
@@ -69,6 +70,7 @@ export function Shell() {
           ? [
               ["/submissions", "提交報價", ArrowRightLeft],
               ["/invoices", "單據管理", Files],
+              ["/municipal-orders", "市政單", FileText],
               ["/customers", "客戶", Users],
             ]
           : [
@@ -76,6 +78,7 @@ export function Shell() {
               ["/orders", "工程管理", Hammer],
               ["/contractors", "工程師傅", HardHat],
               ["/suppliers", "供應商", Truck],
+              ["/municipal-orders", "市政單", FileText],
               ["/customers", "客戶", Users],
               ["/product-styles", "產品款式", Palette],
               ["/services", "工程價目", Tags],
