@@ -291,4 +291,6 @@
 - 普通單（團購／自費）維持base number，無suffix。8萬base sequence只消耗一次，A/B共用。
 - 市政單初始lines由Invoice line snapshot建立；clerk/admin可在module自由改name/description/quantity/unit/unitPrice/amount；只更新municipalOrders，不改invoice/order/quote。
 - 舊已存在8萬Invoice未自動backfill市政單；如需要，應另做有audit的migration。
-- 開單員「修改報價」只提供已提交報價的客戶姓名／電話更正（列表Q號旁鉛筆），不得改簽署項目、數量、價錢；Invoice後客戶資料凍結。真正做到項目／價錢更正應走新版本或市政單流程。
+- 開單員「修改報價」提供完整編輯器（客戶、項目、數量、折扣、產品款式），列表Q號旁鉛筆進`/quotes/:id/edit`；儲存建立新version及原因，保留舊signed version，將現有payments移至新version，需Sales重新簽署／提交。不可直接覆寫已簽版本；已Invoice則不可改。
+- 開單員修改報價已改為完整編輯器（不是只改客戶）：`/quotes/:id/edit` guard加入clerk；QuoteEditor clerk mode可改customer/lines/discount/productStyle snapshot。儲存走`saveDraft` clerkCorrection branch，必須reason，建立新version，保留舊signed version及舊submission，將現有payments移至新version；不刪舊版本。儲存後返回Submissions，Sales需重新簽署及提交。
+- Municipal module在Office菜單（clerk/admin），市政單B可改lines但只寫municipalOrders；嚴格不可改正單A、Invoice、quote。

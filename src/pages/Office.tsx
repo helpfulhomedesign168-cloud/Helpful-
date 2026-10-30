@@ -522,10 +522,6 @@ export function Submissions() {
   const [teamFilter, setTeamFilter] = useState<"all" | "A" | "B">("all");
   const [salesFilter, setSalesFilter] = useState("all");
   const [activePayment, setActivePayment] = useState<Payment | null>(null);
-  const [correctingQuote, setCorrectingQuote] = useState<Quote | null>(null);
-  const [contactName, setContactName] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [contactWhatsapp, setContactWhatsapp] = useState("");
   const parentSummaryOf = (quote: Quote) =>
     quote.parentQuoteId
       ? engine.quoteParentSummary(actor, quote.id)
@@ -641,14 +637,8 @@ export function Submissions() {
                           {!quote.invoiceId && (
                             <Button
                               variant="ghost"
-                              aria-label={`更正${quote.number}客戶資料`}
-                              onClick={() => {
-                                const customer = currentVersion(quote).customer;
-                                setContactName(customer.name);
-                                setContactPhone(customer.phone);
-                                setContactWhatsapp(customer.whatsapp);
-                                setCorrectingQuote(quote);
-                              }}
+                              aria-label={`編輯${quote.number}報價單`}
+                              onClick={() => nav("/quotes/" + quote.id + "/edit")}
                             >
                               <PenLine size={16} />
                             </Button>
@@ -748,55 +738,6 @@ export function Submissions() {
           />
         )}
       </div>
-      {correctingQuote && (
-        <Dialog
-          title="更正客戶聯絡資料"
-          onClose={() => setCorrectingQuote(null)}
-        >
-          <p className="dialog-intro">
-            只可更正客戶姓名及聯絡電話；已簽署的工程項目、數量及價錢不會改變。
-          </p>
-          <div className="form-grid two">
-            <Field label="客戶姓名" required>
-              <input
-                value={contactName}
-                onChange={(event) => setContactName(event.target.value)}
-              />
-            </Field>
-            <Field label="聯絡電話" required>
-              <input
-                value={contactPhone}
-                onChange={(event) => setContactPhone(event.target.value)}
-              />
-            </Field>
-            <Field label="WhatsApp電話">
-              <input
-                value={contactWhatsapp}
-                onChange={(event) => setContactWhatsapp(event.target.value)}
-              />
-            </Field>
-          </div>
-          <div className="dialog-actions">
-            <Button onClick={() => setCorrectingQuote(null)}>取消</Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                const done = run(() => {
-                  engine.correctQuoteContact(actor, correctingQuote.id, {
-                    name: contactName,
-                    phone: contactPhone,
-                    whatsapp: contactWhatsapp,
-                  });
-                  return true;
-                }, "客戶聯絡資料已更正。");
-                if (done) setCorrectingQuote(null);
-              }}
-            >
-              儲存更正
-            </Button>
-          </div>
-        </Dialog>
-      )}
       {activePayment && (
         <PaymentReviewDialog
           payment={activePayment}

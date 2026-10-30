@@ -509,9 +509,19 @@ export function QuoteEditor() {
   try {
     pricing = engine.preview(actor, lines, discount);
   } catch {}
+  const clerkEditor = actor.role === "clerk";
   const own =
     salesRoles.includes(actor.role) &&
     (!existing || existing.ownerId === actor.id);
+  const canEdit = own || clerkEditor || actor.role === "admin";
+  if (!canEdit || (id && !existing)) {
+    return (
+      <Empty
+        title="沒有這張報價的編輯權限"
+        action={<Button onClick={() => nav("/quotes")}>返回報價管理</Button>}
+      />
+    );
+  }
   function save(destination: "draft" | "deal") {
     const q = run(
       () =>
@@ -531,9 +541,11 @@ export function QuoteEditor() {
     );
     if (q)
       nav(
-        destination === "deal"
+        clerkEditor
           ? "/quotes/" + q.id
-          : "/quotes/" + q.id + "/edit",
+          : destination === "deal"
+            ? "/quotes/" + q.id
+            : "/quotes/" + q.id + "/edit",
       );
   }
   function add(s: ServiceItem) {
@@ -611,13 +623,6 @@ export function QuoteEditor() {
   const customerCandidates = engine
     .listCustomers(actor)
     .map((profile) => profile.customer);
-  if (!own || (id && !existing))
-    return (
-      <Empty
-        title="沒有這張報價的編輯權限"
-        action={<Button onClick={() => nav("/quotes")}>返回報價管理</Button>}
-      />
-    );
   return (
     <>
       <PageHead
@@ -638,11 +643,17 @@ export function QuoteEditor() {
             </Button>
             <Button variant="primary" onClick={() => save("draft")}>
               <Check size={20} />
-              儲存草稿
+              {clerkEditor ? "儲存更正" : "儲存草稿"}
             </Button>
           </>
         }
       />
+      {clerkEditor && (
+        <p className="inline-warning">
+          開單員更正模式：儲存後會建立新版本，項目及價錢會更新；原版本保留，
+          需要重新準備列印、客戶簽署及提交Office。
+        </p>
+      )}
       <div className="editor-layout">
         <div className="editor-main">
           <Section
@@ -967,13 +978,23 @@ export function QuoteEditor() {
             <span>成交金額</span>
             <strong>{money(pricing.total)}</strong>
           </div>
-          <Button
-            className="full-width"
-            variant="primary"
-            onClick={() => save("deal")}
-          >
-            前往預覽及成交 <ArrowRight size={20} />
-          </Button>
+          {clerkEditor ? (
+            <Button
+              className="full-width"
+              variant="primary"
+              onClick={() => save("draft")}
+            >
+              儲存更正
+            </Button>
+          ) : (
+            <Button
+              className="full-width"
+              variant="primary"
+              onClick={() => save("deal")}
+            >
+              前往預覽及成交 <ArrowRight size={20} />
+            </Button>
+          )}
         </aside>
       </div>
       {styleLineIndex !== null && (

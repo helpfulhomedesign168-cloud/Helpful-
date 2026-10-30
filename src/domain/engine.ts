@@ -1800,35 +1800,6 @@ export class Engine {
       });
     });
   }
-  correctQuoteContact(
-    actorInput: Actor,
-    quoteId: string,
-    input: { name: string; phone: string; whatsapp: string },
-  ): void {
-    const actor = this.actor(actorInput);
-    if (!(actor.role === "clerk" || actor.role === "admin"))
-      fail("只有開單員或Super Admin可更正客戶聯絡資料。");
-    if (!input.name.trim() || !input.phone.trim())
-      fail("請填寫客戶姓名及聯絡電話。");
-    this.mutate((state) => {
-      const quote = this.findQuote(quoteId, state);
-      if (quote.archived) fail("已封存報價不可修改。");
-      if (quote.invoiceId)
-        fail("已開Invoice的客戶資料已凍結，請使用單據更正流程。");
-      if (!quote.submission) fail("此報價尚未提交Office。");
-      const version = currentVersion(quote);
-      version.customer.name = input.name.trim();
-      version.customer.phone = input.phone.trim();
-      version.customer.whatsapp = input.whatsapp.trim() || input.phone.trim();
-      quote.updatedAt = NOW;
-      this.audit(state, {
-        quoteId,
-        actorId: actor.id,
-        action: "customer_contact_corrected",
-        detail: "開單員更正客戶姓名／聯絡電話；工程項目及簽署價錢不變",
-      });
-    });
-  }
   setOfficeCategory(
     actorInput: Actor,
     quoteId: string,
@@ -2522,7 +2493,15 @@ export class Engine {
     let output!: Quote;
     this.mutate((state) => {
       const quote = quoteId ? this.findQuote(quoteId, state) : undefined;
-      if (!this.canWriteQuote(actor, quote) && actor.role !== "admin")
+      const clerkCorrection =
+        actor.role === "clerk" &&
+        Boolean(quote?.submission) &&
+        !quote?.invoiceId;
+      if (
+        !this.canWriteQuote(actor, quote) &&
+        actor.role !== "admin" &&
+        !clerkCorrection
+      )
         fail("你沒有儲存此報價草稿的權限。");
       if (quote?.archived) fail("已封存報價不可修改。");
       if (quote?.invoiceId)
@@ -2609,6 +2588,38 @@ export class Engine {
         return;
       }
       const version = currentVersion(quote);
+      if (clerkCorrection) {
+        if (!input.reason?.trim())
+          fail("開單員更正報價必須填寫更正原因。");
+        const nextVersion: QuoteVersion = {
+          id: uid("version"),
+          index: version.index + 1,
+          customer,
+          lines: rebuilt,
+          discount: selectedDiscount.discount,
+          discountMode: selectedDiscount.mode,
+          discountValue: selectedDiscount.value,
+          createdAt: NOW,
+          reason: input.reason.trim(),
+        };
+        quote.versions.push(nextVersion);
+        // Actual payments remain with the source; the corrected version keeps
+        // them so accounting does not lose money already received.
+        state.payments
+          .filter((payment) => payment.quoteId === quote.id)
+          .forEach((payment) => {
+            payment.versionId = nextVersion.id;
+          });
+        quote.updatedAt = NOW;
+        this.audit(state, {
+          quoteId: quote.id,
+          actorId: actor.id,
+          action: "clerk_quote_corrected",
+          detail: `開單員建立更正版本 ${nextVersion.index}：${input.reason.trim()}`,
+        });
+        output = deepCopy(quote);
+        return;
+      }
       if (quoteVersionIsSigned(version) || version.printPreparation) {
         if (quoteVersionIsSigned(version) && !input.reason?.trim())
           fail("已簽版本修改必須填寫修改原因並重新簽署。");

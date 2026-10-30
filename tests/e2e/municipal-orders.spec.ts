@@ -41,17 +41,25 @@ test("8萬資助開Invoice會建立正單A及可修改市政單B", async ({ page
   expect(errors).toEqual([]);
 });
 
-test("開單員可更正已提交報價的客戶聯絡，不改價錢", async ({ page }) => {
+test("開單員可開啟完整報價編輯器並建立更正版本", async ({ page }) => {
   await page.goto("/");
   await switchRole(page, "開單員");
   await page.goto("/submissions");
-  const row = page.locator("tbody tr").filter({ hasText: "李好波" });
-  const original = await row.innerText();
-  await page.getByRole("button", { name: /更正QSHMM26100004客戶資料/ }).click();
-  const dialog = page.getByRole("dialog", { name: "更正客戶聯絡資料" });
-  await dialog.getByLabel("客戶姓名", { exact: false }).fill("李好波更正");
-  await dialog.getByLabel("聯絡電話", { exact: false }).fill("90001111");
-  await dialog.getByRole("button", { name: "儲存更正", exact: true }).click();
-  await expect(page.locator("tbody tr").filter({ hasText: "李好波更正" })).toBeVisible();
-  expect(original).toContain("HK$7,000.00");
+  await page.getByRole("button", { name: /編輯QSHMM26100004報價單/ }).click();
+  await expect(page).toHaveURL(/\/quotes\/quote-pending-office\/edit$/);
+  await expect(
+    page.getByText("開單員更正模式", { exact: false }),
+  ).toBeVisible();
+  await page.getByLabel("客戶姓名", { exact: false }).fill("李好波更正");
+  const line = page.locator(".line-card").first();
+  const length = line.getByLabel("長度", { exact: false });
+  if (await length.count()) await length.fill("9");
+  await page
+    .getByLabel("修改原因", { exact: false })
+    .fill("開單員更正測試");
+  await page.getByRole("button", { name: "儲存更正", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/submissions$/);
+  await expect(
+    page.locator(".submission-table tbody tr").filter({ hasText: "李好波更正" }),
+  ).toBeVisible();
 });
