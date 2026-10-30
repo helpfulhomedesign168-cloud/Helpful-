@@ -178,7 +178,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/product-styles"
               element={
-                <Guard roles={["admin"]}>
+                <Guard roles={[...sales, "admin"]}>
                   <ProductStyles />
                 </Guard>
               }

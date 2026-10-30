@@ -42,3 +42,4 @@
 - [x] 供應商模組：8個demo供應商、13分類tabs、列表（供應商／電話／聯絡人／主理供應／編輯）、新增／修改／刪除、工程詳細checkbox、產品款式有／沒有；普通CS只讀。hasProductStyles已存起，產品款式module下一步才接。
 - [x] 供應商新增公司地址及公司Logo上載；Logo用Attachment/IndexedDB保存，供應商列表名稱前顯示thumbnail；舊suppliers不受影響。
 - [x] 供應商表單改版：大Logo、地址、聯絡人1/電話1必填、聯絡人2/電話2選填、供應項目checkbox、產品款式有/沒有。新增產品款式module（Super Admin only）：依供應商分類顯示供應商、click入詳情、小冊子顯示為、新增系列、每系列無限圖片、產品編號及相簿。
+- [x] Sales角色產品款式唯讀視角：所有Sales roles menu可見產品款式；只顯示已設定catalogueName的工廠卡，click後只看到顏色系列/相簿，不顯示供應商contact/地址，不提供新增系列或上載圖片。

@@ -48,6 +48,7 @@ export function Shell() {
         ["/quotes", "報價管理", Files],
         ["/quotes/new", "建立報價", Plus],
         ["/customers", "客戶", Users],
+        ["/product-styles", "產品款式", Palette],
         ["/performance", "我的業績", ChartNoAxesCombined],
       ]
     : actor.role === "cs" || actor.role === "cs_supervisor"

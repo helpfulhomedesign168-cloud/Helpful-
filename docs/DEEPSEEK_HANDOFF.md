@@ -241,3 +241,10 @@
 - ProductStyles頁tabs用SUPPLIER_CATEGORIES；只列`hasProductStyles=true`且categories包含該tab的suppliers；click supplier入詳情，左邊顯示logo/名稱/地址/contacts/catalogueName「小冊子顯示為」。
 - ProductStyleSeries按supplierId儲存；新增系列popup一個name input；每系列images無限，新增圖片popup需上載Attachment及輸入productCode。圖片只存Attachment metadata，blob在IndexedDB。
 - Supplier logo/list及product style images都不可用假圖；沒有圖片時顯示placeholder/上載框。
+
+## 2026-10-30 Sales產品款式唯讀
+
+- 所有selling roles（sales/supervisor/head）menu要有產品款式；route guard包括selling+admin。CS仍然不可見。
+- Sales只可用`listProductStyleSuppliers`（只回傳active、hasProductStyles、catalogueName非空的supplier id/name/categories）及`listProductStyles`相簿；不可用`listSuppliers`看到contact/phone/address。
+- Sales列表只可用catalogueName作工廠名稱（圖1）；沒有catalogueName的supplier不可顯示，避免泄露supplier名稱。Sales詳情只可顯示左邊工廠名稱及右邊顏色系列相簿，不可見新增/上載/小冊子輸入/edit。
+- Super Admin保留管理視角；catalogueName由admin在產品款式詳情「小冊子顯示為」輸入。
