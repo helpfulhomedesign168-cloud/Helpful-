@@ -32,6 +32,7 @@ import {
   type Supplier,
   type ProductStyleSeries,
   type ProductStyleImage,
+  type ProductStyleSupplier,
   type ResourceFeeMode,
   type ServiceItem,
   type WorkOrder,
@@ -1342,13 +1343,32 @@ export class Engine {
         actor.role === "admin" ? deepCopy(item) : removeCost(item),
       );
   }
+  listProductStyleSuppliers(actorInput: Actor): ProductStyleSupplier[] {
+    const actor = this.actor(actorInput);
+    const selling = ["sales", "supervisor", "head"].includes(actor.role);
+    if (actor.role !== "admin" && !selling)
+      fail("你沒有查看產品款式的權限。");
+    return this.state.suppliers
+      .filter(
+        (supplier) =>
+          supplier.active &&
+          supplier.hasProductStyles &&
+          Boolean(supplier.catalogueName?.trim()),
+      )
+      .map((supplier) => ({
+        id: supplier.id,
+        name: supplier.catalogueName!.trim(),
+        categories: [...supplier.categories],
+      }));
+  }
   listProductStyles(
     actorInput: Actor,
     supplierId: string,
   ): ProductStyleSeries[] {
     const actor = this.actor(actorInput);
-    if (actor.role !== "admin")
-      fail("只有Super Admin可維護產品款式。");
+    const selling = ["sales", "supervisor", "head"].includes(actor.role);
+    if (actor.role !== "admin" && !selling)
+      fail("你沒有查看產品款式的權限。");
     const supplier =
       this.state.suppliers.find((item) => item.id === supplierId) ??
       fail("找不到供應商。");

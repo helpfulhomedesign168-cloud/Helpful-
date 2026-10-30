@@ -13,6 +13,7 @@ import {
   Attachment,
   ProductStyleImage,
   ProductStyleSeries,
+  ProductStyleSupplier,
   SUPPLIER_CATEGORIES,
   Supplier,
 } from "../domain/types";
@@ -82,7 +83,7 @@ function StylePhoto({ image }: { image: ProductStyleImage }) {
   );
 }
 
-export function ProductStyles() {
+function AdminProductStyles() {
   const { actor, engine, run } = useApp();
   const [category, setCategory] = useState("all");
   const [selectedId, setSelectedId] = useState("");
@@ -337,6 +338,120 @@ export function ProductStyles() {
             </Button>
           </div>
         </Dialog>
+      )}
+    </>
+  );
+}
+
+
+export function ProductStyles() {
+  const { actor } = useApp();
+  return actor.role === "admin" ? (
+    <AdminProductStyles />
+  ) : (
+    <SalesProductStyles />
+  );
+}
+
+function SalesProductStyles() {
+  const { actor, engine } = useApp();
+  const [category, setCategory] = useState("all");
+  const [selectedId, setSelectedId] = useState("");
+  const suppliers = engine.listProductStyleSuppliers(actor);
+  const filtered = suppliers.filter(
+    (supplier) =>
+      category === "all" || supplier.categories.includes(category),
+  );
+  const selected = suppliers.find((supplier) => supplier.id === selectedId);
+  const series = selected
+    ? engine.listProductStyles(actor, selected.id)
+    : [];
+  return (
+    <>
+      <PageHead title="產品款式" />
+      {!selected ? (
+        <div className="list-panel product-styles-panel">
+          <div className="service-tabs" role="tablist" aria-label="產品分類">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={category === "all"}
+              className={category === "all" ? "active" : ""}
+              onClick={() => setCategory("all")}
+            >
+              全部
+            </button>
+            {SUPPLIER_CATEGORIES.map((item) => (
+              <button
+                type="button"
+                role="tab"
+                key={item}
+                aria-selected={category === item}
+                className={category === item ? "active" : ""}
+                onClick={() => setCategory(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+          {filtered.length === 0 ? (
+            <Empty
+              title="此分類未有產品款式"
+              description="產品款式由Super Admin建立後會在這裏顯示。"
+            />
+          ) : (
+            <div className="sales-product-suppliers">
+              {filtered.map((supplier) => (
+                <button
+                  type="button"
+                  className="sales-style-factory"
+                  key={supplier.id}
+                  onClick={() => setSelectedId(supplier.id)}
+                >
+                  {supplier.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="product-styles-detail">
+          <button
+            type="button"
+            className="text-button product-styles-back"
+            onClick={() => setSelectedId("")}
+          >
+            <ArrowLeft size={18} /> 返回產品款式
+          </button>
+          <div className="sales-product-style-layout">
+            <aside className="sales-style-factory-card">
+              {selected.name}
+            </aside>
+            <section className="product-style-content sales-style-content">
+              <div className="product-style-toolbar">
+                <h2>顏色系列</h2>
+              </div>
+              {series.length === 0 ? (
+                <div className="product-style-empty">
+                  <p>尚未新增產品款式。</p>
+                </div>
+              ) : (
+                <div className="product-style-series-list">
+                  {series.map((item) => (
+                    <div className="product-style-series" key={item.id}>
+                      <h3>{item.name}</h3>
+                      <div className="product-style-images">
+                        {item.images.map((image) => (
+                          <StylePhoto image={image} key={image.id} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
       )}
     </>
   );

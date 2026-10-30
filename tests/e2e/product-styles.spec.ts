@@ -23,6 +23,10 @@ test("Super Admin可依供應商分類建立產品款式系列及圖片", async 
     .click();
   await expect(page.getByRole("heading", { name: "鑫泰鋁材" })).toBeVisible();
 
+  const catalogue = page.getByLabel("小冊子顯示為", { exact: false });
+  await catalogue.fill("工廠A");
+  await catalogue.blur();
+
   await page.getByRole("button", { name: "新增", exact: true }).click();
   const seriesDialog = page.getByRole("dialog", { name: "新增產品款式" });
   await seriesDialog.getByLabel("款式名稱", { exact: false }).fill("E2E 顏色系列");
@@ -43,6 +47,25 @@ test("Super Admin可依供應商分類建立產品款式系列及圖片", async 
   await imageDialog.getByRole("button", { name: "儲存", exact: true }).click();
   await expect(imageDialog).toBeHidden();
   await expect(page.getByText("E2E-001", { exact: true })).toBeVisible();
+
+  await switchRole(page, "文文B MM");
+  await expect(
+    page.locator("nav").getByRole("link", { name: "產品款式", exact: true }),
+  ).toBeVisible();
+  await page
+    .locator("nav")
+    .getByRole("link", { name: "產品款式", exact: true })
+    .click();
+  await page.getByRole("tab", { name: "PD門", exact: true }).click();
+  await page.getByRole("button", { name: "工廠A", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "顏色系列", exact: true })).toBeVisible();
+  await expect(page.getByText("E2E-001", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "新增", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "上載圖片", exact: true }),
+  ).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

@@ -300,6 +300,12 @@ export interface Supplier {
   createdAt: string;
 }
 
+export interface ProductStyleSupplier {
+  id: string;
+  name: string;
+  categories: string[];
+}
+
 export interface ProductStyleImage {
   id: string;
   attachment: Attachment;
