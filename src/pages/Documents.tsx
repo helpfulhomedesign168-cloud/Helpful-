@@ -130,6 +130,13 @@ export function Documents() {
                           {l.position}
                           {l.style ? " · " + l.style : ""}
                         </small>
+                        {l.productStyle && (
+                          <span className="style-snapshot-text">
+                            產品款式：{l.productStyle.factoryName} ·{" "}
+                            {l.productStyle.seriesName} ·{" "}
+                            {l.productStyle.productCode}
+                          </span>
+                        )}
                       </td>
                       <td>
                         {l.itemSnapshot.measure === "area"
