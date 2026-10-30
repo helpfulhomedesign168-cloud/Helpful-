@@ -43,3 +43,5 @@
 - [x] 供應商新增公司地址及公司Logo上載；Logo用Attachment/IndexedDB保存，供應商列表名稱前顯示thumbnail；舊suppliers不受影響。
 - [x] 供應商表單改版：大Logo、地址、聯絡人1/電話1必填、聯絡人2/電話2選填、供應項目checkbox、產品款式有/沒有。新增產品款式module（Super Admin only）：依供應商分類顯示供應商、click入詳情、小冊子顯示為、新增系列、每系列無限圖片、產品編號及相簿。
 - [x] Sales角色產品款式唯讀視角：所有Sales roles menu可見產品款式；只顯示已設定catalogueName的工廠卡，click後只看到顏色系列/相簿，不顯示供應商contact/地址，不提供新增系列或上載圖片。
+- [x] 報價尺寸單位UI：每行可切換呎／寸，切換時自動換算已輸入長度/闊度；即時顯示換算後直呎/平方呎及計費數量。報價明細同時顯示原本尺寸及換算。
+- [x] 報價產品款式：Sales可從產品款式工廠/系列/圖片picker選款，QuoteLine存productStyle snapshot（factory/series/productCode/attachment），報價明細及列印顯示；款式不影響價錢。

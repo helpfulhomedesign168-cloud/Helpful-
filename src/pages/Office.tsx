@@ -57,6 +57,32 @@ type ProofPreview =
   | { kind: "image"; url: string }
   | { kind: "file" }
   | { kind: "missing" };
+function OrderStyleThumb({
+  attachment,
+}: {
+  attachment: Attachment;
+}) {
+  const [url, setUrl] = useState<string>();
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | undefined;
+    getAttachmentBlob(attachment).then((blob) => {
+      if (cancelled || !blob) return;
+      objectUrl = URL.createObjectURL(blob);
+      setUrl(objectUrl);
+    });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [attachment.id]);
+  return url ? (
+    <img className="order-style-thumb" src={url} alt="產品款式" />
+  ) : (
+    <span className="order-style-thumb order-style-thumb-empty" />
+  );
+}
+
 const RESOURCE_FEE_LABELS: Record<ResourceFeeMode, string> = {
   project60: "項目6成",
   daily: "日薪",
@@ -899,6 +925,12 @@ export function InvoiceDetail() {
           </strong>
         </div>
       </div>
+      {!status.releasedToCS && (
+        <p className="release-gate-note">
+          尚未發CS：累計有效收款需達 {money(status.csReleaseDue)}（成交額50%）。
+          核對付款後會自動建立工程單及通知CS，毋須另按。
+        </p>
+      )}
       <Section
         title="收款狀況及收據"
         action={
@@ -2027,6 +2059,18 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                               ? "一式"
                               : `${line.quantity} ${line.itemSnapshot.unit}`}
                       </small>
+                      {line.productStyle && (
+                        <div className="order-product-style">
+                          <OrderStyleThumb
+                            attachment={line.productStyle.attachment}
+                          />
+                          <small>
+                            {line.productStyle.factoryName} ·{" "}
+                            {line.productStyle.seriesName} ·{" "}
+                            {line.productStyle.productCode}
+                          </small>
+                        </div>
+                      )}
                     </td>
                     <td>{resource?.name ?? "—"}</td>
                     <td>

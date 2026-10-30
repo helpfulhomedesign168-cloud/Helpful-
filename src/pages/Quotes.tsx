@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Plus,
@@ -14,7 +14,7 @@ import {
   Archive,
   Search as SearchIcon,
 } from "lucide-react";
-import { useApp } from "../context";
+import { getAttachmentBlob, useApp } from "../context";
 import {
   Customer,
   Quote,
@@ -30,6 +30,10 @@ import {
   DiscountMode,
   discountLabel,
   composeCustomerAddress,
+  SUPPLIER_CATEGORIES,
+  ProductStyleSeries,
+  ProductStyleSnapshot,
+  ProductStyleSupplier,
 } from "../domain/types";
 import {
   Badge,
@@ -45,6 +49,64 @@ import {
   Pagination,
   usePagination,
 } from "../components/ui";
+function feetNumber(value: number, unit: "呎" | "寸") {
+  return unit === "寸" ? value / 12 : value;
+}
+
+function roundDimension(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function QuoteStylePicture({
+  attachment,
+  alt,
+}: {
+  attachment: ProductStyleSnapshot["attachment"];
+  alt: string;
+}) {
+  const [url, setUrl] = useState<string>();
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | undefined;
+    getAttachmentBlob(attachment).then((blob) => {
+      if (cancelled || !blob) return;
+      objectUrl = URL.createObjectURL(blob);
+      setUrl(objectUrl);
+    });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [attachment.id]);
+  return url ? (
+    <img src={url} alt={alt} />
+  ) : (
+    <span className="quote-style-thumb-empty" />
+  );
+}
+
+function QuoteStyleThumb({ snapshot }: { snapshot: ProductStyleSnapshot }) {
+  const [url, setUrl] = useState<string>();
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | undefined;
+    getAttachmentBlob(snapshot.attachment).then((blob) => {
+      if (cancelled || !blob) return;
+      objectUrl = URL.createObjectURL(blob);
+      setUrl(objectUrl);
+    });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [snapshot.attachment.id]);
+  return url ? (
+    <img className="quote-style-thumb" src={url} alt={snapshot.productCode} />
+  ) : (
+    <span className="quote-style-thumb quote-style-thumb-empty" />
+  );
+}
+
 const salesRoles = ["sales", "supervisor", "head"];
 export function quoteListPath(role: string) {
   if (role === "finance") return "/finance";
@@ -396,7 +458,28 @@ export function QuoteEditor() {
   const [itemSearch, setItemSearch] = useState("");
   const [cat, setCat] = useState("全部");
   const [linkedPrompt, setLinkedPrompt] = useState<string | null>(null);
+  const [styleLineIndex, setStyleLineIndex] = useState<number | null>(null);
+  const [styleCategory, setStyleCategory] = useState("all");
+  const [styleFactoryId, setStyleFactoryId] = useState("");
   const services = engine.listServices(actor).filter((s) => s.published);
+  let styleSuppliers: ProductStyleSupplier[] = [];
+  try {
+    styleSuppliers = engine.listProductStyleSuppliers(actor);
+  } catch {}
+  const styleFactory = styleSuppliers.find(
+    (supplier) => supplier.id === styleFactoryId,
+  );
+  let styleSeries: ProductStyleSeries[] = [];
+  try {
+    if (styleFactory) {
+      styleSeries = engine.listProductStyles(actor, styleFactory.id);
+    }
+  } catch {}
+  const filteredStyleSuppliers = styleSuppliers.filter(
+    (supplier) =>
+      styleCategory === "all" ||
+      supplier.categories.includes(styleCategory),
+  );
   const categories = ["全部", ...new Set(services.map((s) => s.category))];
   let baseSubtotal = 0;
   try {
@@ -474,6 +557,21 @@ export function QuoteEditor() {
   }
   function update(index: number, values: Partial<QuoteLine>) {
     setLines(lines.map((l, i) => (i === index ? { ...l, ...values } : l)));
+  }
+  function changeDimensionUnit(index: number, unit: "呎" | "寸") {
+    const line = lines[index];
+    if (!line || line.dimensionUnit === unit) return;
+    const factor =
+      line.dimensionUnit === "呎" && unit === "寸"
+        ? 12
+        : line.dimensionUnit === "寸" && unit === "呎"
+          ? 1 / 12
+          : 1;
+    update(index, {
+      dimensionUnit: unit,
+      length: line.length ? roundDimension(line.length * factor) : 0,
+      width: line.width ? roundDimension(line.width * factor) : 0,
+    });
   }
   const linkedSource = linkedPrompt
     ? lines.find((line) => line.id === linkedPrompt)
@@ -637,6 +735,20 @@ export function QuoteEditor() {
                                 />
                               </Field>
                             )}
+                            <Field label="單位">
+                              <select
+                                value={l.dimensionUnit}
+                                onChange={(event) =>
+                                  changeDimensionUnit(
+                                    i,
+                                    event.target.value as "呎" | "寸",
+                                  )
+                                }
+                              >
+                                <option value="呎">呎</option>
+                                <option value="寸">寸</option>
+                              </select>
+                            </Field>
                           </>
                         ) : (
                           <Field
@@ -673,6 +785,59 @@ export function QuoteEditor() {
                               ))}
                             </select>
                           </Field>
+                        )}
+                      </div>
+                      {s.measure === "area" || s.measure === "length" ? (
+                        <div className="measurement-conversion">
+                          {s.measure === "area"
+                            ? `輸入 ${l.length || 0} × ${l.width || 0} ${l.dimensionUnit} = ${roundDimension(feetNumber(l.length, l.dimensionUnit))} × ${roundDimension(feetNumber(l.width, l.dimensionUnit))} ${s.unit}`
+                            : `輸入 ${l.length || 0} ${l.dimensionUnit} = ${roundDimension(feetNumber(l.length, l.dimensionUnit))} ${s.unit}`}
+                          {a?.billedQty
+                            ? ` · 計費 ${a.billedQty} ${s.unit}`
+                            : ""}
+                        </div>
+                      ) : null}
+                      <div className="quote-product-style">
+                        <span className="field-label">產品款式</span>
+                        {l.productStyle ? (
+                          <div className="quote-product-style-selected">
+                            <QuoteStyleThumb snapshot={l.productStyle} />
+                            <div>
+                              <strong>
+                                {l.productStyle.factoryName} ·{" "}
+                                {l.productStyle.seriesName}
+                              </strong>
+                              <small>{l.productStyle.productCode}</small>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              onClick={() => {
+                                setStyleCategory("all");
+                                setStyleFactoryId("");
+                                setStyleLineIndex(i);
+                              }}
+                            >
+                              更改
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() =>
+                                update(i, { productStyle: undefined })
+                              }
+                            >
+                              移除
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={() => {
+                              setStyleCategory("all");
+                              setStyleFactoryId("");
+                              setStyleLineIndex(i);
+                            }}
+                          >
+                            選擇產品款式
+                          </Button>
                         )}
                       </div>
                       <details className="line-notes">
@@ -807,6 +972,117 @@ export function QuoteEditor() {
           </Button>
         </aside>
       </div>
+      {styleLineIndex !== null && (
+        <Dialog
+          wide
+          title="選擇產品款式"
+          onClose={() => {
+            setStyleLineIndex(null);
+            setStyleFactoryId("");
+          }}
+        >
+          {!styleFactory ? (
+            <>
+              <div className="category-chips">
+                <button
+                  type="button"
+                  className={styleCategory === "all" ? "selected" : ""}
+                  onClick={() => setStyleCategory("all")}
+                >
+                  全部
+                </button>
+                {SUPPLIER_CATEGORIES.map((category) => (
+                  <button
+                    type="button"
+                    key={category}
+                    className={styleCategory === category ? "selected" : ""}
+                    onClick={() => setStyleCategory(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+              {filteredStyleSuppliers.length === 0 ? (
+                <p className="section-empty">
+                  此分類暫未設定產品款式；請先由Super Admin建立工廠相簿。
+                </p>
+              ) : (
+                <div className="quote-style-factories">
+                  {filteredStyleSuppliers.map((supplier) => (
+                    <button
+                      type="button"
+                      className="quote-style-factory"
+                      key={supplier.id}
+                      onClick={() => setStyleFactoryId(supplier.id)}
+                    >
+                      {supplier.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => setStyleFactoryId("")}
+              >
+                ← 返回工廠
+              </button>
+              <h3 className="quote-style-factory-title">
+                {styleFactory.name}
+              </h3>
+              {styleSeries.length === 0 ? (
+                <p className="section-empty">
+                  此工廠尚未有產品款式圖片。
+                </p>
+              ) : (
+                <div className="quote-style-series">
+                  {styleSeries.map((item) => (
+                    <div key={item.id}>
+                      <h4>{item.name}</h4>
+                      <div className="quote-style-images">
+                        {item.images.map((image) => (
+                          <button
+                            type="button"
+                            className="quote-style-image-choice"
+                            key={image.id}
+                            onClick={() => {
+                              if (styleLineIndex === null) return;
+                              update(styleLineIndex, {
+                                productStyle: {
+                                  supplierId: styleFactory.id,
+                                  factoryName: styleFactory.name,
+                                  seriesId: item.id,
+                                  seriesName: item.name,
+                                  imageId: image.id,
+                                  productCode: image.productCode,
+                                  attachment: image.attachment,
+                                },
+                              });
+                              setStyleLineIndex(null);
+                              setStyleFactoryId("");
+                            }}
+                          >
+                            <span className="quote-style-image-frame">
+                              <QuoteStylePicture
+                                attachment={image.attachment}
+                                alt={image.productCode}
+                              />
+                            </span>
+                            <small>{image.productCode}</small>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </Dialog>
+      )}
       {linkedPrompt && linkedSource && (
         <Dialog title="連貫工程" onClose={() => setLinkedPrompt(null)}>
           <p className="dialog-intro">
@@ -1137,6 +1413,16 @@ export function QuoteDetail() {
                             {l.position}
                             {l.style ? " · " + l.style : ""}
                           </small>
+                          {l.productStyle && (
+                            <div className="quote-detail-style">
+                              <QuoteStyleThumb snapshot={l.productStyle} />
+                              <small>
+                                {l.productStyle.factoryName} ·{" "}
+                                {l.productStyle.seriesName} ·{" "}
+                                {l.productStyle.productCode}
+                              </small>
+                            </div>
+                          )}
                         </td>
                         <td>
                           {l.itemSnapshot.measure === "area"
@@ -1146,6 +1432,18 @@ export function QuoteDetail() {
                               : l.itemSnapshot.measure === "fixed"
                                 ? "一式"
                                 : `${l.quantity} ${l.itemSnapshot.unit}`}
+                          {(l.itemSnapshot.measure === "area" ||
+                            l.itemSnapshot.measure === "length") && (
+                            <small>
+                              換算{" "}
+                              {l.itemSnapshot.measure === "area"
+                                ? `${roundDimension(feetNumber(l.length, l.dimensionUnit))} × ${roundDimension(feetNumber(l.width, l.dimensionUnit))}`
+                                : roundDimension(
+                                    feetNumber(l.length, l.dimensionUnit),
+                                  )}{" "}
+                              {l.itemSnapshot.unit}
+                            </small>
+                          )}
                           {a?.minApplied && (
                             <small>
                               按最低 {a.billedQty} {l.itemSnapshot.unit}計費

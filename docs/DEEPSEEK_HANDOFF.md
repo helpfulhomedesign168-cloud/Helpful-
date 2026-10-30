@@ -248,3 +248,13 @@
 - Sales只可用`listProductStyleSuppliers`（只回傳active、hasProductStyles、catalogueName非空的supplier id/name/categories）及`listProductStyles`相簿；不可用`listSuppliers`看到contact/phone/address。
 - Sales列表只可用catalogueName作工廠名稱（圖1）；沒有catalogueName的supplier不可顯示，避免泄露supplier名稱。Sales詳情只可顯示左邊工廠名稱及右邊顏色系列相簿，不可見新增/上載/小冊子輸入/edit。
 - Super Admin保留管理視角；catalogueName由admin在產品款式詳情「小冊子顯示為」輸入。
+
+## 2026-10-30 報價尺寸單位及產品款式snapshot
+
+- QuoteLine已有dimensionUnit「呎／寸」；UI必須提供每行單位toggle。切換時換算既有length/width（呎→寸×12、寸→呎÷12，round 2dp），不可只改unit。
+- 尺寸輸入後必須顯示換算後s.unit（直呎/平方呎）及a.billedQty計費數量；原本輸入尺寸仍保留。價錢engine rawQuantity已按寸÷12，不可另建一套價錢換算。
+- ProductStyleSnapshot存於QuoteLine.productStyle：supplierId/factoryName/seriesId/seriesName/imageId/productCode/attachment。款式只作規格記錄，不影響pricing。
+- Sales quote line「選擇產品款式」picker只用Sales唯讀product style APIs；不可提供新增系列/上載/edit。選擇後line editor、QuoteDetail及Documents quote print都要顯示snapshot文字及（editor/detail）thumbnail。
+- 沒有catalogueName的supplier不可在Sales picker出現；picker factory名稱用catalogueName（工廠A/B）。
+- CS工程管理OrderPanel必須顯示QuoteLine.productStyle snapshot（圖片＋factory/series/productCode）；Invoice/WorkOrder由quote line deepCopy，productStyle不可在issue/release時丟失。
+- InvoiceDetail必須顯示CS release gate：未達50%時清楚說明需累計有效收款多少及會自動發CS；不可靜默沒有工程單。

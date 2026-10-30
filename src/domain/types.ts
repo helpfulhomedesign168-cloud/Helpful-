@@ -120,6 +120,16 @@ export interface ServiceItem {
   /** 舊 demo 目錄保留作歷史引用，但不再顯示於新價目／新報價。 */
   archived?: boolean;
 }
+export interface ProductStyleSnapshot {
+  supplierId: string;
+  factoryName: string;
+  seriesId: string;
+  seriesName: string;
+  imageId: string;
+  productCode: string;
+  attachment: Attachment;
+}
+
 export interface QuoteLine {
   id: string;
   itemId: string;
@@ -132,6 +142,8 @@ export interface QuoteLine {
   style: string;
   notes: string;
   attachment?: Attachment;
+  /** 客人已選的產品款式snapshot；價錢不由此欄計算。 */
+  productStyle?: ProductStyleSnapshot;
 }
 export interface Signature {
   date: string;
