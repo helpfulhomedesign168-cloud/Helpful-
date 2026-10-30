@@ -39,6 +39,18 @@ test("Sales客戶表單只顯示核心欄位，街道及座數可以留空", asy
   expect(blockLabel).not.toContain("＊");
   expect(nameLabel).toContain("＊");
 
+  await expect(dialog.getByText("使用示例檔", { exact: true })).toHaveCount(0);
+  await dialog.getByLabel("上載客戶文件", { exact: true }).setInputFiles({
+    name: "customer-file.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#ddd"/></svg>',
+    ),
+  });
+  await expect(dialog.getByText("customer-file.svg", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "刪除", exact: true }).click();
+  await expect(dialog.getByText("customer-file.svg", { exact: true })).toHaveCount(0);
+
   await dialog.getByLabel("客戶姓名", { exact: false }).fill("UI簡化客戶");
   await dialog.getByLabel(/^聯絡電話/).fill("91237788");
   await dialog.getByLabel(/^WhatsApp電話/).fill("91237788");

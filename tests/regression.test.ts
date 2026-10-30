@@ -125,6 +125,44 @@ it("CS可讀取工程單所屬報價版本的line金額，供6成師傅費計算
   expect(Object.values(amounts).every((amount) => amount > 0)).toBe(true);
 });
 
+it("多項訂單分類按自費 > 8萬資助 > 團購決定收款分類", () => {
+  const e = new Engine(undefined, createSeedState());
+  const sales = actor(e, "sales-mm");
+  const cases: Array<[string[], string]> = [
+    [["group-buy", "grant-80k"], "grant-80k"],
+    [["grant-80k", "self-pay"], "self-pay"],
+    [["group-buy", "self-pay"], "self-pay"],
+    [["group-buy", "grant-80k", "self-pay"], "self-pay"],
+  ];
+  const total = e.pricing(sales, "quote-pending-office").total;
+  for (const [categories, expected] of cases) {
+    e.updateQuoteOrderMeta(sales, "quote-pending-office", {
+      orderCategories: categories as any,
+    });
+    expect(e.getQuote(sales, "quote-pending-office").officeCategory).toBe(
+      expected,
+    );
+  }
+  e.updateQuoteOrderMeta(sales, "quote-pending-office", {
+    orderCategories: ["group-buy"],
+  });
+  expect(e.eligibility(sales, "quote-pending-office").firstDue).toBe(
+    Math.round(total * 50) / 100,
+  );
+  e.updateQuoteOrderMeta(sales, "quote-pending-office", {
+    orderCategories: ["grant-80k"],
+  });
+  expect(e.eligibility(sales, "quote-pending-office").firstDue).toBe(
+    Math.round(total * 30) / 100,
+  );
+  e.updateQuoteOrderMeta(sales, "quote-pending-office", {
+    orderCategories: ["self-pay"],
+  });
+  expect(e.eligibility(sales, "quote-pending-office").firstDue).toBe(
+    Math.round(total * 30) / 100,
+  );
+});
+
 it("自訂扣減保存金額與模式，並由正式列印鎖定主管及報價號", () => {
   const e = new Engine(undefined, createSeedState()),
     sales = actor(e, "sales-mm"),

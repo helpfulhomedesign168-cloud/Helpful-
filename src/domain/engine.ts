@@ -1044,6 +1044,16 @@ export class Engine {
         .reduce((sum, payment) => sum + cents(payment.amount), 0),
     );
   }
+  private effectiveOrderCategory(
+    categories: InvoiceCategory[] | undefined,
+  ): InvoiceCategory | undefined {
+    const priority: InvoiceCategory[] = [
+      "self-pay",
+      "grant-80k",
+      "group-buy",
+    ];
+    return priority.find((category) => categories?.includes(category));
+  }
   private installmentPlan(
     category: InvoiceCategory,
     total: number,
@@ -1058,7 +1068,10 @@ export class Engine {
       InvoiceCategory,
       Array<{ label: string; percentage: number }>
     > = {
-      "group-buy": [{ label: "全數訂金", percentage: 100 }],
+      "group-buy": [
+        { label: "第一期訂金", percentage: 50 },
+        { label: "尾數", percentage: 50 },
+      ],
       "grant-80k": [
         { label: "第一期訂金", percentage: 30 },
         { label: "第二期訂金", percentage: 20 },
@@ -1601,6 +1614,80 @@ export class Engine {
     return this.state.quotes
       .filter((quote) => this.quoteReadable(actor, quote))
       .map((quote) => sanitiseQuote(quote, actor.role === "admin"));
+  }
+  quoteParentSummary(
+    actorInput: Actor,
+    quoteId: string,
+  ): { number: string; customerName: string } | undefined {
+    const actor = this.actor(actorInput);
+    const quote = this.findQuote(quoteId);
+    if (
+      !this.quoteReadable(actor, quote) &&
+      !this.canWriteQuote(actor, quote) &&
+      actor.role !== "admin"
+    )
+      fail("你沒有查看此報價的權限。");
+    if (!quote.parentQuoteId) return undefined;
+    const parent = this.state.quotes.find(
+      (item) => item.id === quote.parentQuoteId,
+    );
+    if (!parent) return undefined;
+    return {
+      number: parent.number,
+      customerName: currentVersion(parent).customer.name,
+    };
+  }
+  updateQuoteOrderMeta(
+    actorInput: Actor,
+    quoteId: string,
+    input: {
+      orderCategories?: InvoiceCategory[];
+      isAdditionalOrder?: boolean;
+      parentQuoteId?: string;
+    },
+  ): void {
+    const actor = this.actor(actorInput);
+    this.mutate((state) => {
+      const quote = this.findQuote(quoteId, state);
+      if (!this.canWriteQuote(actor, quote) && actor.role !== "admin")
+        fail("你沒有修改此報價訂單資料的權限。");
+      if (quote.archived) fail("已封存報價不可修改訂單資料。");
+      if (quote.invoiceId) fail("已轉 Invoice 的來源不可修改訂單資料。");
+      if (input.orderCategories !== undefined) {
+        const valid = input.orderCategories.filter((category) =>
+          Object.hasOwn(INVOICE_CATEGORY_NAMES, category),
+        );
+        quote.orderCategories = [...new Set(valid)];
+        // Sales now owns classification. The first selected category drives
+        // the single invoice/payment-plan category; all selections are kept.
+        quote.officeCategory = this.effectiveOrderCategory(
+          quote.orderCategories,
+        );
+      }
+      if (input.isAdditionalOrder !== undefined) {
+        quote.isAdditionalOrder = Boolean(input.isAdditionalOrder);
+        if (!quote.isAdditionalOrder) {
+          quote.parentQuoteId = undefined;
+        }
+      }
+      if (input.parentQuoteId !== undefined) {
+        quote.parentQuoteId = input.parentQuoteId || undefined;
+      }
+      if (quote.isAdditionalOrder) {
+        const parent = state.quotes.find((item) => item.id === quote.parentQuoteId);
+        if (!parent) fail("請選擇原本的報價單。");
+        if (parent.ownerId !== quote.ownerId)
+          fail("只可選擇自己之前的報價單。");
+        if (parent.id === quote.id) fail("不可選擇目前報價作為原本單據。");
+      }
+      quote.updatedAt = NOW;
+      this.audit(state, {
+        quoteId,
+        actorId: actor.id,
+        action: "quote_order_meta_updated",
+        detail: "更新訂單分類／加單資料",
+      });
+    });
   }
   setOfficeCategory(
     actorInput: Actor,
@@ -2472,6 +2559,26 @@ export class Engine {
       });
     });
   }
+  clearSignedDocument(actorInput: Actor, quoteId: string): void {
+    const actor = this.actor(actorInput);
+    this.mutate((state) => {
+      const quote = this.findQuote(quoteId, state);
+      if (!this.canWriteQuote(actor, quote) && actor.role !== "admin")
+        fail("你沒有刪除已簽文件的權限。");
+      if (quote.archived) fail("已封存報價不可刪除文件。");
+      if (quote.invoiceId) fail("已轉 Invoice 的來源不可刪除文件。");
+      const version = currentVersion(quote);
+      if (version.signature) fail("已確認簽署後不可刪除已簽文件。");
+      version.signedDocument = undefined;
+      quote.updatedAt = NOW;
+      this.audit(state, {
+        quoteId,
+        actorId: actor.id,
+        action: "signed_document_removed",
+        detail: "刪除已簽報價文件",
+      });
+    });
+  }
   recordSignature(
     actorInput: Actor,
     quoteId: string,
@@ -2717,8 +2824,10 @@ export class Engine {
       if (quote.archived) fail("已封存來源不可開Invoice。");
       const version = currentVersion(quote);
       const signature = version.signature;
-      const category = quote.officeCategory;
-      if (!category) fail("請先選擇團購、8萬資助或自費分類。");
+      const category =
+        this.effectiveOrderCategory(quote.orderCategories) ??
+        quote.officeCategory;
+      if (!category) fail("Sales尚未選擇訂單分類，未能開Invoice。");
       if (
         !quote.submission ||
         quote.submission.versionId !== version.id ||

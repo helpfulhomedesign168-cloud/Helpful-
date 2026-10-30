@@ -34,6 +34,8 @@ import {
   ProductStyleSeries,
   ProductStyleSnapshot,
   ProductStyleSupplier,
+  InvoiceCategory,
+  INVOICE_CATEGORY_NAMES,
 } from "../domain/types";
 import {
   Badge,
@@ -403,9 +405,11 @@ export function CustomerForm({
             <UploadField
               attachment={value.attachment}
               label="上載客戶文件"
-              sample
               onSave={(attachment) =>
                 onChange({ ...value, attachment, address })
+              }
+              onClear={() =>
+                onChange({ ...value, attachment: undefined, address })
               }
             />
           </Field>
@@ -1268,9 +1272,9 @@ export function PaymentDialog({
       <Field label="付款證明">
         <UploadField
           label="上載付款證明"
-          sample
           attachment={input.proof}
           onSave={(proof) => setInput({ ...input, proof })}
+          onClear={() => setInput({ ...input, proof: undefined })}
         />
       </Field>
       <Field label="備註">
@@ -1310,6 +1314,8 @@ export function QuoteDetail() {
   const [archive, setArchive] = useState(false);
   const [archiveReason, setArchiveReason] = useState("customer_rejected");
   const [archiveNote, setArchiveNote] = useState("");
+  const [additionalOrder, setAdditionalOrder] = useState(false);
+  const [parentQuoteId, setParentQuoteId] = useState("");
   let q: Quote | undefined;
   try {
     q = engine.getQuote(actor, id);
@@ -1327,6 +1333,15 @@ export function QuoteDetail() {
     p = engine.pricing(actor, id),
     e = engine.eligibility(actor, id);
   const own = salesRoles.includes(actor.role) && q.ownerId === actor.id;
+  const canEditOrderMeta = own && !q.archived && !q.invoiceId;
+  const ownPreviousQuotes = engine
+    .listQuotes(actor)
+    .filter((item) => item.ownerId === actor.id && item.id !== q.id)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  useEffect(() => {
+    setAdditionalOrder(Boolean(q.isAdditionalOrder));
+    setParentQuoteId(q.parentQuoteId ?? "");
+  }, [q.id, q.isAdditionalOrder, q.parentQuoteId]);
   const preparation = v.printPreparation;
   let payments = [] as ReturnType<typeof engine.listPayments>;
   try {
@@ -1521,10 +1536,14 @@ export function QuoteDetail() {
                   <Field label={`已簽報價文件 · 版本 ${v.index}`} required>
                     <UploadField
                       label="上載已簽文件"
-                      sample
-                      attachment={v.signedDocument}
+                              attachment={v.signedDocument}
                       onSave={(attachment) =>
                         engine.uploadDocument(actor, id, attachment)
+                      }
+                      onClear={
+                        v.signature
+                          ? undefined
+                          : () => engine.clearSignedDocument(actor, id)
                       }
                     />
                   </Field>
@@ -1710,27 +1729,103 @@ export function QuoteDetail() {
             <span>成交金額</span>
             <strong>{money(p.total)}</strong>
           </div>
-          {e.officeCategory ? (
-            <div className="summary-row">
-              <span>分類後第一期應收</span>
-              <strong>{money(e.firstDue)}</strong>
+          <div className="summary-order-block">
+            <span className="summary-order-label">訂單分類</span>
+            <div className="order-category-chips">
+              {(Object.keys(INVOICE_CATEGORY_NAMES) as InvoiceCategory[]).map(
+                (category) => {
+                  const active = (q.orderCategories ?? []).includes(category);
+                  return (
+                    <button
+                      type="button"
+                      key={category}
+                      className={active ? "selected" : ""}
+                      disabled={!canEditOrderMeta}
+                      onClick={() => {
+                        const current = q.orderCategories ?? [];
+                        const next = active
+                          ? current.filter((item) => item !== category)
+                          : [...current, category];
+                        run(
+                          () =>
+                            engine.updateQuoteOrderMeta(actor, q.id, {
+                              orderCategories: next,
+                            }),
+                          "訂單分類已更新。",
+                        );
+                      }}
+                    >
+                      {INVOICE_CATEGORY_NAMES[category]}
+                    </button>
+                  );
+                },
+              )}
             </div>
-          ) : (
-            <div className="summary-row">
-              <span>收款分類</span>
-              <strong>待開單員確認</strong>
-            </div>
-          )}
-          <div className="summary-row">
-            <span>會計已核</span>
-            <strong>{money(e.validPaid)}</strong>
+            {(q.orderCategories?.length ?? 0) > 1 && (
+              <small className="summary-order-hint">
+                多於一個分類時，收款計劃按自費 ＞ 8萬資助 ＞ 團購的優先次序計算。
+              </small>
+            )}
           </div>
-          {e.officeCategory && (
-            <div className="summary-row">
-              <span>尚欠第一期</span>
-              <strong>{money(e.balance)}</strong>
+          <div className="summary-order-block">
+            <span className="summary-order-label">是否加單？</span>
+            <div className="additional-order-options">
+              <button
+                type="button"
+                className={!additionalOrder ? "selected" : ""}
+                disabled={!canEditOrderMeta}
+                onClick={() => {
+                  setAdditionalOrder(false);
+                  setParentQuoteId("");
+                  run(
+                    () =>
+                      engine.updateQuoteOrderMeta(actor, q.id, {
+                        isAdditionalOrder: false,
+                      }),
+                    "已設為非加單。",
+                  );
+                }}
+              >
+                不是
+              </button>
+              <button
+                type="button"
+                className={additionalOrder ? "selected" : ""}
+                disabled={!canEditOrderMeta}
+                onClick={() => setAdditionalOrder(true)}
+              >
+                是
+              </button>
             </div>
-          )}
+            {additionalOrder && (
+              <select
+                aria-label="原本報價單"
+                value={parentQuoteId}
+                disabled={!canEditOrderMeta}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setParentQuoteId(value);
+                  if (!value) return;
+                  run(
+                    () =>
+                      engine.updateQuoteOrderMeta(actor, q.id, {
+                        isAdditionalOrder: true,
+                        parentQuoteId: value,
+                      }),
+                    "加單資料已更新。",
+                  );
+                }}
+              >
+                <option value="">選擇自己之前的報價單</option>
+                {ownPreviousQuotes.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.number} · {currentVersion(item).customer.name} ·{" "}
+                    {item.createdAt.slice(0, 10)}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
           <Badge strong={e.hasInvoice}>{e.label}</Badge>
           {q.invoiceId && (
             <Button

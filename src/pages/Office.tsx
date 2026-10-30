@@ -521,14 +521,17 @@ export function Submissions() {
   const [teamFilter, setTeamFilter] = useState<"all" | "A" | "B">("all");
   const [salesFilter, setSalesFilter] = useState("all");
   const [activePayment, setActivePayment] = useState<Payment | null>(null);
-  const sources = engine
-    .listQuotes(actor)
+  const parentSummaryOf = (quote: Quote) =>
+    quote.parentQuoteId
+      ? engine.quoteParentSummary(actor, quote.id)
+      : undefined;
+  const sources = engine.listQuotes(actor)
     .filter((quote) => quote.submission && !quote.invoiceId && !quote.archived)
     .filter(
       (quote) =>
         (teamFilter === "all" || quote.team === teamFilter) &&
         (salesFilter === "all" || quote.ownerId === salesFilter) &&
-        `${quote.number} ${currentVersion(quote).customer.name} ${currentVersion(quote).customer.address}`.includes(
+        `${quote.number} ${currentVersion(quote).customer.name} ${currentVersion(quote).customer.address} ${parentSummaryOf(quote)?.number ?? ""}`.includes(
           search,
         ),
     );
@@ -629,6 +632,18 @@ export function Submissions() {
                     <tr key={quote.id}>
                       <td>
                         <strong>{quote.number}</strong>
+                        {quote.isAdditionalOrder && (
+                          <div className="additional-order-mark">
+                            <Badge strong>加單</Badge>
+                            <small>
+                              原單{" "}
+                              {parentSummaryOf(quote)?.number ?? "未能讀取"}
+                              {parentSummaryOf(quote)
+                                ? ` · ${parentSummaryOf(quote)!.customerName}`
+                                : ""}
+                            </small>
+                          </div>
+                        )}
                       </td>
                       <td>
                         {(quote.submission?.createdAt ?? quote.updatedAt).slice(
@@ -655,31 +670,21 @@ export function Submissions() {
                         )}
                       </td>
                       <td>
-                        <select
-                          aria-label={`${quote.number} 分類`}
-                          value={quote.officeCategory ?? ""}
-                          onChange={(e) => {
-                            if (!e.target.value) return;
-                            run(
-                              () =>
-                                engine.setOfficeCategory(
-                                  actor,
-                                  quote.id,
-                                  e.target.value as InvoiceCategory,
-                                ),
-                              "分類已保存。",
-                            );
-                          }}
-                        >
-                          <option value="">未分類</option>
-                          {Object.entries(INVOICE_CATEGORY_NAMES).map(
-                            ([value, label]) => (
-                              <option key={value} value={value}>
-                                {label}
-                              </option>
-                            ),
-                          )}
-                        </select>
+                        {quote.orderCategories?.length ||
+                        quote.officeCategory ? (
+                          <div className="submission-category-list">
+                            {(quote.orderCategories?.length
+                              ? quote.orderCategories
+                              : [quote.officeCategory!]
+                            ).map((category) => (
+                              <Badge strong key={category}>
+                                {INVOICE_CATEGORY_NAMES[category]}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="pending-value">待Sales分類</span>
+                        )}
                       </td>
                       <td>
                         {pending.length > 0 ? (
@@ -698,9 +703,10 @@ export function Submissions() {
                           </Button>
                         ) : (
                           <Button variant="secondary" disabled>
-                            {eligibility.officeCategory
+                            {quote.orderCategories?.length ||
+                            eligibility.officeCategory
                               ? "待收款"
-                              : "待分類"}
+                              : "待Sales分類"}
                           </Button>
                         )}
                       </td>
@@ -1135,9 +1141,9 @@ export function InvoiceDetail() {
           >
             <UploadField
               label="上載付款證明"
-              sample
               attachment={proof}
               onSave={setProof}
+              onClear={() => setProof(undefined)}
             />
           </Field>
           <Field label="備註">

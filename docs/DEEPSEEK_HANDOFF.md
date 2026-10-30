@@ -26,7 +26,7 @@
 
 理解`src/domain/types.ts`的永久IDs及QuoteVersion／Submission／Payment／Invoice／WorkOrder／Assignment關係。`src/domain/engine.ts`是一份共享業務來源，所有角色的頁面都由同一來源取得投影。`src/context.tsx`目前的browser-local存取只是Prototype替身，不能作生產安全邊界。
 
-首要保留：上載簽檔與指定版簽署明確分開但同頁可完成；Sales只記款，Finance／開單員才核有效；付款計劃不再按成交額自動決定。開單員先將已交Office來源分類為團購（100%）、8萬資助（30%／20%／50%）或自費（30%／20%／30%／20%）；未分類或沒有任何已核對有效收款，不能開Invoice。分類後只要已有一筆有效首訂即可開Invoice；若第一期未足，開單員在Invoice詳情補登第一期餘額，首訂及其證明仍歸入第一期並可開啟。Invoice必須凍結分類及付款計劃快照。每筆有效付款可發一張唯一Receipt（綁Payment ID、期數、金額）；不是將所有付款合併成一張首期收據。累計有效收款達成交額50%才唯一建立工程單／Group、留audit並通知CS。CS交接只安全摘要，原Q、付款明細、證明及收據仍不可讀。Invoice為SHMM2610xxxx等四位當月流水，不額外加I。
+首要保留：上載簽檔與指定版簽署明確分開但同頁可完成；Sales只記款，Finance／開單員才核有效；付款計劃不再按成交額自動決定。Sales先以多選訂單分類決定收款分類：團購（50%／50%）、8萬資助（30%／20%／50%）、自費（30%／20%／30%／20%），自費 > 8萬資助 > 團購；未分類或沒有任何已核對有效收款，不能開Invoice。分類後只要已有一筆有效首訂即可開Invoice；若第一期未足，開單員在Invoice詳情補登第一期餘額，首訂及其證明仍歸入第一期並可開啟。Invoice必須凍結分類及付款計劃快照。每筆有效付款可發一張唯一Receipt（綁Payment ID、期數、金額）；不是將所有付款合併成一張首期收據。累計有效收款達成交額50%才唯一建立工程單／Group、留audit並通知CS。CS交接只安全摘要，原Q、付款明細、證明及收據仍不可讀。Invoice為SHMM2610xxxx等四位當月流水，不額外加I。
 
 保留大字體黑白灰UI、48px主要操作、stable shell及統一間距；PRD是規則，不是每頁必須展示的説明文案。所有必填／前置必須有可發現的UI滿足途徑，error不可藏在modal背後。
 
@@ -39,7 +39,7 @@
 - 最新分類key為`group-buy`（團購）、`grant-80k`（8萬資助）、`self-pay`（自費）。分類、各期百分比及按分位計算的期款金額必須保存到Invoice快照，日後政策改動不能改歷史Invoice。
 - Invoice後的付款必須帶`invoiceId`及`installment`。開單員可在Invoice詳情新增第一期餘額或下一個合法期款、上載選填圖片證明；保存後是pending，Finance／開單員核實後才valid。第一期原有首訂付款的證明須在第一期付款列保留並可開啟。支票未兌現、FPS／轉帳未核實、rejected或其他Invoice／Version的款項一律不可計入門檻。
 - 收據必須以`paymentId`冪等：每筆valid付款最多一張`R-YYYYMM-SSSS`，金額等於該筆付款、保留期數／標籤／百分比，重按返回同一張。不可再只以Invoice發「唯一首期收據」。
-- 開Invoice時不再要求30%已收足；分類後有一筆valid付款即可建立Invoice，第一期30%是付款計劃門檻而不是開Invoice門檻。團購核足100%可即時符合50%門檻。累計valid付款恰好或超過Invoice成交額50%時才由冪等release動作建立唯一WorkOrder、audit及CS通知。CS的handoff、list／get order及assign都要拒絕未release工程。
+- 開Invoice時不再要求30%已收足；分類後有一筆valid付款即可建立Invoice，第一期30%是付款計劃門檻而不是開Invoice門檻。團購核足第一期50%即可符合50%門檻。累計valid付款恰好或超過Invoice成交額50%時才由冪等release動作建立唯一WorkOrder、audit及CS通知。CS的handoff、list／get order及assign都要拒絕未release工程。
 - 本輪仍未把完整公司收入／支出、MYOB／ABSS連接、付款分配／多筆超額付款、完成摘要及正式後端transaction宣稱為已完成。
 
 可以更換repository，不可以讓每個角色擁有獨立seed或每頁私有資料。新增正式API及transaction，用Customer／Property／Quote／Version／Payment Allocation／Invoice／WorkOrder Group等真正表。避免把當前Quote內customer snapshot當完整主檔已完成。簽版鎖價、四位流水、冪等鍵及支付核對都由server正式驗證；敏感資料不用前端getState當ACL。角色切換要換成真正員工ID登入及session／role grants，按PRD實作。
@@ -258,3 +258,27 @@
 - 沒有catalogueName的supplier不可在Sales picker出現；picker factory名稱用catalogueName（工廠A/B）。
 - CS工程管理OrderPanel必須顯示QuoteLine.productStyle snapshot（圖片＋factory/series/productCode）；Invoice/WorkOrder由quote line deepCopy，productStyle不可在issue/release時丟失。
 - InvoiceDetail必須顯示CS release gate：未達50%時清楚說明需累計有效收款多少及會自動發CS；不可靜默沒有工程單。
+
+## 2026-10-30 Sales訂單分類、加單及上載刪除
+
+- Quote新增`orderCategories: InvoiceCategory[]`（多選，僅Sales metadata）及`isAdditionalOrder`/`parentQuoteId`。不可用單一officeCategory取代；officeCategory仍由開單員決定Invoice收款計劃。
+- Sales成交摘要移除「收款分類／會計已核」顯示，改為多選訂單分類及是否加單。加單默認false；是時只可選同一owner的歷史quote（engine驗證，不可自己）。
+- `updateQuoteOrderMeta`必須處理parentQuoteId寫入後才驗證；不可只驗證未寫入（已修）。
+- UploadField不可再顯示「使用示例檔」；有attachment可提供onClear顯示「刪除」。已簽文件在signature後不可刪，engine clearSignedDocument會拒絕。
+- 刪除只清attachment metadata／state，不可刪IndexedDB共用blob（其他文件可能引用）。
+- 開單員Submissions必須在加單quote的報價單cell顯示「加單」badge及原單number＋customerName；parent summary由`quoteParentSummary`安全提供，不可只靠clerk listQuotes（parent可能draft/archived而不可讀）。
+- 分類ownership已改：Sales多選orderCategories是唯一入口；Submissions只可read-only顯示分類badges，不可再有分類select／setOfficeCategory。updateQuoteOrderMeta會同步officeCategory=orderCategories[0]；issueInvoice fallback orderCategories[0]。多於一個分類時收款計劃以第一個計，Sales摘要必須顯示此提示。舊quote未有orderCategories仍顯示legacy officeCategory，否則待Sales分類。
+
+
+## 2026-10-30 收款分類更新
+
+- 團購：第1期50%、第2期50%（尾數）。
+- 8萬資助：30%／20%／50%（不變）。
+- 自費：30%／20%／30%／20%（不變）。
+- Sales多選分類的收款優先次序：自費 > 8萬資助 > 團購。組合結果：
+  - 團購＋8萬資助 → 8萬資助
+  - 8萬資助＋自費 → 自費
+  - 團購＋自費 → 自費
+  - 團購＋8萬資助＋自費 → 自費
+- `updateQuoteOrderMeta`會用此priority同步officeCategory；issueInvoice fallback同一priority。Invoice paymentPlan仍凍結，舊Invoice不可改。
+- 舊Invoice保留原有paymentPlan snapshot；新policy只影響新Invoice。

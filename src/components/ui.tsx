@@ -14,7 +14,6 @@ import {
   currentVersion,
 } from "../domain/types";
 import {
-  sampleAttachment,
   saveAttachment,
   showAttachment,
   useApp,
@@ -306,12 +305,12 @@ export function UploadField({
   attachment,
   onSave,
   label = "上載文件",
-  sample = false,
+  onClear,
 }: {
   attachment?: Attachment;
   onSave: (a: Attachment) => void;
   label?: string;
-  sample?: boolean;
+  onClear?: () => void;
 }) {
   const { run } = useApp();
   const input = useRef<HTMLInputElement>(null);
@@ -328,19 +327,6 @@ export function UploadField({
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
-    }
-  }
-  async function example() {
-    setBusy(true);
-    try {
-      const a = await sampleAttachment(label);
-      run(() => onSave(a), "示例測試檔案已保存。");
-    } catch (e) {
-      run(() => {
-        throw e;
-      });
-    } finally {
-      setBusy(false);
     }
   }
   return (
@@ -372,14 +358,13 @@ export function UploadField({
           <Upload size={18} />
           {attachment ? "更換文件" : label}
         </Button>
-        {sample && (
+        {attachment && onClear && (
           <Button
             type="button"
             variant="ghost"
-            disabled={busy}
-            onClick={example}
+            onClick={onClear}
           >
-            使用示例檔
+            刪除
           </Button>
         )}
       </div>

@@ -306,6 +306,7 @@ function AdminProductStyles() {
               label="上載產品圖片"
               attachment={imageAttachment}
               onSave={setImageAttachment}
+              onClear={() => setImageAttachment(undefined)}
             />
           </div>
           <Field label="產品編號" required>
