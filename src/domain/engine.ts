@@ -33,6 +33,8 @@ import {
   type ProductStyleSeries,
   type ProductStyleImage,
   type ProductStyleSupplier,
+  type MunicipalOrder,
+  type MunicipalOrderLine,
   type ResourceFeeMode,
   type ServiceItem,
   type WorkOrder,
@@ -707,6 +709,7 @@ export class Engine {
       }
       migrated.suppliers ??= [];
       migrated.productStyles ??= [];
+      migrated.municipalOrders ??= [];
       createDemoSuppliers().forEach((supplier) => {
         if (!migrated.suppliers.some((item) => item.id === supplier.id))
           migrated.suppliers.push(supplier);
@@ -804,7 +807,7 @@ export class Engine {
       });
       migrated.orders.forEach((order) => {
         migrateCustomer(order.customer);
-        const match = order.number.match(/^D(\d{2})(\d{5})$/);
+        const match = order.number.match(/^D(\d{2})(\d{5})[AB]?$/);
         if (match) {
           const year = match[1];
           migrated.workOrderSequences[year] = Math.max(
@@ -1191,11 +1194,119 @@ export class Engine {
       installments,
     };
   }
+  private quoteNeedsMunicipalOrder(
+    state: AppState,
+    invoice: Invoice,
+  ): boolean {
+    const quote = state.quotes.find((item) => item.id === invoice.quoteId);
+    if (!quote) return invoice.category === "grant-80k";
+    if (quote.orderCategories?.length)
+      return quote.orderCategories.includes("grant-80k");
+    return invoice.category === "grant-80k";
+  }
+  private ensureGrantOrders(
+    state: AppState,
+    invoice: Invoice,
+    actorId: string,
+  ): void {
+    if (!this.quoteNeedsMunicipalOrder(state, invoice)) return;
+    const existing = state.orders.find(
+      (item) => item.invoiceId === invoice.id,
+    );
+    if (existing) {
+      if (
+        !state.municipalOrders.some(
+          (item) => item.principalOrderId === existing.id,
+        )
+      ) {
+        const base = existing.number.replace(/A$/, "");
+        state.municipalOrders.push(
+          this.makeMunicipalOrder(state, invoice, existing, base, actorId),
+        );
+      }
+      return;
+    }
+    const base = nextWorkOrderNumber(state);
+    const startDate = addDays(DEMO_TODAY, 10);
+    const principal: WorkOrder = {
+      id: uid("workorder"),
+      number: `${base}A`,
+      quoteId: invoice.quoteId,
+      invoiceId: invoice.id,
+      groupId: `group-${invoice.quoteId}`,
+      versionId: invoice.versionId,
+      customer: deepCopy(invoice.customer),
+      lines: deepCopy(invoice.lines),
+      createdAt: NOW,
+      startDate,
+      endDate: addMonthsClamped(
+        startDate,
+        invoice.lines.length <= 30 ? 3 : 4,
+      ),
+      status: "pending",
+      dateChanges: [],
+    };
+    state.orders.push(principal);
+    state.municipalOrders.push(
+      this.makeMunicipalOrder(state, invoice, principal, base, actorId),
+    );
+    this.audit(state, {
+      quoteId: invoice.quoteId,
+      workOrderId: principal.id,
+      actorId,
+      action: "grant_orders_created",
+      detail: `8萬資助建立正單 ${principal.number} 及市政單 ${base}B`,
+    });
+  }
+  private makeMunicipalOrder(
+    state: AppState,
+    invoice: Invoice,
+    principal: WorkOrder,
+    base: string,
+    actorId: string,
+  ): MunicipalOrder {
+    const pricing =
+      invoice.calculation ??
+      calculatePricing(invoice.lines, invoice.discount, [], true);
+    const amounts = new Map(
+      pricing.lineAmounts.map((amount) => [amount.id, amount]),
+    );
+    const lines: MunicipalOrderLine[] = invoice.lines.map((line) => {
+      const priced = amounts.get(line.id);
+      const quantity =
+        priced?.billedQty ?? line.quantity ?? 0;
+      return {
+        id: uid("municipal-line"),
+        sourceLineId: line.id,
+        name: line.itemSnapshot.name,
+        description: [line.position, line.itemSnapshot.details]
+          .filter(Boolean)
+          .join(" · "),
+        quantity,
+        unit: line.itemSnapshot.unit,
+        unitPrice: line.itemSnapshot.price,
+        amount: priced?.amount ?? 0,
+      };
+    });
+    return {
+      id: uid("municipal-order"),
+      number: `${base}B`,
+      quoteId: invoice.quoteId,
+      invoiceId: invoice.id,
+      principalOrderId: principal.id,
+      principalOrderNumber: principal.number,
+      customer: deepCopy(invoice.customer),
+      lines,
+      createdAt: NOW,
+      actorId,
+    };
+  }
   private releaseToCsIfReady(
     state: AppState,
     invoice: Invoice,
     actorId: string,
   ): void {
+    this.ensureGrantOrders(state, invoice, actorId);
     const status = this.paymentStatusRaw(invoice, state);
     if (status.validPaid < status.csReleaseDue) return;
     let order = state.orders.find((item) => item.invoiceId === invoice.id);
@@ -1689,6 +1800,35 @@ export class Engine {
       });
     });
   }
+  correctQuoteContact(
+    actorInput: Actor,
+    quoteId: string,
+    input: { name: string; phone: string; whatsapp: string },
+  ): void {
+    const actor = this.actor(actorInput);
+    if (!(actor.role === "clerk" || actor.role === "admin"))
+      fail("只有開單員或Super Admin可更正客戶聯絡資料。");
+    if (!input.name.trim() || !input.phone.trim())
+      fail("請填寫客戶姓名及聯絡電話。");
+    this.mutate((state) => {
+      const quote = this.findQuote(quoteId, state);
+      if (quote.archived) fail("已封存報價不可修改。");
+      if (quote.invoiceId)
+        fail("已開Invoice的客戶資料已凍結，請使用單據更正流程。");
+      if (!quote.submission) fail("此報價尚未提交Office。");
+      const version = currentVersion(quote);
+      version.customer.name = input.name.trim();
+      version.customer.phone = input.phone.trim();
+      version.customer.whatsapp = input.whatsapp.trim() || input.phone.trim();
+      quote.updatedAt = NOW;
+      this.audit(state, {
+        quoteId,
+        actorId: actor.id,
+        action: "customer_contact_corrected",
+        detail: "開單員更正客戶姓名／聯絡電話；工程項目及簽署價錢不變",
+      });
+    });
+  }
   setOfficeCategory(
     actorInput: Actor,
     quoteId: string,
@@ -2089,6 +2229,70 @@ export class Engine {
       this.findQuote(invoice.quoteId).ownerId === actor.id;
     if (!readable) fail("你沒有查看此Invoice付款詳情的權限。 ");
     return deepCopy(this.paymentStatusRaw(invoice));
+  }
+  listMunicipalOrders(actorInput: Actor): MunicipalOrder[] {
+    const actor = this.actor(actorInput);
+    if (!(actor.role === "clerk" || actor.role === "admin"))
+      fail("只有開單員或Super Admin可查看市政單。");
+    return deepCopy(
+      this.state.municipalOrders.sort((a, b) =>
+        b.createdAt.localeCompare(a.createdAt),
+      ),
+    );
+  }
+  getMunicipalOrder(actorInput: Actor, id: string): MunicipalOrder {
+    const actor = this.actor(actorInput);
+    if (!(actor.role === "clerk" || actor.role === "admin"))
+      fail("只有開單員或Super Admin可查看市政單。");
+    const order =
+      this.state.municipalOrders.find((item) => item.id === id) ??
+      fail("找不到市政單。");
+    return deepCopy(order);
+  }
+  updateMunicipalOrder(
+    actorInput: Actor,
+    id: string,
+    lines: MunicipalOrderLine[],
+  ): MunicipalOrder {
+    const actor = this.actor(actorInput);
+    if (!(actor.role === "clerk" || actor.role === "admin"))
+      fail("只有開單員或Super Admin可修改市政單。");
+    if (!lines.length) fail("市政單最少要有一個項目。");
+    const clean = lines.map((line, index) => {
+      if (!line.name?.trim()) fail(`第 ${index + 1} 項請填寫項目名稱。`);
+      if (
+        !isFiniteNonNegative(line.quantity) ||
+        !isFiniteNonNegative(line.unitPrice) ||
+        !isFiniteNonNegative(line.amount)
+      )
+        fail(`第 ${index + 1} 項的數量或價錢無效。`);
+      return {
+        id: line.id || uid("municipal-line"),
+        sourceLineId: line.sourceLineId,
+        name: line.name.trim(),
+        description: line.description?.trim() || "",
+        quantity: line.quantity,
+        unit: line.unit?.trim() || "項",
+        unitPrice: line.unitPrice,
+        amount: line.amount,
+      };
+    });
+    let output!: MunicipalOrder;
+    this.mutate((state) => {
+      const order =
+        state.municipalOrders.find((item) => item.id === id) ??
+        fail("找不到市政單。");
+      order.lines = deepCopy(clean);
+      order.updatedAt = NOW;
+      output = deepCopy(order);
+      this.audit(state, {
+        quoteId: order.quoteId,
+        actorId: actor.id,
+        action: "municipal_order_updated",
+        detail: `修改市政單 ${order.number}`,
+      });
+    });
+    return output;
   }
   listOrders(actorInput: Actor): WorkOrder[] {
     const actor = this.actor(actorInput);
@@ -2887,6 +3091,7 @@ export class Engine {
         action: "invoice_issued",
         detail: `生成 ${number}（${INVOICE_CATEGORY_NAMES[category]}）`,
       });
+      this.ensureGrantOrders(state, invoice, actor.id);
       this.releaseToCsIfReady(state, invoice, actor.id);
       output = deepCopy(invoice);
     });
@@ -4492,6 +4697,7 @@ export function createSeedState(): AppState {
     resources,
     suppliers: createDemoSuppliers(),
     productStyles: [],
+    municipalOrders: [],
     audits: [
       {
         id: "audit-seed-issued",

@@ -282,3 +282,13 @@
   - 團購＋8萬資助＋自費 → 自費
 - `updateQuoteOrderMeta`會用此priority同步officeCategory；issueInvoice fallback同一priority。Invoice paymentPlan仍凍結，舊Invoice不可改。
 - 舊Invoice保留原有paymentPlan snapshot；新policy只影響新Invoice。
+
+## 2026-10-30 8萬資助正單A／市政單B
+
+- Sales訂單分類只要包含`grant-80k`（即使與自費組合、收款計劃按自費），開Invoice時就要建立兩張單：
+  - 正單：`base + A`，是真實成交／會計／CS工程單；建立時csReleasedAt為空，累計有效收款達50%才release。
+  - 市政單：`base + B`，只作政府8萬資助申請；不進會計、不進CS、不影響Invoice；獨立MunicipalOrder entity及module。
+- 普通單（團購／自費）維持base number，無suffix。8萬base sequence只消耗一次，A/B共用。
+- 市政單初始lines由Invoice line snapshot建立；clerk/admin可在module自由改name/description/quantity/unit/unitPrice/amount；只更新municipalOrders，不改invoice/order/quote。
+- 舊已存在8萬Invoice未自動backfill市政單；如需要，應另做有audit的migration。
+- 開單員「修改報價」只提供已提交報價的客戶姓名／電話更正（列表Q號旁鉛筆），不得改簽署項目、數量、價錢；Invoice後客戶資料凍結。真正做到項目／價錢更正應走新版本或市政單流程。

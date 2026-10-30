@@ -17,6 +17,10 @@ import { Customers, Services, Performance } from "./pages/Resources";
 import { Contractors } from "./pages/Contractors";
 import { Suppliers } from "./pages/Suppliers";
 import { ProductStyles } from "./pages/ProductStyles";
+import {
+  MunicipalOrderDetail,
+  MunicipalOrders,
+} from "./pages/MunicipalOrders";
 import { Documents } from "./pages/Documents";
 import { Button, Empty } from "./components/ui";
 import "./styles.css";
@@ -180,6 +184,22 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={[...sales, "admin"]}>
                   <ProductStyles />
+                </Guard>
+              }
+            />
+            <Route
+              path="/municipal-orders"
+              element={
+                <Guard roles={["clerk", "admin"]}>
+                  <MunicipalOrders />
+                </Guard>
+              }
+            />
+            <Route
+              path="/municipal-orders/:id"
+              element={
+                <Guard roles={["clerk", "admin"]}>
+                  <MunicipalOrderDetail />
                 </Guard>
               }
             />

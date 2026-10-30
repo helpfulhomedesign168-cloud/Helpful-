@@ -4343,3 +4343,92 @@ textarea {
   font-size: 12px;
   line-height: 1.4;
 }
+
+/* Municipal orders (8萬資助 government copy) */
+.municipal-info {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.municipal-info > div {
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+.municipal-info span {
+  display: block;
+  color: #777d70;
+  font-size: 12px;
+}
+.municipal-info strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 15px;
+}
+.municipal-lines-panel {
+  padding: 18px;
+}
+.municipal-lines-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 15px;
+}
+.municipal-lines-head p {
+  margin: 5px 0 0;
+  color: #777d70;
+  font-size: 13px;
+}
+.municipal-line-table {
+  min-width: 900px;
+}
+.municipal-line-table input {
+  width: 100%;
+  min-width: 70px;
+  padding: 8px 9px;
+}
+.municipal-table td:first-child strong,
+.municipal-table td:nth-child(3) strong {
+  display: block;
+}
+.municipal-table td:nth-child(3) small {
+  display: block;
+  margin-top: 2px;
+  color: #7a8174;
+}
+.municipal-total {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 24px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e7e9e2;
+}
+.municipal-total span {
+  color: #6f7669;
+}
+.municipal-total strong {
+  font-size: 24px;
+}
+@media (max-width: 800px) {
+  .municipal-info {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .municipal-lines-head {
+    flex-direction: column;
+  }
+}
+
+.submission-quote-heading {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.submission-quote-heading .btn {
+  min-height: 28px;
+  padding: 2px;
+}
