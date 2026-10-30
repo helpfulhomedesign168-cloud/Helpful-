@@ -1369,6 +1369,8 @@ export class Engine {
         name: supplier.name.trim(),
         phone: supplier.phone.trim(),
         contact: supplier.contact.trim(),
+        address: supplier.address?.trim() || "",
+        logo: supplier.logo,
         categories: [...supplier.categories],
         supply: supplier.supply?.trim() || supplier.categories.join(", "),
         hasProductStyles: Boolean(supplier.hasProductStyles),

@@ -25,6 +25,15 @@ test("供應商列表、分類tabs、新增、產品款式及刪除", async ({ p
   await add.getByLabel("供應商名稱", { exact: false }).fill("E2E 玻璃廠");
   await add.getByLabel("聯絡人", { exact: false }).fill("E2E 陳生");
   await add.getByLabel("聯絡電話", { exact: false }).fill("9000 5678");
+  await add.getByLabel("公司地址", { exact: false }).fill("屯門 屯順街 8號");
+  await add.locator("input[type=file]").setInputFiles({
+    name: "e2e-logo.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#222"/><text x="10" y="38" fill="#fff">E2E</text></svg>',
+    ),
+  });
+  await expect(add.getByText("e2e-logo.svg", { exact: true })).toBeVisible();
   await add.getByRole("checkbox", { name: "玻璃", exact: true }).check();
   await add.getByRole("checkbox", { name: "木門", exact: true }).check();
   await add.getByRole("radio", { name: "有", exact: true }).check();
@@ -36,8 +45,12 @@ test("供應商列表、分類tabs、新增、產品款式及刪除", async ({ p
   });
   await expect(row).toContainText("E2E 陳生");
   await expect(row).toContainText("玻璃, 木門");
+  await expect(row.locator("img.supplier-logo")).toBeVisible();
   await page.getByRole("button", { name: "修改E2E 玻璃廠" }).click();
   const edit = page.getByRole("dialog", { name: "修改供應商" });
+  await expect(edit.getByLabel("公司地址", { exact: false })).toHaveValue(
+    "屯門 屯順街 8號",
+  );
   await expect(edit.getByRole("radio", { name: "有", exact: true })).toBeChecked();
   await edit.getByRole("radio", { name: "沒有", exact: true }).check();
   await edit.getByRole("button", { name: "儲存", exact: true }).click();

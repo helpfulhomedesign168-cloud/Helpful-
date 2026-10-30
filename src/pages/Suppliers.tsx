@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Check, PenLine, Plus, Trash2 } from "lucide-react";
-import { useApp } from "../context";
+import { getAttachmentBlob, useApp } from "../context";
 import {
   Button,
   Dialog,
@@ -8,9 +8,31 @@ import {
   Field,
   PageHead,
   Pagination,
+  UploadField,
   usePagination,
 } from "../components/ui";
-import { SUPPLIER_CATEGORIES, Supplier } from "../domain/types";
+import { Attachment, SUPPLIER_CATEGORIES, Supplier } from "../domain/types";
+
+function SupplierLogo({ attachment }: { attachment?: Attachment }) {
+  const [url, setUrl] = useState<string>();
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | undefined;
+    setUrl(undefined);
+    if (!attachment) return;
+    getAttachmentBlob(attachment).then((blob) => {
+      if (cancelled || !blob) return;
+      objectUrl = URL.createObjectURL(blob);
+      setUrl(objectUrl);
+    });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [attachment?.id]);
+  if (!attachment || !url) return null;
+  return <img className="supplier-logo" src={url} alt={`${attachment.name} logo`} />;
+}
 
 function newSupplier(): Supplier {
   return {
@@ -18,6 +40,7 @@ function newSupplier(): Supplier {
     name: "",
     phone: "",
     contact: "",
+    address: "",
     categories: [],
     hasProductStyles: true,
     active: true,
@@ -109,7 +132,10 @@ export function Suppliers() {
                 {pager.items.map((supplier) => (
                   <tr key={supplier.id}>
                     <td>
-                      <strong>{supplier.name}</strong>
+                      <div className="supplier-name-cell">
+                        <SupplierLogo attachment={supplier.logo} />
+                        <strong>{supplier.name}</strong>
+                      </div>
                     </td>
                     <td>{supplier.phone}</td>
                     <td>{supplier.contact}</td>
@@ -175,6 +201,21 @@ export function Suppliers() {
               <input
                 value={editing.phone}
                 onChange={(event) => set({ phone: event.target.value })}
+              />
+            </Field>
+          </div>
+          <div className="form-grid two supplier-address-logo">
+            <Field label="公司地址">
+              <input
+                value={editing.address ?? ""}
+                onChange={(event) => set({ address: event.target.value })}
+              />
+            </Field>
+            <Field label="公司 Logo">
+              <UploadField
+                label="上載公司 Logo"
+                attachment={editing.logo}
+                onSave={(logo) => set({ logo })}
               />
             </Field>
           </div>

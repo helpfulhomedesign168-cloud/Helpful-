@@ -285,6 +285,9 @@ export interface Supplier {
   name: string;
   phone: string;
   contact: string;
+  address?: string;
+  /** 公司Logo，顯示於供應商列表名稱前。 */
+  logo?: Attachment;
   categories: string[];
   /** 列表顯示的「主理供應」；新供應商由categories派生。 */
   supply?: string;

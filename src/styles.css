@@ -3762,3 +3762,25 @@ textarea {
     min-width: 760px;
   }
 }
+
+/* Supplier logo and address */
+.supplier-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.supplier-logo {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  border: 1px solid #e2e5dc;
+  border-radius: 6px;
+  background: #fff;
+}
+.supplier-address-logo {
+  margin-top: 18px;
+}
+.supplier-address-logo .upload-field {
+  margin-top: 4px;
+}
