@@ -113,6 +113,10 @@ export function MunicipalOrderDetail() {
   const [lines, setLines] = useState<MunicipalOrderLine[]>(
     structuredClone(order.lines),
   );
+  let principal;
+  try {
+    principal = engine.getOrder(actor, order.principalOrderId);
+  } catch {}
   useEffect(() => {
     setLines(structuredClone(order.lines));
   }, [order.id, order.updatedAt]);
@@ -179,6 +183,61 @@ export function MunicipalOrderDetail() {
           <strong>政府8萬資助申請，不作會計</strong>
         </div>
       </div>
+      {principal && (
+        <section className="municipal-principal">
+          <div className="municipal-principal-head">
+            <div>
+              <span className="eyebrow">正單 A</span>
+              <h2>{principal.number}</h2>
+            </div>
+            <p>
+              客戶：{principal.customer.name} · {principal.customer.phone}
+              <br />
+              地址：{principal.customer.address || "—"}
+              <br />
+              工程期：{principal.startDate} 至 {principal.endDate}
+            </p>
+          </div>
+          <div className="table-scroll">
+            <table className="municipal-principal-table">
+              <thead>
+                <tr>
+                  <th>工程項目</th>
+                  <th>位置</th>
+                  <th>尺寸／數量</th>
+                  <th>產品款式</th>
+                </tr>
+              </thead>
+              <tbody>
+                {principal.lines.map((line) => {
+                  const dimensions =
+                    line.itemSnapshot.measure === "area"
+                      ? `${line.length} × ${line.width} ${line.dimensionUnit}`
+                      : line.itemSnapshot.measure === "length"
+                        ? `${line.length} ${line.dimensionUnit}`
+                        : line.itemSnapshot.measure === "fixed"
+                          ? "一式"
+                          : `${line.quantity} ${line.itemSnapshot.unit}`;
+                  return (
+                    <tr key={line.id}>
+                      <td>
+                        <strong>{line.itemSnapshot.name}</strong>
+                      </td>
+                      <td>{line.position || "—"}</td>
+                      <td>{dimensions}</td>
+                      <td>
+                        {line.productStyle
+                          ? `${line.productStyle.factoryName} · ${line.productStyle.seriesName} · ${line.productStyle.productCode}`
+                          : line.style || "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
       <div className="list-panel municipal-lines-panel">
         <div className="municipal-lines-head">
           <div>

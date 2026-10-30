@@ -1275,11 +1275,27 @@ export class Engine {
       const priced = amounts.get(line.id);
       const quantity =
         priced?.billedQty ?? line.quantity ?? 0;
+      const dimensions =
+        line.itemSnapshot.measure === "area"
+          ? `${line.length} × ${line.width} ${line.dimensionUnit}`
+          : line.itemSnapshot.measure === "length"
+            ? `${line.length} ${line.dimensionUnit}`
+            : line.itemSnapshot.measure === "fixed"
+              ? "一式"
+              : `${line.quantity} ${line.itemSnapshot.unit}`;
+      const style = line.productStyle
+        ? `${line.productStyle.factoryName} · ${line.productStyle.seriesName} · ${line.productStyle.productCode}`
+        : line.style;
       return {
         id: uid("municipal-line"),
         sourceLineId: line.id,
         name: line.itemSnapshot.name,
-        description: [line.position, line.itemSnapshot.details]
+        description: [
+          line.position,
+          dimensions,
+          line.itemSnapshot.details,
+          style,
+        ]
           .filter(Boolean)
           .join(" · "),
         quantity,

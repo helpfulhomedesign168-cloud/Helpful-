@@ -33,6 +33,9 @@ test("8萬資助開Invoice會建立正單A及可修改市政單B", async ({ page
   expect(municipalNumber).toBe(invoiceNumber.replace(/A$/, "B"));
   await municipalRow.getByRole("link", { name: "查看／修改" }).click();
   await expect(page.getByRole("heading", { name: municipalNumber })).toBeVisible();
+  const principalSnapshot = page.locator(".municipal-principal");
+  await expect(principalSnapshot).toContainText(principalNumber);
+  await expect(principalSnapshot.locator("tbody tr").first()).toContainText("PD門");
 
   await page.getByLabel("第1項名稱").fill("市政測試項目");
   await page.getByLabel("第1項金額").fill("1234");

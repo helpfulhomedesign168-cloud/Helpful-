@@ -4432,3 +4432,38 @@ textarea {
   min-height: 28px;
   padding: 2px;
 }
+
+.municipal-principal {
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+.municipal-principal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 14px;
+}
+.municipal-principal-head h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+}
+.municipal-principal-head p {
+  margin: 0;
+  color: #5f675a;
+  font-size: 14px;
+  line-height: 1.65;
+  text-align: right;
+}
+.municipal-principal-table {
+  min-width: 760px;
+}
+.municipal-principal-table td {
+  vertical-align: top;
+}
+.municipal-principal-table td:first-child strong {
+  display: block;
+}

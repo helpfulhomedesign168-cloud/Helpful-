@@ -289,7 +289,7 @@
   - 正單：Invoice number本身加`A`（例如`DNMM26100099A`），是真實成交／會計／CS工程單；建立時csReleasedAt為空，累計有效收款達50%才release。
   - 市政單：同一Invoice base的`B`（例如`DNMM26100099B`），只作政府8萬資助申請；不進會計、不進CS、不影響Invoice；獨立MunicipalOrder entity及module。
 - 普通單（團購／自費）維持原本Invoice／WorkOrder number，無suffix。8萬以Invoice number作base，A/B共用，不再耗用WorkOrder sequence。
-- 市政單初始lines由Invoice line snapshot建立；clerk/admin可在module自由改name/description/quantity/unit/unitPrice/amount；只更新municipalOrders，不改invoice/order/quote。
+- 市政單詳情必須先完整顯示正單A的number／客戶／電話／地址／工程期及所有工程項目（位置、尺寸、數量、產品款式）；下面才是由A完整分拆出來的市政單B可編輯lines。clerk/admin可在module自由改name/description/quantity/unit/unitPrice/amount；只更新municipalOrders，不改invoice/order/quote。
 - 舊已存在8萬Invoice未自動backfill市政單；如需要，應另做有audit的migration。
 - 開單員「修改報價」提供完整編輯器（客戶、項目、數量、折扣、產品款式），列表Q號旁鉛筆進`/quotes/:id/edit`；儲存建立新version及原因，保留舊signed version，將現有payments移至新version，需Sales重新簽署／提交。不可直接覆寫已簽版本；已Invoice則不可改。
 - 開單員修改報價已改為完整編輯器（不是只改客戶）：`/quotes/:id/edit` guard加入clerk；QuoteEditor clerk mode可改customer/lines/discount/productStyle snapshot。儲存走`saveDraft` clerkCorrection branch，必須reason，建立新version，保留舊signed version及舊submission，將現有payments移至新version；不刪舊版本。儲存後返回Submissions，Sales需重新簽署及提交。
