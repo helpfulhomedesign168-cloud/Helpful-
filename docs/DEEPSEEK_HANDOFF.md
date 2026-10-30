@@ -256,3 +256,5 @@
 - ProductStyleSnapshot存於QuoteLine.productStyle：supplierId/factoryName/seriesId/seriesName/imageId/productCode/attachment。款式只作規格記錄，不影響pricing。
 - Sales quote line「選擇產品款式」picker只用Sales唯讀product style APIs；不可提供新增系列/上載/edit。選擇後line editor、QuoteDetail及Documents quote print都要顯示snapshot文字及（editor/detail）thumbnail。
 - 沒有catalogueName的supplier不可在Sales picker出現；picker factory名稱用catalogueName（工廠A/B）。
+- CS工程管理OrderPanel必須顯示QuoteLine.productStyle snapshot（圖片＋factory/series/productCode）；Invoice/WorkOrder由quote line deepCopy，productStyle不可在issue/release時丟失。
+- InvoiceDetail必須顯示CS release gate：未達50%時清楚說明需累計有效收款多少及會自動發CS；不可靜默沒有工程單。

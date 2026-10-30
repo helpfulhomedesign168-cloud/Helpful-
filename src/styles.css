@@ -4245,3 +4245,34 @@ textarea {
 .quote-detail-style small {
   max-width: 260px;
 }
+
+/* CS product style snapshot and release gate */
+.order-product-style {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+}
+.order-style-thumb,
+.order-style-thumb-empty {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  border: 1px solid #e2e5dc;
+  border-radius: 4px;
+  background: #f7f8f3;
+}
+.order-product-style small {
+  max-width: 230px;
+  color: #69715f;
+  font-size: 12px;
+}
+.release-gate-note {
+  margin: 0 0 16px;
+  padding: 11px 14px;
+  border-radius: 7px;
+  background: #fff8e8;
+  color: #745b27;
+  font-size: 14px;
+}
