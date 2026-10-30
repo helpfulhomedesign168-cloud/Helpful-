@@ -16,14 +16,21 @@ test("8萬資助開Invoice會建立正單A及可修改市政單B", async ({ page
   await expect(
     page.getByRole("heading", { name: "王小虎的單據", exact: true }),
   ).toBeVisible();
+  const invoiceNumber = (
+    await page.locator(".page-head .eyebrow").innerText()
+  )
+    .split(" · ")[0]
+    .trim();
+  expect(invoiceNumber).toMatch(/A$/);
 
   await page.getByRole("link", { name: "市政單", exact: true }).click();
   await expect(page.getByRole("heading", { name: "市政單", exact: true })).toBeVisible();
   const municipalRow = page.locator(".municipal-table tbody tr").first();
   const municipalNumber = (await municipalRow.locator("strong").first().innerText()).trim();
   const principalNumber = (await municipalRow.locator("td").nth(1).innerText()).trim();
-  expect(municipalNumber).toMatch(/B$/);
+  expect(principalNumber).toBe(invoiceNumber);
   expect(principalNumber).toMatch(/A$/);
+  expect(municipalNumber).toBe(invoiceNumber.replace(/A$/, "B"));
   await municipalRow.getByRole("link", { name: "查看／修改" }).click();
   await expect(page.getByRole("heading", { name: municipalNumber })).toBeVisible();
 

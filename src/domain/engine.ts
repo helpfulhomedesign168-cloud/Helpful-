@@ -1226,7 +1226,7 @@ export class Engine {
       }
       return;
     }
-    const base = nextWorkOrderNumber(state);
+    const base = invoice.number.replace(/A$/, "");
     const startDate = addDays(DEMO_TODAY, 10);
     const principal: WorkOrder = {
       id: uid("workorder"),
@@ -3063,7 +3063,12 @@ export class Engine {
       const month = dateKey(DEMO_TODAY);
       const sequence = (state.monthlySequences[month] ?? 0) + 1;
       state.monthlySequences[month] = sequence;
-      const number = `${supervisor.code}${owner.code}${yyMM(DEMO_TODAY)}${String(sequence).padStart(4, "0")}`;
+      const numberBase = `${supervisor.code}${owner.code}${yyMM(DEMO_TODAY)}${String(sequence).padStart(4, "0")}`;
+      const hasGrant =
+        quote.orderCategories?.length
+          ? quote.orderCategories.includes("grant-80k")
+          : category === "grant-80k";
+      const number = hasGrant ? `${numberBase}A` : numberBase;
       const invoice: Invoice = {
         id: uid("invoice"),
         number,

@@ -286,9 +286,9 @@
 ## 2026-10-30 8萬資助正單A／市政單B
 
 - Sales訂單分類只要包含`grant-80k`（即使與自費組合、收款計劃按自費），開Invoice時就要建立兩張單：
-  - 正單：`base + A`，是真實成交／會計／CS工程單；建立時csReleasedAt為空，累計有效收款達50%才release。
-  - 市政單：`base + B`，只作政府8萬資助申請；不進會計、不進CS、不影響Invoice；獨立MunicipalOrder entity及module。
-- 普通單（團購／自費）維持base number，無suffix。8萬base sequence只消耗一次，A/B共用。
+  - 正單：Invoice number本身加`A`（例如`DNMM26100099A`），是真實成交／會計／CS工程單；建立時csReleasedAt為空，累計有效收款達50%才release。
+  - 市政單：同一Invoice base的`B`（例如`DNMM26100099B`），只作政府8萬資助申請；不進會計、不進CS、不影響Invoice；獨立MunicipalOrder entity及module。
+- 普通單（團購／自費）維持原本Invoice／WorkOrder number，無suffix。8萬以Invoice number作base，A/B共用，不再耗用WorkOrder sequence。
 - 市政單初始lines由Invoice line snapshot建立；clerk/admin可在module自由改name/description/quantity/unit/unitPrice/amount；只更新municipalOrders，不改invoice/order/quote。
 - 舊已存在8萬Invoice未自動backfill市政單；如需要，應另做有audit的migration。
 - 開單員「修改報價」提供完整編輯器（客戶、項目、數量、折扣、產品款式），列表Q號旁鉛筆進`/quotes/:id/edit`；儲存建立新version及原因，保留舊signed version，將現有payments移至新version，需Sales重新簽署／提交。不可直接覆寫已簽版本；已Invoice則不可改。
