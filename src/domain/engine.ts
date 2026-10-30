@@ -710,6 +710,20 @@ export class Engine {
       migrated.suppliers ??= [];
       migrated.productStyles ??= [];
       migrated.municipalOrders ??= [];
+      migrated.municipalOrders.forEach((municipal) => {
+        const invoice = migrated.invoices.find(
+          (item) => item.id === municipal.invoiceId,
+        );
+        if (!invoice) return;
+        const base = invoice.number.replace(/A$/, "");
+        invoice.number = `${base}A`;
+        const principal = migrated.orders.find(
+          (item) => item.id === municipal.principalOrderId,
+        );
+        if (principal) principal.number = `${base}A`;
+        municipal.number = `${base}B`;
+        municipal.principalOrderNumber = `${base}A`;
+      });
       createDemoSuppliers().forEach((supplier) => {
         if (!migrated.suppliers.some((item) => item.id === supplier.id))
           migrated.suppliers.push(supplier);
