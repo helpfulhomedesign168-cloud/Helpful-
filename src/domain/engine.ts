@@ -30,6 +30,8 @@ import {
   type Resource,
   type ResourceKind,
   type Supplier,
+  type ProductStyleSeries,
+  type ProductStyleImage,
   type ResourceFeeMode,
   type ServiceItem,
   type WorkOrder,
@@ -703,6 +705,7 @@ export class Engine {
         migrated.demoEngineeringVersion = 2;
       }
       migrated.suppliers ??= [];
+      migrated.productStyles ??= [];
       createDemoSuppliers().forEach((supplier) => {
         if (!migrated.suppliers.some((item) => item.id === supplier.id))
           migrated.suppliers.push(supplier);
@@ -1339,6 +1342,87 @@ export class Engine {
         actor.role === "admin" ? deepCopy(item) : removeCost(item),
       );
   }
+  listProductStyles(
+    actorInput: Actor,
+    supplierId: string,
+  ): ProductStyleSeries[] {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "admin")
+      fail("只有Super Admin可維護產品款式。");
+    const supplier =
+      this.state.suppliers.find((item) => item.id === supplierId) ??
+      fail("找不到供應商。");
+    if (!supplier.hasProductStyles) return [];
+    return deepCopy(
+      this.state.productStyles
+        .filter((series) => series.supplierId === supplierId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    );
+  }
+  addProductStyleSeries(
+    actorInput: Actor,
+    supplierId: string,
+    name: string,
+  ): ProductStyleSeries {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "admin")
+      fail("只有Super Admin可維護產品款式。");
+    if (!name.trim()) fail("請輸入產品款式名稱。");
+    let output!: ProductStyleSeries;
+    this.mutate((state) => {
+      const supplier =
+        state.suppliers.find((item) => item.id === supplierId) ??
+        fail("找不到供應商。");
+      if (!supplier.hasProductStyles)
+        fail("此供應商沒有開啟產品款式。");
+      output = {
+        id: uid("style-series"),
+        supplierId,
+        name: name.trim(),
+        images: [],
+        createdAt: NOW,
+      };
+      state.productStyles.push(output);
+      this.audit(state, {
+        actorId: actor.id,
+        action: "product_style_series_created",
+        detail: `新增產品款式 ${name.trim()} · ${supplier.name}`,
+      });
+    });
+    return deepCopy(output);
+  }
+  addProductStyleImage(
+    actorInput: Actor,
+    seriesId: string,
+    attachment: Attachment,
+    productCode: string,
+  ): ProductStyleImage {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "admin")
+      fail("只有Super Admin可維護產品款式。");
+    if (!attachment?.id) fail("請先上載產品圖片。");
+    if (!productCode.trim()) fail("請輸入產品編號。");
+    let output!: ProductStyleImage;
+    this.mutate((state) => {
+      const series =
+        state.productStyles.find((item) => item.id === seriesId) ??
+        fail("找不到產品款式。");
+      output = {
+        id: uid("style-image"),
+        attachment,
+        productCode: productCode.trim(),
+        createdAt: NOW,
+      };
+      series.images.push(output);
+      series.updatedAt = NOW;
+      this.audit(state, {
+        actorId: actor.id,
+        action: "product_style_image_added",
+        detail: `新增產品圖片 ${productCode.trim()} · ${series.name}`,
+      });
+    });
+    return deepCopy(output);
+  }
   listSuppliers(actorInput: Actor): Supplier[] {
     const actor = this.actor(actorInput);
     if (!(isCsActor(actor) || actor.role === "admin"))
@@ -1369,7 +1453,10 @@ export class Engine {
         name: supplier.name.trim(),
         phone: supplier.phone.trim(),
         contact: supplier.contact.trim(),
+        contact2: supplier.contact2?.trim() || "",
+        phone2: supplier.phone2?.trim() || "",
         address: supplier.address?.trim() || "",
+        catalogueName: supplier.catalogueName?.trim() || "",
         logo: supplier.logo,
         categories: [...supplier.categories],
         supply: supplier.supply?.trim() || supplier.categories.join(", "),
@@ -4275,6 +4362,7 @@ export function createSeedState(): AppState {
     extraWorks: [],
     resources,
     suppliers: createDemoSuppliers(),
+    productStyles: [],
     audits: [
       {
         id: "audit-seed-issued",

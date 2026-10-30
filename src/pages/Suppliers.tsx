@@ -1,6 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Check, PenLine, Plus, Trash2 } from "lucide-react";
-import { getAttachmentBlob, useApp } from "../context";
+import {
+  getAttachmentBlob,
+  saveAttachment,
+  useApp,
+} from "../context";
 import {
   Button,
   Dialog,
@@ -8,7 +12,6 @@ import {
   Field,
   PageHead,
   Pagination,
-  UploadField,
   usePagination,
 } from "../components/ui";
 import { Attachment, SUPPLIER_CATEGORIES, Supplier } from "../domain/types";
@@ -34,12 +37,80 @@ function SupplierLogo({ attachment }: { attachment?: Attachment }) {
   return <img className="supplier-logo" src={url} alt={`${attachment.name} logo`} />;
 }
 
+function SupplierLogoUpload({
+  attachment,
+  onSave,
+}: {
+  attachment?: Attachment;
+  onSave: (attachment: Attachment) => void;
+}) {
+  const { run } = useApp();
+  const input = useRef<HTMLInputElement>(null);
+  const [url, setUrl] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | undefined;
+    setUrl(undefined);
+    if (!attachment) return;
+    getAttachmentBlob(attachment).then((blob) => {
+      if (cancelled || !blob) return;
+      objectUrl = URL.createObjectURL(blob);
+      setUrl(objectUrl);
+    });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [attachment?.id]);
+  return (
+    <div className="supplier-logo-upload-wrap">
+      <button
+        type="button"
+        className="supplier-logo-upload"
+        onClick={() => input.current?.click()}
+        disabled={busy}
+      >
+        {url ? (
+          <img src={url} alt="供應商Logo" />
+        ) : (
+          <span>上載公司Logo</span>
+        )}
+      </button>
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={async (event) => {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          setBusy(true);
+          try {
+            const next = await saveAttachment(file);
+            run(() => onSave(next), "公司Logo已保存。");
+          } catch (error) {
+            run(() => {
+              throw error;
+            });
+          } finally {
+            setBusy(false);
+            if (input.current) input.current.value = "";
+          }
+        }}
+      />
+    </div>
+  );
+}
+
 function newSupplier(): Supplier {
   return {
     id: crypto.randomUUID(),
     name: "",
     phone: "",
     contact: "",
+    contact2: "",
+    phone2: "",
     address: "",
     categories: [],
     hasProductStyles: true,
@@ -184,43 +255,58 @@ export function Suppliers() {
           title={isExisting ? "修改供應商" : "新增供應商"}
           onClose={() => setEditing(null)}
         >
-          <div className="service-form-top">
-            <Field label="供應商名稱" required>
-              <input
-                value={editing.name}
-                onChange={(event) => set({ name: event.target.value })}
+          <div className="supplier-form-grid">
+            <div className="supplier-logo-column">
+              <span className="field-label">供應商Logo</span>
+              <SupplierLogoUpload
+                attachment={editing.logo}
+                onSave={(logo) => set({ logo })}
               />
-            </Field>
-            <Field label="聯絡人" required>
+            </div>
+            <div className="supplier-main-fields">
+              <Field label="供應商名稱" required>
+                <input
+                  value={editing.name}
+                  onChange={(event) => set({ name: event.target.value })}
+                />
+              </Field>
+              <Field label="供應商地址">
+                <textarea
+                  rows={5}
+                  value={editing.address ?? ""}
+                  onChange={(event) => set({ address: event.target.value })}
+                />
+              </Field>
+            </div>
+          </div>
+          <div className="form-grid two supplier-contact-grid">
+            <Field label="聯絡人-1" required>
               <input
                 value={editing.contact}
                 onChange={(event) => set({ contact: event.target.value })}
               />
             </Field>
-            <Field label="聯絡電話" required>
+            <Field label="聯絡電話-1" required>
               <input
                 value={editing.phone}
                 onChange={(event) => set({ phone: event.target.value })}
               />
             </Field>
-          </div>
-          <div className="form-grid two supplier-address-logo">
-            <Field label="公司地址">
+            <Field label="聯絡人-2">
               <input
-                value={editing.address ?? ""}
-                onChange={(event) => set({ address: event.target.value })}
+                value={editing.contact2 ?? ""}
+                onChange={(event) => set({ contact2: event.target.value })}
               />
             </Field>
-            <Field label="公司 Logo">
-              <UploadField
-                label="上載公司 Logo"
-                attachment={editing.logo}
-                onSave={(logo) => set({ logo })}
+            <Field label="聯絡電話-2">
+              <input
+                value={editing.phone2 ?? ""}
+                onChange={(event) => set({ phone2: event.target.value })}
               />
             </Field>
           </div>
           <div className="supplier-detail-block">
-            <span className="field-label">工程詳細</span>
+            <span className="field-label">供應項目</span>
             <div className="supplier-checkboxes">
               {SUPPLIER_CATEGORIES.map((category) => (
                 <label className="supplier-check" key={category}>
