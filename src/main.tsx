@@ -16,7 +16,7 @@ import {
 import { Customers, Services, Performance } from "./pages/Resources";
 import { Contractors } from "./pages/Contractors";
 import { Suppliers } from "./pages/Suppliers";
-import { ProductStyles } from "./pages/Placeholders";
+import { ProductStyles } from "./pages/ProductStyles";
 import { Documents } from "./pages/Documents";
 import { Button, Empty } from "./components/ui";
 import "./styles.css";
@@ -178,7 +178,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/product-styles"
               element={
-                <Guard roles={["cs", "cs_supervisor", "admin"]}>
+                <Guard roles={["admin"]}>
                   <ProductStyles />
                 </Guard>
               }

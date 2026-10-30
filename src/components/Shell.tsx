@@ -57,7 +57,6 @@ export function Shell() {
           ["/contractors", "工程師傅", HardHat],
           ["/suppliers", "供應商", Truck],
           ["/customers", "客戶", Users],
-          ["/product-styles", "產品款式", Palette],
           ["/services", "工程價目", Tags],
         ]
       : actor.role === "finance"

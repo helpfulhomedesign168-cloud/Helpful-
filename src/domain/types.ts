@@ -285,7 +285,10 @@ export interface Supplier {
   name: string;
   phone: string;
   contact: string;
+  contact2?: string;
+  phone2?: string;
   address?: string;
+  catalogueName?: string;
   /** 公司Logo，顯示於供應商列表名稱前。 */
   logo?: Attachment;
   categories: string[];
@@ -295,6 +298,21 @@ export interface Supplier {
   hasProductStyles: boolean;
   active: boolean;
   createdAt: string;
+}
+
+export interface ProductStyleImage {
+  id: string;
+  attachment: Attachment;
+  productCode: string;
+  createdAt: string;
+}
+export interface ProductStyleSeries {
+  id: string;
+  supplierId: string;
+  name: string;
+  images: ProductStyleImage[];
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export type ResourceKind = "foreman" | "worker";
@@ -434,6 +452,7 @@ export interface AppState {
   extraWorks: ExtraWork[];
   resources: Resource[];
   suppliers: Supplier[];
+  productStyles: ProductStyleSeries[];
   audits: AuditEvent[];
   notifications: Notification[];
   monthlySequences: Record<string, number>;

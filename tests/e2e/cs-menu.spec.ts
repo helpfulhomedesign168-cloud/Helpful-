@@ -17,22 +17,12 @@ test("CS及Super Admin menu加入工程師傅、供應商、產品款式及工�
     "工程師傅",
     "供應商",
     "客戶",
-    "產品款式",
     "工程價目",
   ])
     await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
-
-  for (const [label, title] of [
-    ["產品款式", "產品款式"],
-  ]) {
-    await nav.getByRole("link", { name: label, exact: true }).click();
-    await expect(
-      page.getByRole("heading", { name: title, exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("此模組尚未建立", { exact: true }),
-    ).toBeVisible();
-  }
+  await expect(
+    nav.getByRole("link", { name: "產品款式", exact: true }),
+  ).toHaveCount(0);
 
   await nav.getByRole("link", { name: "工程師傅", exact: true }).click();
   await expect(
@@ -64,6 +54,14 @@ test("CS及Super Admin menu加入工程師傅、供應商、產品款式及工�
     await expect(
       page.locator("nav").getByRole("link", { name: label, exact: true }),
     ).toBeVisible();
+
+  await page
+    .locator("nav")
+    .getByRole("link", { name: "產品款式", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "產品款式", exact: true }),
+  ).toBeVisible();
 
   await page
     .locator("nav")

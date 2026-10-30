@@ -232,3 +232,12 @@
 - Logo用現有`saveAttachment`/IndexedDB保存，列表在供應商名稱前顯示32x32 thumbnail；沒有logo的供應商只顯示名稱，不可顯示假logo。
 - Logo只是metadata在AppState，blob在homeflow-files；preserve attachment id。
 - 測試必須覆蓋上載logo、列表顯示及edit保留地址。
+
+## 2026-10-30 供應商表單及產品款式module
+
+- 供應商form layout：左大Logo上載/預覽，右供應商名稱及供應商地址textarea；聯絡人-1/聯絡電話-1必填，聯絡人-2/聯絡電話-2選填；供應項目checkboxes；產品款式有/沒有。
+- Logo必須用Attachment保存，form大圖及列表thumbnail都要顯示；不要只存URL。
+- 產品款式module只限`admin`：route Guard及menu只可Super Admin看到；CS/CS supervisor不可見。供應商form仍可由CS supervisor/admin設定`hasProductStyles`及categories。
+- ProductStyles頁tabs用SUPPLIER_CATEGORIES；只列`hasProductStyles=true`且categories包含該tab的suppliers；click supplier入詳情，左邊顯示logo/名稱/地址/contacts/catalogueName「小冊子顯示為」。
+- ProductStyleSeries按supplierId儲存；新增系列popup一個name input；每系列images無限，新增圖片popup需上載Attachment及輸入productCode。圖片只存Attachment metadata，blob在IndexedDB。
+- Supplier logo/list及product style images都不可用假圖；沒有圖片時顯示placeholder/上載框。
