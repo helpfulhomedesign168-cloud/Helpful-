@@ -4332,3 +4332,14 @@ textarea {
   color: #6f7669;
   font-size: 12px;
 }
+
+.submission-category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.summary-order-hint {
+  color: #8a9082;
+  font-size: 12px;
+  line-height: 1.4;
+}

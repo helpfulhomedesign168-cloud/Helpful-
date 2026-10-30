@@ -1761,6 +1761,11 @@ export function QuoteDetail() {
                 },
               )}
             </div>
+            {(q.orderCategories?.length ?? 0) > 1 && (
+              <small className="summary-order-hint">
+                多於一個分類時，收款計劃以第一個分類計算。
+              </small>
+            )}
           </div>
           <div className="summary-order-block">
             <span className="summary-order-label">是否加單？</span>

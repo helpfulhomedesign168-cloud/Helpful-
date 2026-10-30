@@ -56,7 +56,7 @@ test("提交報價：搜尋及兩個篩選同一行，首訂金額及證明文�
   const unclassified = page
     .locator("tbody tr")
     .filter({ hasText: "QSHMM26100004" });
-  await expect(unclassified).toContainText("待分類");
+  await expect(unclassified).toContainText("待Sales分類");
   await expect(
     unclassified.getByRole("button", { name: "核對收款", exact: true }),
   ).toBeVisible();

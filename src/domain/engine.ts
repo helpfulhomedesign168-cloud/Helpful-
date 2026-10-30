@@ -1645,6 +1645,13 @@ export class Engine {
           Object.hasOwn(INVOICE_CATEGORY_NAMES, category),
         );
         quote.orderCategories = [...new Set(valid)];
+        // Sales now owns classification. The first selected category drives
+        // the single invoice/payment-plan category; all selections are kept.
+        if (quote.orderCategories.length > 0) {
+          quote.officeCategory = quote.orderCategories[0];
+        } else {
+          quote.officeCategory = undefined;
+        }
       }
       if (input.isAdditionalOrder !== undefined) {
         quote.isAdditionalOrder = Boolean(input.isAdditionalOrder);
@@ -2806,8 +2813,9 @@ export class Engine {
       if (quote.archived) fail("已封存來源不可開Invoice。");
       const version = currentVersion(quote);
       const signature = version.signature;
-      const category = quote.officeCategory;
-      if (!category) fail("請先選擇團購、8萬資助或自費分類。");
+      const category =
+        quote.officeCategory ?? quote.orderCategories?.[0];
+      if (!category) fail("Sales尚未選擇訂單分類，未能開Invoice。");
       if (
         !quote.submission ||
         quote.submission.versionId !== version.id ||

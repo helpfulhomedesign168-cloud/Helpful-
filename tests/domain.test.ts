@@ -195,8 +195,12 @@ describe("Engine Golden Path（同一來源跨角色）", () => {
       date: "2026-10-21",
       cleared: true,
     });
-    expect(() => engine.issueInvoice(clerk, quote.id)).toThrow("請先選擇");
-    engine.setOfficeCategory(clerk, quote.id, "self-pay");
+    expect(() => engine.issueInvoice(clerk, quote.id)).toThrow(
+      "Sales尚未選擇訂單分類",
+    );
+    engine.updateQuoteOrderMeta(sales, quote.id, {
+      orderCategories: ["self-pay"],
+    });
     const partialInvoice = engine.issueInvoice(clerk, quote.id);
     expect(partialInvoice.category).toBe("self-pay");
     const firstBalance = engine.recordInstallmentPayment(clerk, partialInvoice.id, 1, {
@@ -498,8 +502,12 @@ describe("Engine 安全投影、負面資格與計價", () => {
         cleared: false,
       }),
     ).toThrow("支票未兌現");
-    expect(() => engine.issueInvoice(clerk, q.id)).toThrow("請先選擇");
-    engine.setOfficeCategory(clerk, q.id, "grant-80k");
+    expect(() => engine.issueInvoice(clerk, q.id)).toThrow(
+      "Sales尚未選擇訂單分類",
+    );
+    engine.updateQuoteOrderMeta(sales, q.id, {
+      orderCategories: ["grant-80k"],
+    });
     expect(() => engine.issueInvoice(clerk, q.id)).toThrow("至少一筆有效收款");
     expect(() =>
       engine.saveDraft(otherSales, undefined, draft(water, "91238881")),

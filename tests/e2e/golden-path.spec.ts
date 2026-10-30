@@ -114,6 +114,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   await file(pay, "上載付款證明", "首訂證明.svg");
   await pay.getByRole("button", { name: "儲存付款記錄", exact: true }).click();
   await expect(pay).toBeHidden();
+  await page.getByRole("button", { name: "自費", exact: true }).click();
   await page.getByRole("button", { name: "提交Office", exact: true }).click();
   await expect(page.getByText("已提交Office", { exact: true })).toBeVisible();
   await expect(
@@ -147,12 +148,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
     .getByRole("button", { name: "確認有效收款", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toBeHidden();
-  await expect(
-    row.getByRole("button", { name: "待分類", exact: true }),
-  ).toBeDisabled();
-  await row
-    .getByRole("combobox", { name: `${qNumber} 分類` })
-    .selectOption("self-pay");
+  await expect(row).toContainText("自費");
   await expect(
     row.getByRole("button", { name: /已核對並開單/ }),
   ).toBeEnabled();
