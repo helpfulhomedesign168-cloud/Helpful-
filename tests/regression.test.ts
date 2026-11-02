@@ -163,6 +163,32 @@ it("多項訂單分類按自費 > 8萬資助 > 團購決定收款分類", () => 
   );
 });
 
+it("Sales排班只准阿頭改全部Team、主管改自己Team，普通Sales只讀自己", () => {
+  const state = createSeedState();
+  const teamASales = state.actors.find((a) => a.id === "sales-mm")!;
+  teamASales.team = "A";
+  const e = new Engine(undefined, state);
+  const head = actor(e, "head-don");
+  const supervisor = actor(e, "supervisor-sh");
+  const sales = actor(e, "sales-mm");
+  expect(() =>
+    e.setSalesShift(sales, "sales-mm", "2026-10-05", "morning"),
+  ).toThrow("只有Sales阿頭或主管");
+  expect(() =>
+    e.setSalesShift(supervisor, "sales-mm", "2026-10-05", "morning"),
+  ).toThrow("自己Team");
+  e.setSalesShift(head, "sales-mm", "2026-10-05", "morning");
+  expect(
+    e
+      .listSalesSchedule(head, "2026-10")
+      .shifts.some((shift) => shift.actorId === "sales-mm"),
+  ).toBe(true);
+  expect(e.listSalesSchedule(sales, "2026-10").members).toHaveLength(1);
+  expect(
+    e.listSalesSchedule(supervisor, "2026-10").members.map((m) => m.id),
+  ).not.toContain("sales-mm");
+});
+
 it("自訂扣減保存金額與模式，並由正式列印鎖定主管及報價號", () => {
   const e = new Engine(undefined, createSeedState()),
     sales = actor(e, "sales-mm"),

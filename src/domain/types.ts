@@ -502,6 +502,7 @@ export interface AppState {
   suppliers: Supplier[];
   productStyles: ProductStyleSeries[];
   municipalOrders: MunicipalOrder[];
+  salesShifts: SalesShift[];
   audits: AuditEvent[];
   notifications: Notification[];
   monthlySequences: Record<string, number>;
@@ -632,6 +633,29 @@ export interface Performance {
   nextTarget?: number;
   nextBonus?: number;
   entries: PerformanceEntry[];
+}
+export type SalesShiftCode =
+  | "morning"
+  | "afternoon"
+  | "evening"
+  | "full"
+  | "off"
+  | "leave";
+export const SALES_SHIFT_NAMES: Record<SalesShiftCode, string> = {
+  morning: "早班",
+  afternoon: "午班",
+  evening: "晚班",
+  full: "全日",
+  off: "休息",
+  leave: "年假",
+};
+export interface SalesShift {
+  id: string;
+  actorId: string;
+  date: string;
+  shift: SalesShiftCode;
+  updatedBy: string;
+  updatedAt: string;
 }
 export interface DraftInput {
   customer: Customer;

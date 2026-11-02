@@ -35,6 +35,8 @@ import {
   type ProductStyleSupplier,
   type MunicipalOrder,
   type MunicipalOrderLine,
+  type SalesShift,
+  type SalesShiftCode,
   type ResourceFeeMode,
   type ServiceItem,
   type WorkOrder,
@@ -44,6 +46,7 @@ import {
   type InstallmentPlanRow,
   type InvoicePaymentStatus,
   INVOICE_CATEGORY_NAMES,
+  SALES_SHIFT_NAMES,
   DEFAULT_SERVICE_CATEGORIES,
   composeCustomerAddress,
   DEMO_TODAY,
@@ -2499,6 +2502,87 @@ export class Engine {
     });
     return { sales, commission, bonus, nextTarget, nextBonus, entries };
   }
+  listSalesSchedule(
+    actorInput: Actor,
+    month: string,
+  ): { members: Actor[]; shifts: SalesShift[] } {
+    const actor = this.actor(actorInput);
+    if (!/^\d{4}-\d{2}$/.test(month))
+      fail("排班月份格式無效。");
+    let members: Actor[];
+    if (actor.role === "head") {
+      members = this.state.actors.filter((item) => item.role === "sales");
+    } else if (actor.role === "supervisor") {
+      members = this.state.actors.filter(
+        (item) => item.role === "sales" && item.team === actor.team,
+      );
+    } else if (actor.role === "sales") {
+      members = [actor];
+    } else {
+      fail("你沒有查看Sales排班的權限。");
+    }
+    members = members
+      .slice()
+      .sort(
+        (a, b) =>
+          (a.team ?? "").localeCompare(b.team ?? "") ||
+          a.name.localeCompare(b.name),
+      );
+    const ids = new Set(members.map((member) => member.id));
+    return {
+      members: deepCopy(members),
+      shifts: deepCopy(
+        this.state.salesShifts.filter(
+          (shift) =>
+            ids.has(shift.actorId) && shift.date.startsWith(month),
+        ),
+      ),
+    };
+  }
+  setSalesShift(
+    actorInput: Actor,
+    salesActorId: string,
+    date: string,
+    shift: SalesShiftCode | null,
+  ): void {
+    const actor = this.actor(actorInput);
+    if (!(actor.role === "head" || actor.role === "supervisor"))
+      fail("只有Sales阿頭或主管可修改排班。");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
+      fail("排班日期格式無效。");
+    if (shift && !Object.hasOwn(SALES_SHIFT_NAMES, shift))
+      fail("排班更次無效。");
+    this.mutate((state) => {
+      const target = state.actors.find((item) => item.id === salesActorId);
+      if (!target || target.role !== "sales")
+        fail("找不到可排班的Sales。");
+      if (actor.role === "supervisor" && target.team !== actor.team)
+        fail("主管只可修改自己Team的排班。");
+      const index = state.salesShifts.findIndex(
+        (item) => item.actorId === target.id && item.date === date,
+      );
+      if (!shift) {
+        if (index >= 0) state.salesShifts.splice(index, 1);
+      } else {
+        const row: SalesShift = {
+          id: index >= 0 ? state.salesShifts[index].id : uid("sales-shift"),
+          actorId: target.id,
+          date,
+          shift,
+          updatedBy: actor.id,
+          updatedAt: NOW,
+        };
+        if (index >= 0) state.salesShifts[index] = row;
+        else state.salesShifts.push(row);
+      }
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_shift_updated",
+        detail: `${target.name} ${date}：${shift ? SALES_SHIFT_NAMES[shift] : "清除排班"}`,
+      });
+    });
+  }
   notifications(actorInput: Actor): Notification[] {
     const actor = this.actor(actorInput);
     return deepCopy(
@@ -4796,6 +4880,7 @@ export function createSeedState(): AppState {
     suppliers: createDemoSuppliers(),
     productStyles: [],
     municipalOrders: [],
+    salesShifts: [],
     audits: [
       {
         id: "audit-seed-issued",

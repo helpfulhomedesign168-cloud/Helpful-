@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Provider, useApp } from "./context";
 import { Shell, roleHome } from "./components/Shell";
 import { QuoteEditor, QuoteDetail, Quotes } from "./pages/Quotes";
+import { SalesSchedule } from "./pages/SalesSchedule";
 import {
   Finance,
   InvoiceDetail,
@@ -200,6 +201,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={["clerk", "admin"]}>
                   <MunicipalOrderDetail />
+                </Guard>
+              }
+            />
+            <Route
+              path="/sales-schedule"
+              element={
+                <Guard roles={sales}>
+                  <SalesSchedule />
                 </Guard>
               }
             />

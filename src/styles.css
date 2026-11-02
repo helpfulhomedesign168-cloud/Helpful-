@@ -4539,3 +4539,166 @@ textarea {
   border-radius: inherit;
   background: #59684d;
 }
+
+/* Sales monthly roster */
+.roster-panel {
+  overflow: hidden;
+}
+.roster-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.roster-toolbar p {
+  margin: 5px 0 0;
+  color: #737a6d;
+  font-size: 13px;
+}
+.roster-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.roster-legend span {
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.roster-scroll {
+  max-width: 100%;
+}
+.sales-roster-table {
+  min-width: 1180px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sales-roster-table th,
+.sales-roster-table td {
+  padding: 0;
+  border-right: 1px solid #eef0e9;
+  border-bottom: 1px solid #eef0e9;
+  text-align: center;
+  vertical-align: middle;
+}
+.sales-roster-table thead th {
+  min-width: 52px;
+  height: 54px;
+  color: #68705f;
+  font-size: 12px;
+  background: #f8f9f4;
+}
+.sales-roster-table thead th strong,
+.sales-roster-table thead th small {
+  display: block;
+  font-size: 12px;
+}
+.sales-roster-table thead th small {
+  margin-top: 2px;
+  color: #92998b;
+  font-weight: 400;
+}
+.sales-roster-table thead th.weekend {
+  background: #f3f5ed;
+}
+.roster-person-head,
+.roster-person {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 138px;
+  min-width: 138px;
+  padding: 0 13px !important;
+  text-align: left !important;
+  background: #fff;
+}
+.sales-roster-table thead .roster-person-head {
+  z-index: 3;
+  background: #f8f9f4;
+}
+.roster-person strong,
+.roster-person small {
+  display: block;
+}
+.roster-person small {
+  margin-top: 2px;
+  color: #8a9282;
+  font-size: 11px;
+  font-weight: 400;
+}
+.roster-cell {
+  height: 54px;
+}
+.roster-cell select {
+  width: 100%;
+  height: 100%;
+  min-height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #3b4534;
+  text-align: center;
+  font-size: 12px;
+  cursor: pointer;
+}
+.roster-cell span {
+  display: block;
+  padding: 8px 3px;
+  color: #3b4534;
+  font-size: 12px;
+}
+.roster-cell.weekend {
+  background: #fafbf7;
+}
+.roster-cell.shift-morning,
+.roster-legend [data-shift="morning"] {
+  background: #fff2c7;
+}
+.roster-cell.shift-afternoon,
+.roster-legend [data-shift="afternoon"] {
+  background: #dbeafe;
+}
+.roster-cell.shift-evening,
+.roster-legend [data-shift="evening"] {
+  background: #e9def8;
+}
+.roster-cell.shift-full,
+.roster-legend [data-shift="full"] {
+  background: #dcefd9;
+}
+.roster-cell.shift-off,
+.roster-legend [data-shift="off"] {
+  background: #f0f1ed;
+  color: #858b80;
+}
+.roster-cell.shift-leave,
+.roster-legend [data-shift="leave"] {
+  background: #f8dfe1;
+}
+.roster-coverage th,
+.roster-coverage td {
+  height: 38px;
+  color: #6d7567;
+  font-size: 12px;
+  background: #f8f9f4;
+}
+.roster-coverage th {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  padding: 0 13px;
+  text-align: left;
+  background: #f2f4ed;
+}
+@media (max-width: 800px) {
+  .roster-toolbar {
+    flex-direction: column;
+  }
+  .roster-legend {
+    justify-content: flex-start;
+  }
+}
