@@ -1010,11 +1010,13 @@ export class Engine {
     actorId: string,
     quoteId: string,
     message: string,
+    invoiceId?: string,
   ): void {
     state.notifications.push({
       id: uid("notice"),
       actorId,
       quoteId,
+      invoiceId,
       message,
       read: false,
       createdAt: NOW,
@@ -3277,8 +3279,30 @@ export class Engine {
           workOrderId: order.id,
           actorId: actor.id,
           action: "work_order_completed",
-          detail: `工程 ${order.number} 標記為完成工程`,
+          detail: `工程 ${order.number} 標記為工程完成`,
         });
+        const invoice = state.invoices.find(
+          (item) => item.id === order.invoiceId,
+        );
+        if (invoice) {
+          const status = this.paymentStatusRaw(invoice, state);
+          const remaining = moneyValue(
+            D(invoice.netTotal).minus(status.validPaid),
+          );
+          if (remaining > 0) {
+            state.actors
+              .filter((recipient) => recipient.role === "clerk")
+              .forEach((recipient) =>
+                this.notify(
+                  state,
+                  recipient.id,
+                  order.quoteId,
+                  `工程 ${order.number} 已完成，請收取單據尾數 HK$${remaining.toFixed(2)}。`,
+                  invoice.id,
+                ),
+              );
+          }
+        }
       }
       output = deepCopy(order);
     });

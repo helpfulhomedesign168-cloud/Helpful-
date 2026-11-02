@@ -773,12 +773,12 @@ export function Invoices() {
   };
   const engineeringLabel = (invoice: (typeof invoices)[number]) => {
     const order = orderByInvoice.get(invoice.id);
-    if (order?.status === "completed") return "完成工程";
+    if (order?.status === "completed") return "工程完成";
     if (order?.csReleasedAt) return "已發工程部";
     return "待收足50%";
   };
   const statusRank = (label: string) =>
-    label === "完成工程" ? 3 : label === "已發工程部" ? 2 : 1;
+    label === "工程完成" ? 3 : label === "已發工程部" ? 2 : 1;
   const invoices = [...engine.listInvoices(actor)]
     .filter((invoice) =>
       `${invoice.number} ${invoice.customer.name} ${invoice.customer.address}`.includes(
@@ -917,7 +917,7 @@ export function Invoices() {
                       <td>
                         <Badge
                           strong={
-                            engineering === "完成工程" ||
+                            engineering === "工程完成" ||
                             Boolean(order?.csReleasedAt)
                           }
                         >
@@ -2070,7 +2070,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         <h1>{order.number}</h1>
         <div className="workorder-head-actions">
           {order.status === "completed" ? (
-            <Badge strong>完成工程</Badge>
+            <Badge strong>工程完成</Badge>
           ) : (
             canEdit && (
               <Button
@@ -2081,7 +2081,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                   )
                 }
               >
-                <Check size={18} /> 完成工程
+                <Check size={18} /> 工程完成
               </Button>
             )
           )}
@@ -2327,8 +2327,18 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         </div>
       </section>
       <SitePhotos order={order} canEdit={canEdit} />
-      <Button className="full-width completion-button" variant="primary">
-        工程完成
+      <Button
+        className="full-width completion-button"
+        variant="primary"
+        disabled={!canEdit || order.status === "completed"}
+        onClick={() =>
+          run(
+            () => engine.completeWorkOrder(actor, order!.id),
+            "工程已標記為完成。",
+          )
+        }
+      >
+        {order.status === "completed" ? "工程已完成" : "工程完成"}
       </Button>
       {selectedLine && (
         <Dialog

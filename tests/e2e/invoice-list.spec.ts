@@ -24,23 +24,31 @@ test("單據管理顯示收款status bar並可按Invoice／Sales／工程狀態�
   await expect(salesSort).toHaveClass(/active/);
   await statusSort.click();
   await expect(statusSort).toHaveClass(/active/);
-  await expect(page.getByText("完成工程", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("工程完成", { exact: true })).toHaveCount(0);
 });
 
-test("CS可標記工程完成，Invoice列表顯示完成工程", async ({ page }) => {
+test("CS可標記工程完成，Invoice列表顯示工程完成並通知開單員收尾數", async ({ page }) => {
   await page.goto("/");
   await switchRole(page, "阿花");
   await page.goto("/orders");
   const railRow = page.locator(".order-rail-row").filter({ hasText: "D2600001" });
   await expect(railRow).toBeVisible();
   await railRow.click();
-  await page.getByRole("button", { name: "完成工程", exact: true }).click();
-  await expect(page.getByText("完成工程", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "工程完成", exact: true }).first().click();
+  await expect(page.getByText("工程完成", { exact: true })).toBeVisible();
 
   await switchRole(page, "開單員");
   await page.goto("/invoices");
   const invoiceRow = page
     .locator("tbody tr")
     .filter({ hasText: "SHMM26100001" });
-  await expect(invoiceRow).toContainText("完成工程");
+  await expect(invoiceRow).toContainText("工程完成");
+
+  await page.getByRole("button", { name: "通知" }).click();
+  const notice = page
+    .locator(".notification-row")
+    .filter({ hasText: "請收取單據尾數" });
+  await expect(notice).toBeVisible();
+  await notice.click();
+  await expect(page).toHaveURL(/\/invoices\/invoice-issued$/);
 });
