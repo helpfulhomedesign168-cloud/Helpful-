@@ -4539,3 +4539,1035 @@ textarea {
   border-radius: inherit;
   background: #59684d;
 }
+
+/* Sales monthly roster */
+.roster-panel {
+  overflow: hidden;
+}
+.roster-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.roster-toolbar p {
+  margin: 5px 0 0;
+  color: #737a6d;
+  font-size: 13px;
+}
+.roster-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.roster-legend span {
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.roster-scroll {
+  max-width: 100%;
+}
+.sales-roster-table {
+  min-width: 1180px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sales-roster-table th,
+.sales-roster-table td {
+  padding: 0;
+  border-right: 1px solid #eef0e9;
+  border-bottom: 1px solid #eef0e9;
+  text-align: center;
+  vertical-align: middle;
+}
+.sales-roster-table thead th {
+  min-width: 52px;
+  height: 54px;
+  color: #68705f;
+  font-size: 12px;
+  background: #f8f9f4;
+}
+.sales-roster-table thead th strong,
+.sales-roster-table thead th small {
+  display: block;
+  font-size: 12px;
+}
+.sales-roster-table thead th small {
+  margin-top: 2px;
+  color: #92998b;
+  font-weight: 400;
+}
+.sales-roster-table thead th.weekend {
+  background: #f3f5ed;
+}
+.roster-person-head,
+.roster-person {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 138px;
+  min-width: 138px;
+  padding: 0 13px !important;
+  text-align: left !important;
+  background: #fff;
+}
+.sales-roster-table thead .roster-person-head {
+  z-index: 3;
+  background: #f8f9f4;
+}
+.roster-person strong,
+.roster-person small {
+  display: block;
+}
+.roster-person small {
+  margin-top: 2px;
+  color: #8a9282;
+  font-size: 11px;
+  font-weight: 400;
+}
+.roster-cell {
+  height: 54px;
+}
+.roster-cell select {
+  width: 100%;
+  height: 100%;
+  min-height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #3b4534;
+  text-align: center;
+  font-size: 12px;
+  cursor: pointer;
+}
+.roster-cell span {
+  display: block;
+  padding: 8px 3px;
+  color: #3b4534;
+  font-size: 12px;
+}
+.roster-cell.weekend {
+  background: #fafbf7;
+}
+.roster-cell.shift-morning,
+.roster-legend [data-shift="morning"] {
+  background: #fff2c7;
+}
+.roster-cell.shift-afternoon,
+.roster-legend [data-shift="afternoon"] {
+  background: #dbeafe;
+}
+.roster-cell.shift-evening,
+.roster-legend [data-shift="evening"] {
+  background: #e9def8;
+}
+.roster-cell.shift-full,
+.roster-legend [data-shift="full"] {
+  background: #dcefd9;
+}
+.roster-cell.shift-off,
+.roster-legend [data-shift="off"] {
+  background: #f0f1ed;
+  color: #858b80;
+}
+.roster-cell.shift-leave,
+.roster-legend [data-shift="leave"] {
+  background: #f8dfe1;
+}
+.roster-coverage th,
+.roster-coverage td {
+  height: 38px;
+  color: #6d7567;
+  font-size: 12px;
+  background: #f8f9f4;
+}
+.roster-coverage th {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  padding: 0 13px;
+  text-align: left;
+  background: #f2f4ed;
+}
+@media (max-width: 800px) {
+  .roster-toolbar {
+    flex-direction: column;
+  }
+  .roster-legend {
+    justify-content: flex-start;
+  }
+}
+
+/* Full monthly roster */
+.roster-stack {
+  display: grid;
+  gap: 16px;
+}
+.roster-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.roster-section-head p {
+  margin: 5px 0 0;
+  color: #737a6d;
+  font-size: 13px;
+}
+.monthly-team-table {
+  min-width: 520px;
+}
+.monthly-team-table td:first-child strong,
+.monthly-team-table td:first-child small {
+  display: block;
+}
+.monthly-team-table td:first-child small {
+  color: #8a9282;
+  font-size: 11px;
+}
+.monthly-team-table select {
+  min-width: 130px;
+}
+.roster-editor {
+  display: flex;
+  flex-direction: column;
+  height: 54px;
+}
+.roster-assignment {
+  flex: 1;
+  min-height: 32px;
+  font-weight: 700;
+}
+.roster-workshift {
+  height: 22px;
+  min-height: 22px !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+  font-size: 10px !important;
+}
+.roster-readonly {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 3px;
+  font-weight: 700;
+}
+.roster-readonly small {
+  font-size: 10px;
+  font-weight: 400;
+}
+.roster-cell.work-early {
+  background: #e6e6e4;
+}
+.roster-cell.work-normal {
+  background: #dcecf4;
+}
+.roster-cell.assignment-d {
+  background: #f6d9c9;
+}
+.roster-cell.assignment-ph {
+  background: #78986c;
+  color: #fff;
+}
+.roster-cell.assignment-ph select {
+  color: #fff;
+}
+.roster-legend [data-assignment="A"],
+.roster-legend [data-assignment="B"],
+.roster-legend [data-assignment="C"] {
+  background: #f3f4ef;
+}
+.roster-legend [data-assignment="D"] {
+  background: #f6d9c9;
+}
+.roster-legend [data-assignment="PH"] {
+  background: #78986c;
+  color: #fff;
+}
+.roster-legend [data-work="early"] {
+  background: #e6e6e4;
+}
+.roster-legend [data-work="normal"] {
+  background: #dcecf4;
+}
+.team-location-row th {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  padding: 0 12px !important;
+  text-align: left !important;
+  color: #59624f;
+  font-size: 12px;
+  background: #f7f8f3;
+}
+.team-location-row td {
+  height: 42px;
+  overflow: hidden;
+  padding: 0 3px !important;
+  color: #59624f;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: #fbfcf8;
+}
+.roster-location-panel {
+  padding-bottom: 8px;
+}
+.roster-location-list {
+  display: grid;
+  gap: 8px;
+  padding: 14px 20px;
+}
+.roster-location-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid #e4e7de;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.roster-location-item > strong {
+  margin-left: auto;
+}
+.roster-location-actions {
+  display: flex;
+  gap: 2px;
+}
+.roster-empty {
+  margin: 0;
+  padding: 18px 20px;
+  color: #7a8174;
+}
+@media (max-width: 800px) {
+  .roster-section-head {
+    flex-direction: column;
+  }
+  .roster-location-item {
+    flex-wrap: wrap;
+  }
+}
+
+/* Calendar-first sales roster */
+.schedule-month-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.schedule-month-nav input[type="month"] {
+  width: 160px;
+}
+.schedule-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 16px;
+  align-items: start;
+}
+.schedule-main {
+  min-width: 0;
+}
+.schedule-calendar-panel {
+  overflow: hidden;
+}
+.schedule-calendar-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.schedule-calendar-head strong {
+  font-size: 20px;
+}
+.schedule-calendar-head p {
+  margin: 5px 0 0;
+  color: #727a6c;
+  font-size: 13px;
+}
+.schedule-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+.schedule-legend span {
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: #f3f4ef;
+  font-size: 11px;
+}
+.schedule-legend [data-assignment="D"] {
+  background: #f6d9c9;
+}
+.schedule-legend [data-assignment="PH"] {
+  background: #78986c;
+  color: #fff;
+}
+.schedule-legend [data-work="early"] {
+  background: #e6e6e4;
+}
+.schedule-legend [data-work="normal"] {
+  background: #dcecf4;
+}
+.schedule-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  padding: 11px 14px 7px;
+  color: #828a7c;
+  font-size: 12px;
+  text-align: center;
+}
+.schedule-grid {
+  padding: 0 14px 14px;
+}
+.schedule-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+.schedule-day {
+  min-width: 0;
+  min-height: 152px;
+  padding: 9px;
+  border: 1px solid #e5e8df;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.schedule-day:hover {
+  border-color: #9aa78d;
+  box-shadow: 0 2px 8px rgba(50, 60, 42, 0.08);
+}
+.schedule-day.weekend {
+  background: #fbfcf8;
+}
+.schedule-day.today {
+  border-color: #59684d;
+  box-shadow: inset 0 0 0 1px #59684d;
+}
+.schedule-day-empty {
+  min-height: 152px;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+.schedule-day > header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+.schedule-day > header strong {
+  font-size: 17px;
+}
+.schedule-day > header span {
+  color: #8a9282;
+  font-size: 11px;
+}
+.schedule-day > header em {
+  margin-left: auto;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #e9eee2;
+  color: #4f6044;
+  font-size: 9px;
+  font-style: normal;
+}
+.schedule-team-lines {
+  display: grid;
+  gap: 4px;
+}
+.schedule-team-line {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  min-height: 20px;
+  font-size: 11px;
+}
+.schedule-team-line b {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border-radius: 4px;
+  font-size: 9px;
+}
+.schedule-team-line.team-A b {
+  background: #e1ecd9;
+  color: #47603a;
+}
+.schedule-team-line.team-B b {
+  background: #dce9f3;
+  color: #36566a;
+}
+.schedule-team-line.team-C b {
+  background: #ece1f2;
+  color: #62456e;
+}
+.schedule-team-line span {
+  overflow: hidden;
+  color: #4d5548;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.schedule-team-line small {
+  color: #7f8778;
+  font-size: 10px;
+}
+.schedule-team-line small.empty-count {
+  color: #b05d48;
+  font-weight: 700;
+}
+.schedule-day > footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 7px;
+  color: #8a9183;
+  font-size: 10px;
+}
+.schedule-own {
+  display: grid;
+  gap: 3px;
+  margin-top: 9px;
+}
+.schedule-own strong {
+  width: fit-content;
+  padding: 4px 7px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.schedule-own strong.day-early {
+  background: #e6e6e4;
+}
+.schedule-own strong.day-normal {
+  background: #dcecf4;
+}
+.schedule-own strong.day-off {
+  background: #f6d9c9;
+}
+.schedule-own strong.day-ph {
+  background: #78986c;
+  color: #fff;
+}
+.schedule-own small {
+  color: #6f7868;
+  font-size: 10px;
+}
+.schedule-own span {
+  overflow: hidden;
+  color: #7b8375;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.schedule-side {
+  display: grid;
+  gap: 16px;
+}
+.schedule-side-card {
+  padding: 16px;
+}
+.schedule-side-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.schedule-side-head p {
+  margin: 4px 0 0;
+  color: #7a8174;
+  font-size: 12px;
+}
+.monthly-team-list {
+  display: grid;
+  gap: 8px;
+}
+.monthly-team-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eef0e9;
+}
+.monthly-team-row:last-child {
+  border-bottom: 0;
+}
+.monthly-team-row > div:first-child strong,
+.monthly-team-row > div:first-child small {
+  display: block;
+}
+.monthly-team-row > div:first-child small {
+  margin-top: 2px;
+  color: #8a9282;
+  font-size: 10px;
+}
+.monthly-team-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.monthly-team-actions select {
+  width: 86px;
+  padding: 6px;
+  font-size: 12px;
+}
+.schedule-side-empty {
+  margin: 0;
+  color: #7a8174;
+  font-size: 12px;
+}
+.schedule-location-list {
+  display: grid;
+  gap: 7px;
+}
+.schedule-location-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 8px;
+  border: 1px solid #e7e9e2;
+  border-radius: 7px;
+}
+.schedule-location-item > div:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+.schedule-location-item strong,
+.schedule-location-item small {
+  display: block;
+}
+.schedule-location-item strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.schedule-location-item small {
+  margin-top: 2px;
+  color: #858d7e;
+  font-size: 10px;
+}
+.schedule-location-actions {
+  display: flex;
+  gap: 2px;
+}
+.schedule-location-actions button {
+  padding: 3px;
+  border: 0;
+  background: transparent;
+  color: #6e7767;
+  cursor: pointer;
+}
+.day-editor-locations {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.day-editor-locations > div {
+  padding: 9px 11px;
+  border: 1px solid #e5e8df;
+  border-radius: 7px;
+  background: #fafbf7;
+}
+.day-editor-locations b,
+.day-editor-locations span {
+  display: block;
+}
+.day-editor-locations b {
+  color: #75806c;
+  font-size: 11px;
+}
+.day-editor-locations span {
+  margin-top: 3px;
+  font-size: 13px;
+}
+.day-editor-table {
+  min-width: 620px;
+}
+.day-editor-table td:first-child strong,
+.day-editor-table td:first-child small {
+  display: block;
+}
+.day-editor-table td:first-child small {
+  color: #8a9282;
+  font-size: 10px;
+}
+.day-editor-table select {
+  min-width: 120px;
+}
+.schedule-day-note {
+  margin: 14px 0 0;
+  color: #7b8375;
+  font-size: 12px;
+}
+@media (max-width: 1200px) {
+  .schedule-layout {
+    grid-template-columns: 1fr;
+  }
+  .schedule-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .schedule-calendar-head {
+    flex-direction: column;
+  }
+  .schedule-legend {
+    justify-content: flex-start;
+  }
+  .schedule-weekdays,
+  .schedule-grid {
+    min-width: 720px;
+  }
+  .schedule-calendar-panel {
+    overflow-x: auto;
+  }
+  .schedule-side {
+    grid-template-columns: 1fr;
+  }
+  .day-editor-locations {
+    grid-template-columns: 1fr;
+  }
+}
+
+.schedule-team-line span.unconfigured {
+  color: #a1a79a;
+  font-style: italic;
+}
+
+.schedule-day-hint {
+  display: block;
+  margin-top: 18px;
+  color: #a0a798;
+  font-size: 11px;
+}
+
+.schedule-day.compact,
+.schedule-day.compact + .schedule-day-empty {
+  min-height: 112px;
+}
+
+.schedule-day-empty {
+  min-height: 112px;
+}
+
+/* Spreadsheet-style sales roster */
+.schedule-sheet-stack {
+  display: grid;
+  gap: 16px;
+}
+.sales-sheet-panel {
+  overflow: hidden;
+}
+.sales-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.sales-sheet-head p {
+  margin: 5px 0 0;
+  color: #737a6d;
+  font-size: 13px;
+}
+.sales-sheet-scroll {
+  overflow-x: auto;
+}
+.sales-location-grid,
+.sales-roster-grid {
+  min-width: 1430px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sales-location-grid th,
+.sales-location-grid td,
+.sales-roster-grid th,
+.sales-roster-grid td {
+  border-right: 1px solid #edf0e7;
+  border-bottom: 1px solid #edf0e7;
+  text-align: center;
+  vertical-align: middle;
+}
+.sales-location-grid thead th,
+.sales-roster-grid thead th {
+  height: 48px;
+  min-width: 40px;
+  color: #6f7768;
+  font-size: 11px;
+  background: #f7f8f3;
+}
+.sales-location-grid thead th strong,
+.sales-location-grid thead th small,
+.sales-roster-grid thead th strong,
+.sales-roster-grid thead th small {
+  display: block;
+}
+.sales-location-grid thead th small,
+.sales-roster-grid thead th small {
+  margin-top: 2px;
+  color: #959c8e;
+  font-size: 9px;
+  font-weight: 400;
+}
+.sales-location-grid th.weekend,
+.sales-roster-grid th.weekend {
+  background: #f1f4eb;
+}
+.sales-table-name-head {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  width: 155px;
+  min-width: 155px;
+  padding: 0 12px !important;
+  text-align: left !important;
+  background: #f7f8f3 !important;
+}
+.sales-location-name {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 155px;
+  min-width: 155px;
+  padding: 5px 9px !important;
+  text-align: left !important;
+}
+.sales-location-name span {
+  display: block;
+  font-size: 18px;
+}
+.sales-location-name button {
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 10px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.sales-location-grid td {
+  height: 42px;
+  padding: 0;
+  background: #fff;
+}
+.sales-location-cell {
+  width: 100%;
+  height: 40px;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: #4e5747;
+  font-size: 10px;
+  line-height: 1.15;
+  cursor: pointer;
+}
+.sales-location-grid tbody tr:nth-child(even) td {
+  background: #fcfdfa;
+}
+.sales-sheet-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 10px 20px 0;
+}
+.sales-sheet-legend span {
+  padding: 4px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.sales-group-row th {
+  height: 30px;
+  padding: 4px 12px !important;
+  text-align: left !important;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sales-member-row > th {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 155px;
+  min-width: 155px;
+  padding: 5px 9px !important;
+  text-align: left !important;
+  background: #fff;
+}
+.sales-table-name strong {
+  display: block;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sales-table-name small {
+  display: block;
+  margin-top: 2px;
+  color: #858d7e;
+  font-size: 9px;
+}
+.sales-table-name select {
+  width: 100%;
+  margin-top: 3px;
+  padding: 2px 4px;
+  font-size: 9px;
+}
+.sales-roster-grid td {
+  height: 42px;
+  padding: 0;
+  background: #fff;
+}
+.sales-shift-cell {
+  width: 100%;
+  min-width: 39px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sales-shift-cell:hover {
+  outline: 2px solid rgba(50, 65, 40, 0.35);
+  outline-offset: -2px;
+}
+
+/* Keep a full month visible on desktop */
+.sales-location-grid,
+.sales-roster-grid {
+  min-width: 1180px;
+}
+.sales-location-grid thead th:not(.sales-table-name-head),
+.sales-roster-grid thead th:not(.sales-table-name-head) {
+  min-width: 33px;
+  padding: 0 1px;
+}
+.sales-table-name-head,
+.sales-location-name,
+.sales-member-row > th {
+  width: 132px;
+  min-width: 132px;
+}
+.sales-location-cell,
+.sales-shift-cell {
+  min-width: 33px;
+}
+
+.sales-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sales-sheet-head > strong {
+  align-self: center;
+  font-size: 20px;
+}
+.sales-delete-link {
+  margin-top: 3px !important;
+  padding: 0 !important;
+  border: 0;
+  background: transparent;
+  color: #a75542 !important;
+  font-size: 10px !important;
+  text-decoration: underline !important;
+  cursor: pointer;
+}
+
+.sales-location-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.sales-location-name-row span {
+  font-size: 17px;
+}
+.sales-location-name-row button {
+  margin-top: 0 !important;
+  white-space: nowrap;
+}
+.roster-editor-list {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.roster-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  border: 1px solid #e6e9e1;
+  border-radius: 7px;
+  font-size: 13px;
+}
+.roster-editor-row > span {
+  color: #7c8476;
+  font-size: 12px;
+}
+.roster-editor-row .sales-delete-link {
+  margin-left: auto;
+  margin-top: 0 !important;
+}
+.roster-editor-code {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.roster-editor-add {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e9ece5;
+}
+.roster-editor-add > strong {
+  display: block;
+  margin-bottom: 10px;
+}
+.roster-editor-add .btn {
+  margin-top: 10px;
+}
+.form-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 700px) {
+  .form-grid.three {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sales-location-span {
+  padding: 0 !important;
+}
+.sales-location-span .sales-location-cell {
+  min-height: 40px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.sales-location-span.location-gap {
+  background: #fff;
+}

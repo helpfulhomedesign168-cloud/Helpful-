@@ -35,6 +35,17 @@ import {
   type ProductStyleSupplier,
   type MunicipalOrder,
   type MunicipalOrderLine,
+  type SalesShift,
+  type SalesAssignment,
+  type SalesWorkShift,
+  type SalesMonthlyTeam,
+  type SalesTeamLocation,
+  type SalesRosterTeam,
+  type SalesRosterMember,
+  type SalesScheduleData,
+  type SalesScheduleTeam,
+  SALES_OFF_CODE,
+  SALES_PH_CODE,
   type ResourceFeeMode,
   type ServiceItem,
   type WorkOrder,
@@ -44,6 +55,7 @@ import {
   type InstallmentPlanRow,
   type InvoicePaymentStatus,
   INVOICE_CATEGORY_NAMES,
+  SALES_WORK_SHIFT_NAMES,
   DEFAULT_SERVICE_CATEGORIES,
   composeCustomerAddress,
   DEMO_TODAY,
@@ -710,6 +722,13 @@ export class Engine {
       migrated.suppliers ??= [];
       migrated.productStyles ??= [];
       migrated.municipalOrders ??= [];
+      migrated.salesShifts = Array.isArray(migrated.salesShifts)
+        ? migrated.salesShifts.filter((shift) => Boolean(shift.assignment))
+        : [];
+      migrated.salesMonthlyTeams ??= [];
+      migrated.salesTeamLocations ??= [];
+      migrated.salesRosterTeams ??= [];
+      migrated.salesRosterMembers ??= [];
       migrated.municipalOrders.forEach((municipal) => {
         const invoice = migrated.invoices.find(
           (item) => item.id === municipal.invoiceId,
@@ -2498,6 +2517,612 @@ export class Engine {
       }
     });
     return { sales, commission, bonus, nextTarget, nextBonus, entries };
+  }
+  private scheduleTeams(state: AppState, month: string): SalesScheduleTeam[] {
+    const base: SalesScheduleTeam[] = [
+      { code: "A", colorIndex: 0, order: 1 },
+      { code: "B", colorIndex: 1, order: 2 },
+      { code: "C", colorIndex: 2, order: 3 },
+    ];
+    const stored = state.salesRosterTeams
+      .filter((team) => team.month === month)
+      .map((team) => ({
+        code: team.code,
+        colorIndex: team.colorIndex,
+        order: team.order,
+      }));
+    const byCode = new Map<string, SalesScheduleTeam>();
+    [...base, ...stored].forEach((team) => byCode.set(team.code, team));
+    return [...byCode.values()].sort((a, b) => a.order - b.order);
+  }
+  private scheduleMemberTeam(
+    state: AppState,
+    month: string,
+    id: string,
+    fallback?: string,
+  ): string {
+    return (
+      state.salesMonthlyTeams.find(
+        (team) => team.actorId === id && team.month === month,
+      )?.team ??
+      fallback ??
+      "A"
+    );
+  }
+  private canManageScheduleMember(
+    actor: Actor,
+    team: string,
+  ): boolean {
+    return (
+      actor.role === "head" ||
+      (actor.role === "supervisor" && actor.team === team)
+    );
+  }
+  getSalesSchedule(
+    actorInput: Actor,
+    month: string,
+  ): SalesScheduleData {
+    const actor = this.actor(actorInput);
+    if (!/^\d{4}-\d{2}$/.test(month))
+      fail("排班月份格式無效。");
+    const teams = this.scheduleTeams(this.state, month);
+    const teamCodes = new Set(teams.map((team) => team.code));
+    const fallbackTeam = teams[0]?.code ?? "A";
+    let actorMembers = this.state.actors.filter(
+      (item) => item.role === "sales",
+    );
+    let addedMembers = this.state.salesRosterMembers.filter(
+      (member) => member.month === month,
+    );
+    if (actor.role === "supervisor") {
+      actorMembers = actorMembers.filter(
+        (item) => item.team === actor.team,
+      );
+      addedMembers = addedMembers.filter(
+        (member) =>
+          this.scheduleMemberTeam(
+            this.state,
+            month,
+            member.id,
+            member.team,
+          ) === actor.team,
+      );
+    } else if (actor.role === "sales") {
+      actorMembers = actorMembers.filter((item) => item.id === actor.id);
+      addedMembers = [];
+    } else if (actor.role !== "head") {
+      fail("你沒有查看Sales排班的權限。");
+    }
+    const members = [
+      ...actorMembers.map((item) => ({
+        id: item.id,
+        name: item.name,
+        kind: "sales" as const,
+        team: this.scheduleMemberTeam(
+          this.state,
+          month,
+          item.id,
+          item.team,
+        ),
+        homeTeam: item.team,
+        sourceActorId: item.id,
+      })),
+      ...addedMembers.map((member) => ({
+        id: member.id,
+        name: member.name,
+        kind: member.kind,
+        team: this.scheduleMemberTeam(
+          this.state,
+          month,
+          member.id,
+          member.team,
+        ),
+        homeTeam: member.team,
+      })),
+    ].map((member) => ({
+      ...member,
+      team: teamCodes.has(member.team) ? member.team : fallbackTeam,
+    }));
+    const ids = new Set(members.map((member) => member.id));
+    return {
+      members: deepCopy(members),
+      teams,
+      shifts: deepCopy(
+        this.state.salesShifts.filter(
+          (shift) =>
+            ids.has(shift.actorId) && shift.date.startsWith(month),
+        ),
+      ),
+      locations: deepCopy(
+        this.state.salesTeamLocations
+          .filter((location) => location.month === month)
+          .sort((a, b) => a.startDate.localeCompare(b.startDate)),
+      ),
+    };
+  }
+  addSalesRosterTeam(actorInput: Actor, month: string): string {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "head")
+      fail("只有Sales阿頭可新增Team。");
+    if (!/^\d{4}-\d{2}$/.test(month))
+      fail("排班月份格式無效。");
+    let code = "";
+    this.mutate((state) => {
+      const teams = this.scheduleTeams(state, month);
+      const maxCode = teams
+        .map((team) => team.code)
+        .filter((item) => /^[A-Z]$/.test(item))
+        .sort()
+        .at(-1);
+      code = maxCode
+        ? String.fromCharCode(maxCode.charCodeAt(0) + 1)
+        : "A";
+      if (code > "Z") fail("Team數量已達上限。");
+      state.salesRosterTeams.push({
+        id: uid("sales-team"),
+        month,
+        code,
+        colorIndex: teams.length,
+        order: teams.length + 1,
+        createdBy: actor.id,
+        createdAt: NOW,
+      });
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_roster_team_added",
+        detail: `${month} 新增 Team ${code}`,
+      });
+    });
+    return code;
+  }
+  deleteSalesRosterTeam(
+    actorInput: Actor,
+    month: string,
+    code: string,
+  ): void {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "head")
+      fail("只有Sales阿頭可刪除Team。");
+    if (["A", "B", "C"].includes(code))
+      fail("基本 Team A／B／C 不可刪除。");
+    this.mutate((state) => {
+      if (
+        !state.salesRosterTeams.some(
+          (team) => team.month === month && team.code === code,
+        )
+      )
+        fail("找不到此Team。");
+      const currentMemberIds = new Set([
+        ...state.actors
+          .filter((member) => member.role === "sales")
+          .map((member) => member.id),
+        ...state.salesRosterMembers
+          .filter((member) => member.month === month)
+          .map((member) => member.id),
+      ]);
+      const hasMembers = [
+        ...state.actors.filter((member) => member.role === "sales"),
+        ...state.salesRosterMembers.filter(
+          (member) => member.month === month,
+        ),
+      ].some(
+        (member) =>
+          this.scheduleMemberTeam(
+            state,
+            month,
+            member.id,
+            member.team,
+          ) === code,
+      );
+      const hasShifts = state.salesShifts.some(
+        (shift) =>
+          shift.date.startsWith(month) &&
+          shift.assignment === code &&
+          currentMemberIds.has(shift.actorId),
+      );
+      const hasLocations = state.salesTeamLocations.some(
+        (location) => location.month === month && location.team === code,
+      );
+      if (hasMembers || hasShifts || hasLocations)
+        fail("此Team仍有成員、地點或更表，請先清空才刪除。");
+      state.salesRosterTeams = state.salesRosterTeams.filter(
+        (team) => !(team.month === month && team.code === code),
+      );
+      state.salesMonthlyTeams = state.salesMonthlyTeams.filter(
+        (team) => !(team.month === month && team.team === code),
+      );
+      state.salesShifts = state.salesShifts.filter(
+        (shift) =>
+          !(
+            shift.date.startsWith(month) &&
+            shift.assignment === code &&
+            !currentMemberIds.has(shift.actorId)
+          ),
+      );
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_roster_team_removed",
+        detail: `${month} 刪除 Team ${code}`,
+      });
+    });
+  }
+  deleteSalesRosterMember(
+    actorInput: Actor,
+    month: string,
+    memberId: string,
+  ): void {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "head")
+      fail("只有Sales阿頭可刪除排班成員。");
+    this.mutate((state) => {
+      const member = state.salesRosterMembers.find(
+        (item) => item.id === memberId && item.month === month,
+      );
+      if (!member || member.sourceActorId)
+        fail("只可刪除手動新增的排班成員。");
+      state.salesRosterMembers = state.salesRosterMembers.filter(
+        (item) => item.id !== memberId,
+      );
+      state.salesShifts = state.salesShifts.filter(
+        (shift) => shift.actorId !== memberId,
+      );
+      state.salesMonthlyTeams = state.salesMonthlyTeams.filter(
+        (team) => !(team.actorId === memberId && team.month === month),
+      );
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_roster_member_removed",
+        detail: `${month} 刪除排班成員 ${member.name}`,
+      });
+    });
+  }
+  addSalesRosterMember(
+    actorInput: Actor,
+    month: string,
+    input: {
+      name: string;
+      kind: "supervisor" | "sales";
+      team: string;
+    },
+  ): SalesRosterMember {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "head")
+      fail("只有Sales阿頭可新增排班成員。");
+    if (!/^\d{4}-\d{2}$/.test(month))
+      fail("排班月份格式無效。");
+    if (!input.name.trim()) fail("請填寫名稱。");
+    let output!: SalesRosterMember;
+    this.mutate((state) => {
+      const teams = this.scheduleTeams(state, month);
+      if (!teams.some((team) => team.code === input.team))
+        fail("所選Team不存在。");
+      const member: SalesRosterMember = {
+        id: uid("sales-member"),
+        month,
+        name: input.name.trim(),
+        kind: input.kind,
+        team: input.team,
+        createdBy: actor.id,
+        createdAt: NOW,
+      };
+      state.salesRosterMembers.push(member);
+      const year = Number(month.slice(0, 4));
+      const monthIndex = Number(month.slice(5, 7)) - 1;
+      const dayCount = new Date(year, monthIndex + 1, 0).getDate();
+      let seed = [...member.id].reduce(
+        (sum, character) => sum + character.charCodeAt(0),
+        0,
+      );
+      const random = () => {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+      };
+      const dates = Array.from(
+        { length: dayCount },
+        (_, index) =>
+          `${month}-${String(index + 1).padStart(2, "0")}`,
+      );
+      const shuffled = dates
+        .map((date) => ({ date, value: random() }))
+        .sort((a, b) => a.value - b.value)
+        .map((item) => item.date);
+      const offDates = new Set(shuffled.slice(0, 5));
+      const workDates = shuffled.slice(5);
+      const earlyCount = Math.min(
+        workDates.length,
+        Math.max(10, Math.round(workDates.length * 0.4)),
+      );
+      const earlyDates = new Set(workDates.slice(0, earlyCount));
+      dates.forEach((date) => {
+        const off = offDates.has(date);
+        state.salesShifts.push({
+          id: uid("sales-shift"),
+          actorId: member.id,
+          date,
+          assignment: off ? SALES_OFF_CODE : member.team,
+          workShift: off
+            ? undefined
+            : earlyDates.has(date)
+              ? "early"
+              : "normal",
+          updatedBy: actor.id,
+          updatedAt: NOW,
+        });
+      });
+      output = deepCopy(member);
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_roster_member_added",
+        detail: `${month} 新增${input.kind === "sales" ? "Sale" : "主管"} ${member.name}（Team ${member.team}）`,
+      });
+    });
+    return output;
+  }
+  setSalesMonthlyTeam(
+    actorInput: Actor,
+    memberId: string,
+    month: string,
+    team: string,
+  ): void {
+    const actor = this.actor(actorInput);
+    if (!/^\d{4}-\d{2}$/.test(month))
+      fail("排班月份格式無效。");
+    this.mutate((state) => {
+      const rosterMember = state.salesRosterMembers.find(
+        (item) => item.id === memberId && item.month === month,
+      );
+      const actorMember = state.actors.find((item) => item.id === memberId);
+      if (!rosterMember && !actorMember) fail("找不到排班成員。");
+      if (!this.scheduleTeams(state, month).some((item) => item.code === team))
+        fail("所選Team不存在。");
+      const targetTeam = rosterMember
+        ? this.scheduleMemberTeam(state, month, memberId, rosterMember.team)
+        : this.scheduleMemberTeam(
+            state,
+            month,
+            memberId,
+            actorMember?.team,
+          );
+      if (!this.canManageScheduleMember(actor, targetTeam))
+        fail("你沒有修改此成員排班的權限。");
+      const index = state.salesMonthlyTeams.findIndex(
+        (item) => item.actorId === memberId && item.month === month,
+      );
+      const row: SalesMonthlyTeam = {
+        id:
+          index >= 0
+            ? state.salesMonthlyTeams[index].id
+            : uid("sales-month"),
+        actorId: memberId,
+        month,
+        team,
+        updatedBy: actor.id,
+        updatedAt: NOW,
+      };
+      if (index >= 0) state.salesMonthlyTeams[index] = row;
+      else state.salesMonthlyTeams.push(row);
+      if (rosterMember) rosterMember.team = team;
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_monthly_team_updated",
+        detail: `${rosterMember?.name ?? actorMember?.name ?? memberId} ${month}：Team ${team}`,
+      });
+    });
+  }
+  applySalesMonthlyTeam(
+    actorInput: Actor,
+    memberId: string,
+    month: string,
+  ): number {
+    const actor = this.actor(actorInput);
+    let count = 0;
+    this.mutate((state) => {
+      const rosterMember = state.salesRosterMembers.find(
+        (item) => item.id === memberId && item.month === month,
+      );
+      const actorMember = state.actors.find((item) => item.id === memberId);
+      if (!rosterMember && !actorMember) fail("找不到排班成員。");
+      const team = this.scheduleMemberTeam(
+        state,
+        month,
+        memberId,
+        rosterMember?.team ?? actorMember?.team,
+      );
+      if (!this.canManageScheduleMember(actor, team))
+        fail("你沒有修改此成員排班的權限。");
+      const year = Number(month.slice(0, 4));
+      const monthIndex = Number(month.slice(5, 7)) - 1;
+      const dayCount = new Date(year, monthIndex + 1, 0).getDate();
+      for (let day = 1; day <= dayCount; day += 1) {
+        const date = `${month}-${String(day).padStart(2, "0")}`;
+        if (
+          state.salesShifts.some(
+            (item) => item.actorId === memberId && item.date === date,
+          )
+        )
+          continue;
+        state.salesShifts.push({
+          id: uid("sales-shift"),
+          actorId: memberId,
+          date,
+          assignment: team,
+          workShift: "normal",
+          updatedBy: actor.id,
+          updatedAt: NOW,
+        });
+        count += 1;
+      }
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_monthly_team_applied",
+        detail: `${rosterMember?.name ?? actorMember?.name ?? memberId} ${month}：套用 Team ${team} 至 ${count} 個未排日期`,
+      });
+    });
+    return count;
+  }
+  setSalesShift(
+    actorInput: Actor,
+    memberId: string,
+    date: string,
+    assignment: SalesAssignment | null,
+    workShift?: SalesWorkShift,
+  ): void {
+    const actor = this.actor(actorInput);
+    if (!(actor.role === "head" || actor.role === "supervisor"))
+      fail("只有Sales阿頭或主管可修改排班。");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
+      fail("排班日期格式無效。");
+    this.mutate((state) => {
+      const rosterMember = state.salesRosterMembers.find(
+        (item) => item.id === memberId && item.month === date.slice(0, 7),
+      );
+      const actorMember = state.actors.find((item) => item.id === memberId);
+      if (!rosterMember && !actorMember) fail("找不到排班成員。");
+      const month = date.slice(0, 7);
+      const team = this.scheduleMemberTeam(
+        state,
+        month,
+        memberId,
+        rosterMember?.team ?? actorMember?.team,
+      );
+      if (!this.canManageScheduleMember(actor, team))
+        fail("你沒有修改此成員排班的權限。");
+      const teamCodes = new Set(
+        this.scheduleTeams(state, month).map((item) => item.code),
+      );
+      if (
+        assignment &&
+        assignment !== SALES_OFF_CODE &&
+        assignment !== SALES_PH_CODE &&
+        !teamCodes.has(assignment)
+      )
+        fail("所選Team不存在。");
+      const index = state.salesShifts.findIndex(
+        (item) => item.actorId === memberId && item.date === date,
+      );
+      if (!assignment) {
+        if (index >= 0) state.salesShifts.splice(index, 1);
+      } else {
+        const row: SalesShift = {
+          id: index >= 0 ? state.salesShifts[index].id : uid("sales-shift"),
+          actorId: memberId,
+          date,
+          assignment,
+          workShift:
+            assignment !== SALES_OFF_CODE && assignment !== SALES_PH_CODE
+              ? workShift ?? "normal"
+              : undefined,
+          updatedBy: actor.id,
+          updatedAt: NOW,
+        };
+        if (index >= 0) state.salesShifts[index] = row;
+        else state.salesShifts.push(row);
+      }
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_shift_updated",
+        detail: `${rosterMember?.name ?? actorMember?.name ?? memberId} ${date}：${
+          assignment === SALES_OFF_CODE
+            ? "D 放假"
+            : assignment === SALES_PH_CODE
+              ? "D 補假"
+              : assignment ?? "清除"
+        }`,
+      });
+    });
+  }
+  saveSalesTeamLocation(
+    actorInput: Actor,
+    input: {
+      id?: string;
+      month: string;
+      team: string;
+      startDate: string;
+      endDate: string;
+      location: string;
+    },
+  ): void {
+    const actor = this.actor(actorInput);
+    if (!/^\d{4}-\d{2}$/.test(input.month))
+      fail("排班月份格式無效。");
+    if (actor.role !== "head" && actor.role !== "supervisor")
+      fail("只有Sales阿頭或主管可安排Team地點。");
+    this.mutate((state) => {
+      if (
+        !this.scheduleTeams(state, input.month).some(
+          (team) => team.code === input.team,
+        )
+      )
+        fail("所選Team不存在。");
+      if (!this.canManageScheduleMember(actor, input.team))
+        fail("你沒有修改此Team地點的權限。");
+      if (
+        !input.startDate.startsWith(input.month) ||
+        !input.endDate.startsWith(input.month) ||
+        input.startDate > input.endDate
+      )
+        fail("Team地點日期無效。");
+      if (!input.location.trim()) fail("請填寫工作地點。");
+      const overlap = state.salesTeamLocations.some(
+        (row) =>
+          row.month === input.month &&
+          row.team === input.team &&
+          row.id !== input.id &&
+          input.startDate <= row.endDate &&
+          input.endDate >= row.startDate,
+      );
+      if (overlap) fail("此Team的地點日期與現有安排重疊。");
+      const index = input.id
+        ? state.salesTeamLocations.findIndex((row) => row.id === input.id)
+        : -1;
+      const row: SalesTeamLocation = {
+        id:
+          index >= 0
+            ? state.salesTeamLocations[index].id
+            : uid("sales-location"),
+        month: input.month,
+        team: input.team,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        location: input.location.trim(),
+        updatedBy: actor.id,
+        updatedAt: NOW,
+      };
+      if (index >= 0) state.salesTeamLocations[index] = row;
+      else state.salesTeamLocations.push(row);
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_team_location_updated",
+        detail: `Team ${input.team} ${input.startDate}–${input.endDate}：${row.location}`,
+      });
+    });
+  }
+  removeSalesTeamLocation(actorInput: Actor, id: string): void {
+    const actor = this.actor(actorInput);
+    this.mutate((state) => {
+      const row =
+        state.salesTeamLocations.find((item) => item.id === id) ??
+        fail("找不到Team地點安排。");
+      if (!this.canManageScheduleMember(actor, row.team))
+        fail("你沒有刪除此Team地點的權限。");
+      state.salesTeamLocations = state.salesTeamLocations.filter(
+        (item) => item.id !== id,
+      );
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_team_location_removed",
+        detail: `刪除 Team ${row.team} ${row.startDate}–${row.endDate}：${row.location}`,
+      });
+    });
   }
   notifications(actorInput: Actor): Notification[] {
     const actor = this.actor(actorInput);
@@ -4796,6 +5421,11 @@ export function createSeedState(): AppState {
     suppliers: createDemoSuppliers(),
     productStyles: [],
     municipalOrders: [],
+    salesShifts: [],
+    salesMonthlyTeams: [],
+    salesTeamLocations: [],
+    salesRosterTeams: [],
+    salesRosterMembers: [],
     audits: [
       {
         id: "audit-seed-issued",

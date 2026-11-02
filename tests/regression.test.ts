@@ -125,6 +125,43 @@ it("CS可讀取工程單所屬報價版本的line金額，供6成師傅費計算
   expect(Object.values(amounts).every((amount) => amount > 0)).toBe(true);
 });
 
+it("空的Team即使有已刪成員的殘留monthlyTeam/shift仍可刪除", () => {
+  const state = createSeedState();
+  state.salesRosterTeams.push({
+    id: "team-d",
+    month: "2026-10",
+    code: "D",
+    colorIndex: 3,
+    order: 4,
+    createdBy: "head-don",
+    createdAt: "2026-10-22T12:00:00+08:00",
+  });
+  state.salesMonthlyTeams.push({
+    id: "stale-team",
+    actorId: "removed-sale",
+    month: "2026-10",
+    team: "D",
+    updatedBy: "head-don",
+    updatedAt: "2026-10-22T12:00:00+08:00",
+  });
+  state.salesShifts.push({
+    id: "stale-shift",
+    actorId: "removed-sale",
+    date: "2026-10-01",
+    assignment: "D",
+    updatedBy: "head-don",
+    updatedAt: "2026-10-22T12:00:00+08:00",
+  });
+  const e = new Engine(undefined, state);
+  const head = actor(e, "head-don");
+  e.deleteSalesRosterTeam(head, "2026-10", "D");
+  expect(
+    e
+      .getSalesSchedule(head, "2026-10")
+      .teams.some((team) => team.code === "D"),
+  ).toBe(false);
+});
+
 it("多項訂單分類按自費 > 8萬資助 > 團購決定收款分類", () => {
   const e = new Engine(undefined, createSeedState());
   const sales = actor(e, "sales-mm");
@@ -161,6 +198,32 @@ it("多項訂單分類按自費 > 8萬資助 > 團購決定收款分類", () => 
   expect(e.eligibility(sales, "quote-pending-office").firstDue).toBe(
     Math.round(total * 30) / 100,
   );
+});
+
+it("Sales排班只准阿頭改全部Team、主管改自己Team，普通Sales只讀自己", () => {
+  const state = createSeedState();
+  const teamASales = state.actors.find((a) => a.id === "sales-mm")!;
+  teamASales.team = "A";
+  const e = new Engine(undefined, state);
+  const head = actor(e, "head-don");
+  const supervisor = actor(e, "supervisor-sh");
+  const sales = actor(e, "sales-mm");
+  expect(() =>
+    e.setSalesShift(sales, "sales-mm", "2026-10-05", "A"),
+  ).toThrow("只有Sales阿頭或主管");
+  expect(() =>
+    e.setSalesShift(supervisor, "sales-mm", "2026-10-05", "A"),
+  ).toThrow("權限");
+  e.setSalesShift(head, "sales-mm", "2026-10-05", "A");
+  expect(
+    e
+      .getSalesSchedule(head, "2026-10")
+      .shifts.some((shift) => shift.actorId === "sales-mm"),
+  ).toBe(true);
+  expect(e.getSalesSchedule(sales, "2026-10").members).toHaveLength(1);
+  expect(
+    e.getSalesSchedule(supervisor, "2026-10").members.map((m) => m.id),
+  ).not.toContain("sales-mm");
 });
 
 it("自訂扣減保存金額與模式，並由正式列印鎖定主管及報價號", () => {
