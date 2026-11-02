@@ -466,6 +466,7 @@ export interface Notification {
   id: string;
   actorId: string;
   quoteId: string;
+  invoiceId?: string;
   message: string;
   read: boolean;
   createdAt: string;

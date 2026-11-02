@@ -222,7 +222,9 @@ export function Shell() {
                         : actor.role === "finance"
                           ? "/finance"
                           : actor.role === "clerk"
-                            ? "/submissions"
+                            ? n.invoiceId
+                              ? "/invoices/" + n.invoiceId
+                              : "/submissions"
                             : "/quotes/" + n.quoteId,
                     );
                   }}
