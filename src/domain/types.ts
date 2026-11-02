@@ -505,6 +505,8 @@ export interface AppState {
   salesShifts: SalesShift[];
   salesMonthlyTeams: SalesMonthlyTeam[];
   salesTeamLocations: SalesTeamLocation[];
+  salesRosterTeams: SalesRosterTeam[];
+  salesRosterMembers: SalesRosterMember[];
   audits: AuditEvent[];
   notifications: Notification[];
   monthlySequences: Record<string, number>;
@@ -636,15 +638,10 @@ export interface Performance {
   nextBonus?: number;
   entries: PerformanceEntry[];
 }
-export type SalesAssignment = "A" | "B" | "C" | "D" | "PH";
+export type SalesAssignment = string;
+export const SALES_OFF_CODE = "OFF";
+export const SALES_PH_CODE = "PH";
 export type SalesWorkShift = "early" | "normal";
-export const SALES_ASSIGNMENT_NAMES: Record<SalesAssignment, string> = {
-  A: "Team A",
-  B: "Team B",
-  C: "Team C",
-  D: "放假",
-  PH: "補假",
-};
 export const SALES_WORK_SHIFT_NAMES: Record<SalesWorkShift, string> = {
   early: "早更 9-6",
   normal: "日常 10-7",
@@ -662,19 +659,57 @@ export interface SalesMonthlyTeam {
   id: string;
   actorId: string;
   month: string;
-  team: "A" | "B" | "C";
+  team: string;
   updatedBy: string;
   updatedAt: string;
 }
 export interface SalesTeamLocation {
   id: string;
   month: string;
-  team: "A" | "B" | "C";
+  team: string;
   startDate: string;
   endDate: string;
   location: string;
   updatedBy: string;
   updatedAt: string;
+}
+export interface SalesRosterTeam {
+  id: string;
+  month: string;
+  code: string;
+  colorIndex: number;
+  order: number;
+  createdBy: string;
+  createdAt: string;
+}
+export interface SalesRosterMember {
+  id: string;
+  month: string;
+  name: string;
+  kind: "supervisor" | "sales";
+  team: string;
+  sourceActorId?: string;
+  createdBy: string;
+  createdAt: string;
+}
+export interface SalesScheduleMember {
+  id: string;
+  name: string;
+  kind: "supervisor" | "sales";
+  team: string;
+  homeTeam?: string;
+  sourceActorId?: string;
+}
+export interface SalesScheduleTeam {
+  code: string;
+  colorIndex: number;
+  order: number;
+}
+export interface SalesScheduleData {
+  members: SalesScheduleMember[];
+  teams: SalesScheduleTeam[];
+  shifts: SalesShift[];
+  locations: SalesTeamLocation[];
 }
 export interface DraftInput {
   customer: Customer;

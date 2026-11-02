@@ -176,16 +176,16 @@ it("Sales排班只准阿頭改全部Team、主管改自己Team，普通Sales只�
   ).toThrow("只有Sales阿頭或主管");
   expect(() =>
     e.setSalesShift(supervisor, "sales-mm", "2026-10-05", "A"),
-  ).toThrow("自己Team");
+  ).toThrow("權限");
   e.setSalesShift(head, "sales-mm", "2026-10-05", "A");
   expect(
     e
-      .listSalesSchedule(head, "2026-10")
+      .getSalesSchedule(head, "2026-10")
       .shifts.some((shift) => shift.actorId === "sales-mm"),
   ).toBe(true);
-  expect(e.listSalesSchedule(sales, "2026-10").members).toHaveLength(1);
+  expect(e.getSalesSchedule(sales, "2026-10").members).toHaveLength(1);
   expect(
-    e.listSalesSchedule(supervisor, "2026-10").members.map((m) => m.id),
+    e.getSalesSchedule(supervisor, "2026-10").members.map((m) => m.id),
   ).not.toContain("sales-mm");
 });
 

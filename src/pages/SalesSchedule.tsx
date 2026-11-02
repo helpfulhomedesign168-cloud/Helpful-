@@ -1,19 +1,33 @@
 import React, { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useApp } from "../context";
 import { Badge, Button, Dialog, Field, PageHead } from "../components/ui";
 import {
   DEMO_TODAY,
-  SALES_ASSIGNMENT_NAMES,
+  SALES_OFF_CODE,
+  SALES_PH_CODE,
   SALES_WORK_SHIFT_NAMES,
   SalesAssignment,
+  SalesRosterMember,
+  SalesScheduleMember,
   SalesTeamLocation,
   SalesWorkShift,
 } from "../domain/types";
 
-const ASSIGNMENTS: SalesAssignment[] = ["A", "B", "C", "D", "PH"];
-const TEAMS = ["A", "B", "C"] as const;
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
+const TEAM_COLORS = [
+  { bg: "#f4e786", text: "#5b4d00" },
+  { bg: "#9dc9f2", text: "#173f61" },
+  { bg: "#d9b8e8", text: "#532d63" },
+  { bg: "#f2b5b5", text: "#6a2020" },
+  { bg: "#a8d8c4", text: "#174d39" },
+  { bg: "#f3c78e", text: "#5d3a0b" },
+  { bg: "#b9c7ef", text: "#283966" },
+  { bg: "#d7d2a8", text: "#4f4a18" },
+];
+const OFF_COLOR = { bg: "#f2c0ab", text: "#6b2d18" };
+const PH_COLOR = { bg: "#78986c", text: "#ffffff" };
+const EARLY_COLOR = { bg: "#dcdcd8", text: "#3d4039" };
 
 function monthDays(month: string) {
   const year = Number(month.slice(0, 4));
@@ -25,33 +39,43 @@ function monthDays(month: string) {
     return { date, day: index + 1, weekday };
   });
 }
-
 function monthLabel(month: string) {
   return `${month.slice(0, 4)}年${Number(month.slice(5, 7))}月`;
 }
-
-function fullDateLabel(date: string) {
-  const parsed = new Date(`${date}T00:00:00`);
-  return `${Number(date.slice(5, 7))}月${Number(date.slice(8))}日（星期${
-    WEEKDAYS[parsed.getDay()]
-  }）`;
+function colorForTeam(index: number) {
+  return TEAM_COLORS[index % TEAM_COLORS.length];
 }
 
 type LocationDraft = {
   id?: string;
-  team: "A" | "B" | "C";
+  team: string;
   startDate: string;
   endDate: string;
   location: string;
+};
+type CellDraft = {
+  member: SalesScheduleMember;
+  date: string;
+  assignment: string;
+  workShift: SalesWorkShift;
 };
 
 export function SalesSchedule() {
   const { actor, engine, run } = useApp();
   const [month, setMonth] = useState(DEMO_TODAY.slice(0, 7));
-  const [editorDate, setEditorDate] = useState<string | null>(null);
   const [location, setLocation] = useState<LocationDraft | null>(null);
+  const [cell, setCell] = useState<CellDraft | null>(null);
+  const [addMember, setAddMember] = useState(false);
+  const [newMember, setNewMember] = useState<{
+    name: string;
+    kind: "supervisor" | "sales";
+    team: string;
+  }>({ name: "", kind: "sales", team: "A" });
   const canEdit = actor.role === "head" || actor.role === "supervisor";
-  const schedule = engine.listSalesSchedule(actor, month);
+  const canAdd = actor.role === "head";
+  const canEditTeam = (team: string) =>
+    canAdd || (actor.role === "supervisor" && actor.team === team);
+  const schedule = engine.getSalesSchedule(actor, month);
   const days = monthDays(month);
   const shifts = new Map(
     schedule.shifts.map((shift) => [
@@ -59,21 +83,23 @@ export function SalesSchedule() {
       shift,
     ]),
   );
-  const monthlyTeams = new Map(
-    schedule.monthlyTeams.map((team) => [team.actorId, team.team]),
+  const teamByCode = new Map(
+    schedule.teams.map((team) => [team.code, team]),
   );
-  const locationFor = (team: "A" | "B" | "C", date: string) =>
+  const locationFor = (team: string, date: string) =>
     schedule.locations.find(
       (row) =>
         row.team === team && row.startDate <= date && row.endDate >= date,
     );
-  const hasTeamLocations = (team: "A" | "B" | "C") =>
-    schedule.locations.some((row) => row.team === team);
-  const hasRosterData =
-    schedule.shifts.length > 0 || schedule.locations.length > 0;
-  const shiftAt = (actorId: string, date: string) =>
-    shifts.get(`${actorId}|${date}`);
-
+  const supervisorMembers = schedule.members.filter(
+    (member) => member.kind === "supervisor",
+  );
+  const salesTeams = schedule.teams.map((team) => ({
+    ...team,
+    members: schedule.members.filter(
+      (member) => member.kind === "sales" && member.team === team.code,
+    ),
+  }));
   const moveMonth = (delta: number) => {
     const date = new Date(`${month}-01T00:00:00`);
     date.setMonth(date.getMonth() + delta);
@@ -81,51 +107,7 @@ export function SalesSchedule() {
       `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
     );
   };
-
-  const updateShift = (
-    actorId: string,
-    date: string,
-    assignment: string,
-    currentWorkShift?: SalesWorkShift,
-  ) => {
-    const next = (assignment || null) as SalesAssignment | null;
-    run(
-      () =>
-        engine.setSalesShift(
-          actor,
-          actorId,
-          date,
-          next,
-          next && next !== "D" && next !== "PH"
-            ? currentWorkShift ?? "normal"
-            : undefined,
-        ),
-      next
-        ? `排班已設為${SALES_ASSIGNMENT_NAMES[next]}。`
-        : "已清除排班。",
-    );
-  };
-
-  const updateWorkShift = (
-    actorId: string,
-    date: string,
-    assignment: SalesAssignment,
-    workShift: SalesWorkShift,
-  ) => {
-    run(
-      () =>
-        engine.setSalesShift(
-          actor,
-          actorId,
-          date,
-          assignment,
-          workShift,
-        ),
-      `更份已設為${SALES_WORK_SHIFT_NAMES[workShift]}。`,
-    );
-  };
-
-  const openLocation = (row?: SalesTeamLocation) => {
+  const openLocation = (team: string, row?: SalesTeamLocation) => {
     setLocation(
       row
         ? {
@@ -136,32 +118,84 @@ export function SalesSchedule() {
             location: row.location,
           }
         : {
-            team:
-              actor.role === "supervisor"
-                ? (actor.team as "A" | "B" | "C")
-                : "A",
+            team,
             startDate: `${month}-01`,
             endDate: `${month}-${String(days.length).padStart(2, "0")}`,
             location: "",
           },
     );
   };
-
-  const cells: Array<(typeof days)[number] | null> = [
-    ...Array.from(
-      { length: (new Date(`${month}-01T00:00:00`).getDay() + 6) % 7 },
-      () => null,
-    ),
-    ...days,
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
-  const weeks: Array<Array<(typeof days)[number] | null>> = [];
-  for (let index = 0; index < cells.length; index += 7)
-    weeks.push(cells.slice(index, index + 7));
-  const editorDay = editorDate
-    ? days.find((day) => day.date === editorDate)
-    : undefined;
-
+  const openCell = (member: SalesScheduleMember, date: string) => {
+    if (!canEdit) return;
+    const row = shifts.get(`${member.id}|${date}`);
+    const assignment =
+      row?.assignment ??
+      (member.kind === "sales" ? member.team : schedule.teams[0]?.code ?? "A");
+    setCell({
+      member,
+      date,
+      assignment,
+      workShift: row?.workShift ?? "normal",
+    });
+  };
+  const cellStyle = (assignment?: string, workShift?: SalesWorkShift) => {
+    if (!assignment) return { background: "#fafbf7", color: "#a0a798" };
+    if (assignment === SALES_OFF_CODE) return {
+      background: OFF_COLOR.bg,
+      color: OFF_COLOR.text,
+    };
+    if (assignment === SALES_PH_CODE) return {
+      background: PH_COLOR.bg,
+      color: PH_COLOR.text,
+    };
+    if (workShift === "early") return {
+      background: EARLY_COLOR.bg,
+      color: EARLY_COLOR.text,
+    };
+    const team = teamByCode.get(assignment);
+    const color = colorForTeam(team?.colorIndex ?? 0);
+    return { background: color.bg, color: color.text };
+  };
+  const cellText = (assignment?: string) => {
+    if (!assignment) return "—";
+    if (assignment === SALES_OFF_CODE || assignment === SALES_PH_CODE)
+      return "D";
+    return assignment;
+  };
+  const memberName = (
+    member: SalesScheduleMember,
+    withTeamSelect = true,
+  ) => (
+    <div className="sales-table-name">
+      <strong>{member.name}</strong>
+      {canEdit && member.kind === "sales" && withTeamSelect ? (
+        <select
+          aria-label={`${member.name} 本月Team`}
+          value={member.team}
+          onChange={(event) =>
+            run(
+              () =>
+                engine.setSalesMonthlyTeam(
+                  actor,
+                  member.id,
+                  month,
+                  event.target.value,
+                ),
+              `${member.name} 本月Team已更新。`,
+            )
+          }
+        >
+          {schedule.teams.map((team) => (
+            <option key={team.code} value={team.code}>
+              Team {team.code}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <small>{member.kind === "supervisor" ? "主管" : `Team ${member.homeTeam ?? member.team}`}</small>
+      )}
+    </div>
+  );
   return (
     <>
       <PageHead
@@ -200,424 +234,372 @@ export function SalesSchedule() {
           </div>
         }
       />
-
-      <div className="schedule-layout">
-        <div className="schedule-main">
-          <section className="list-panel schedule-calendar-panel">
-            <div className="schedule-calendar-head">
-              <div>
-                <strong>{monthLabel(month)}</strong>
-                <p>
-                  {canEdit
-                    ? "點擊日期可編排當日 Sales；每格顯示Team地點及上班人數。"
-                    : "點擊日期查看當日安排。"}
-                </p>
-              </div>
-              <div className="schedule-legend">
-                {ASSIGNMENTS.map((assignment) => (
-                  <span key={assignment} data-assignment={assignment}>
-                    {assignment === "D"
-                      ? "D 放假"
-                      : assignment === "PH"
-                        ? "D 補假"
-                        : assignment}
-                  </span>
-                ))}
-                <span data-work="early">早更</span>
-                <span data-work="normal">日常</span>
-              </div>
+      <div className="schedule-sheet-stack">
+        <section className="list-panel sales-sheet-panel">
+          <div className="sales-sheet-head">
+            <div>
+              <strong>銷售地點</strong>
+              <p>每個Team可按日期分段設定工作地點；空白代表全Team放假。</p>
             </div>
-            <div className="schedule-weekdays">
-              {["一", "二", "三", "四", "五", "六", "日"].map((day) => (
-                <span key={day}>{day}</span>
-              ))}
-            </div>
-            <div className="schedule-grid">
-              {weeks.map((week, weekIndex) => (
-                <div className="schedule-week" key={`week-${weekIndex}`}>
-                  {week.map((day, index) => {
-                    if (!day)
-                      return (
-                        <div
-                          className="schedule-day schedule-day-empty"
-                          key={`empty-${weekIndex}-${index}`}
-                        />
-                      );
-                    const weekend = day.weekday === 0 || day.weekday === 6;
-                    const today = day.date === DEMO_TODAY;
-                    const own = shiftAt(actor.id, day.date);
-                    const offCount = schedule.members.filter(
-                      (member) =>
-                        shiftAt(member.id, day.date)?.assignment === "D",
-                    ).length;
-                    const phCount = schedule.members.filter(
-                      (member) =>
-                        shiftAt(member.id, day.date)?.assignment === "PH",
-                    ).length;
-                    return (
-                      <button
-                        type="button"
-                        className={`schedule-day ${weekend ? "weekend" : ""} ${
-                          today ? "today" : ""
-                        } ${!hasRosterData ? "compact" : ""}`}
-                        key={day.date}
-                        aria-label={`${day.date} 排班`}
-                        onClick={() => setEditorDate(day.date)}
-                      >
-                        <header>
-                          <strong>{day.day}</strong>
-                          <span>{WEEKDAYS[day.weekday]}</span>
-                          {today && <em>今天</em>}
-                        </header>
-                        {canEdit ? (
-                          <>
-                            {hasRosterData ? (
-                              <div className="schedule-team-lines">
-                                {TEAMS.map((team) => {
-                                  const place = locationFor(team, day.date);
-                                  const people = schedule.members.filter(
-                                    (member) =>
-                                      shiftAt(member.id, day.date)
-                                        ?.assignment === team,
-                                  );
-                                  const count = people.length;
-                                  return (
-                                    <div
-                                      className={`schedule-team-line team-${team}`}
-                                      key={team}
-                                      title={people
-                                        .map((person) => person.name)
-                                        .join("、")}
-                                    >
-                                      <b>{team}</b>
-                                      <span
-                                        title={place?.location}
-                                        className={
-                                          !place && !hasTeamLocations(team)
-                                            ? "unconfigured"
-                                            : ""
-                                        }
-                                      >
-                                        {place?.location ??
-                                          (hasTeamLocations(team)
-                                            ? "全Team放假"
-                                            : "未設定地點")}
-                                      </span>
-                                      <small
-                                        className={
-                                          place && count === 0
-                                            ? "empty-count"
-                                            : ""
-                                        }
-                                      >
-                                        {place ? `${count}人` : "—"}
-                                      </small>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              <span className="schedule-day-hint">
-                                未排更 · 點擊設定
-                              </span>
-                            )}
-                            {(offCount > 0 || phCount > 0) && (
-                              <footer>
-                                {offCount > 0 && <span>D {offCount}</span>}
-                                {phCount > 0 && <span>補 {phCount}</span>}
-                              </footer>
-                            )}
-                          </>
-                        ) : (
-                          <div className="schedule-own">
-                            <strong
-                              className={
-                                own?.assignment === "D"
-                                  ? "day-off"
-                                  : own?.assignment === "PH"
-                                    ? "day-ph"
-                                    : own?.workShift === "early"
-                                      ? "day-early"
-                                      : "day-normal"
-                              }
-                            >
-                              {own?.assignment === "PH"
-                                ? "D 補假"
-                                : own?.assignment
-                                  ? SALES_ASSIGNMENT_NAMES[own.assignment]
-                                  : "未排"}
-                            </strong>
-                            {own?.assignment &&
-                              own.assignment !== "D" &&
-                              own.assignment !== "PH" && (
-                                <small>
-                                  {SALES_WORK_SHIFT_NAMES[own.workShift ?? "normal"]}
-                                </small>
-                              )}
-                            <span>
-                              {own?.assignment
-                                ? locationFor(
-                                    own.assignment as "A" | "B" | "C",
-                                    day.date,
-                                  )?.location ??
-                                  (hasTeamLocations(
-                                    own.assignment as "A" | "B" | "C",
-                                  )
-                                    ? "Team全體放假"
-                                    : "未設定地點")
-                                : ""}
-                            </span>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        <aside className="schedule-side">
-          <section className="list-panel schedule-side-card">
-            <div className="schedule-side-head">
-              <div>
-                <strong>月度 Team</strong>
-                <p>每月重新設定，可套用到未排日期。</p>
-              </div>
-            </div>
-            <div className="monthly-team-list">
-              {schedule.members.map((member) => (
-                <div className="monthly-team-row" key={member.id}>
-                  <div>
-                    <strong>{member.name}</strong>
-                    <small>原 Team {member.team ?? "—"}</small>
-                  </div>
-                  {canEdit ? (
-                    <div className="monthly-team-actions">
-                      <select
-                        aria-label={`${member.name} 本月Team`}
-                        value={
-                          monthlyTeams.get(member.id) ?? member.team ?? ""
-                        }
-                        onChange={(event) => {
-                          if (!event.target.value) return;
-                          run(
-                            () =>
-                              engine.setSalesMonthlyTeam(
-                                actor,
-                                member.id,
-                                month,
-                                event.target.value as "A" | "B" | "C",
-                              ),
-                            `${member.name} 本月Team已更新。`,
-                          );
-                        }}
-                      >
-                        {TEAMS.map((team) => (
-                          <option key={team} value={team}>
-                            Team {team}
-                          </option>
-                        ))}
-                      </select>
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          run(
-                            () =>
-                              engine.applySalesMonthlyTeam(
-                                actor,
-                                member.id,
-                                month,
-                              ),
-                            `${member.name} 已套用月度Team至未排日期。`,
-                          )
-                        }
-                      >
-                        套用
-                      </Button>
-                    </div>
-                  ) : (
-                    <Badge strong>
-                      Team {monthlyTeams.get(member.id) ?? member.team ?? "—"}
-                    </Badge>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="list-panel schedule-side-card">
-            <div className="schedule-side-head">
-              <div>
-                <strong>Team 地點</strong>
-                <p>空白代表當日全Team放假。</p>
-              </div>
-              {canEdit && (
-                <Button variant="ghost" onClick={() => openLocation()}>
-                  <Plus size={16} /> 新增
-                </Button>
-              )}
-            </div>
-            {schedule.locations.length === 0 ? (
-              <p className="schedule-side-empty">本月未設定地點。</p>
-            ) : (
-              <div className="schedule-location-list">
-                {schedule.locations.map((row) => (
-                  <div className="schedule-location-item" key={row.id}>
-                    <Badge strong>Team {row.team}</Badge>
-                    <div>
-                      <strong>{row.location}</strong>
-                      <small>
-                        {row.startDate.slice(5)} – {row.endDate.slice(5)}
-                      </small>
-                    </div>
-                    {canEdit && (
-                      <div className="schedule-location-actions">
-                        <button
-                          type="button"
-                          onClick={() => openLocation(row)}
-                        >
-                          改
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`刪除 Team ${row.team} ${row.location}`}
-                          onClick={() =>
-                            run(
-                              () =>
-                                engine.removeSalesTeamLocation(actor, row.id),
-                              "Team地點已刪除。",
-                            )
-                          }
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+            {canAdd && (
+              <Button
+                onClick={() =>
+                  run(
+                    () => engine.addSalesRosterTeam(actor, month),
+                    "已新增Team。",
+                  )
+                }
+              >
+                <Plus size={18} /> Team
+              </Button>
             )}
-          </section>
-        </aside>
-      </div>
-
-      {editorDay && (
-        <Dialog
-          wide
-          title={`${fullDateLabel(editorDay.date)} · 排班`}
-          onClose={() => setEditorDate(null)}
-        >
-          <div className="day-editor-locations">
-            {TEAMS.map((team) => {
-              const place = locationFor(team, editorDay.date);
-              return (
-                <div key={team}>
-                  <b>Team {team}</b>
-                  <span>
-                    {place?.location ??
-                      (hasTeamLocations(team) ? "全Team放假" : "未設定地點")}
-                  </span>
-                </div>
-              );
-            })}
           </div>
-          <div className="table-scroll">
-            <table className="day-editor-table">
+          <div className="table-scroll sales-sheet-scroll">
+            <table className="sales-location-grid">
               <thead>
                 <tr>
-                  <th>Sales</th>
-                  <th>月度 Team</th>
-                  <th>當日安排</th>
-                  <th>更份</th>
+                  <th className="sales-table-name-head">地點</th>
+                  {days.map((day) => (
+                    <th
+                      key={day.date}
+                      className={
+                        day.weekday === 0 || day.weekday === 6
+                          ? "weekend"
+                          : ""
+                      }
+                    >
+                      <strong>{day.day}</strong>
+                      <small>{WEEKDAYS[day.weekday]}</small>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {schedule.members.map((member) => {
-                  const row = shiftAt(member.id, editorDay.date);
+                {schedule.teams.map((team) => {
+                  const color = colorForTeam(team.colorIndex);
                   return (
-                    <tr key={member.id}>
-                      <td>
-                        <strong>{member.name}</strong>
-                        <small>{member.code}</small>
-                      </td>
-                      <td>
-                        Team{" "}
-                        {monthlyTeams.get(member.id) ?? member.team ?? "—"}
-                      </td>
-                      <td>
-                        {canEdit ? (
-                          <select
-                            aria-label={`${member.name} ${editorDay.date} 排班`}
-                            value={row?.assignment ?? ""}
-                            onChange={(event) =>
-                              updateShift(
-                                member.id,
-                                editorDay.date,
-                                event.target.value,
-                                row?.workShift,
-                              )
-                            }
+                    <tr key={team.code}>
+                      <th
+                        className="sales-location-name"
+                        style={{ background: color.bg, color: color.text }}
+                      >
+                        <span>{team.code}</span>
+                        {canEditTeam(team.code) && (
+                          <button
+                            type="button"
+                            onClick={() => openLocation(team.code)}
                           >
-                            <option value="">—</option>
-                            {ASSIGNMENTS.map((code) => (
-                              <option key={code} value={code}>
-                                {code === "D"
-                                  ? "D 放假"
-                                  : code === "PH"
-                                    ? "D 補假"
-                                    : `Team ${code}`}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <Badge strong={row?.assignment === "PH"}>
-                            {row?.assignment === "PH"
-                              ? "D 補假"
-                              : row?.assignment
-                                ? SALES_ASSIGNMENT_NAMES[row.assignment]
-                                : "未排"}
-                          </Badge>
+                            + 新增地方
+                          </button>
                         )}
-                      </td>
-                      <td>
-                        {canEdit &&
-                        row?.assignment &&
-                        row.assignment !== "D" &&
-                        row.assignment !== "PH" ? (
-                          <select
-                            aria-label={`${member.name} ${editorDay.date} 更份`}
-                            value={row.workShift ?? "normal"}
-                            onChange={(event) =>
-                              updateWorkShift(
-                                member.id,
-                                editorDay.date,
-                                row.assignment!,
-                                event.target.value as SalesWorkShift,
-                              )
-                            }
-                          >
-                            <option value="early">早更 9-6</option>
-                            <option value="normal">日常 10-7</option>
-                          </select>
-                        ) : (
-                          <span className="muted">
-                            {row?.workShift
-                              ? SALES_WORK_SHIFT_NAMES[row.workShift]
-                              : "—"}
-                          </span>
-                        )}
-                      </td>
+                      </th>
+                      {days.map((day) => {
+                        const place = locationFor(team.code, day.date);
+                        return (
+                          <td key={day.date}>
+                            {place ? (
+                              <button
+                                type="button"
+                                className="sales-location-cell"
+                                onClick={() =>
+                                  canEditTeam(team.code) &&
+                                  openLocation(team.code, place)
+                                }
+                              >
+                                {place.location}
+                              </button>
+                            ) : (
+                              <span />
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="list-panel sales-sheet-panel">
+          <div className="sales-sheet-head">
+            <div>
+              <strong>銷售 Sales</strong>
+              <p>
+                每位每月自動5日 D 放假及最少10日早更；點擊任何更表格可修改。
+              </p>
+            </div>
+            {canAdd && (
+              <Button
+                onClick={() => {
+                  setNewMember({
+                    name: "",
+                    kind: "sales",
+                    team: schedule.teams[0]?.code ?? "A",
+                  });
+                  setAddMember(true);
+                }}
+              >
+                <Plus size={18} /> Sale
+              </Button>
+            )}
+          </div>
+          <div className="sales-sheet-legend">
+            {schedule.teams.map((team) => {
+              const color = colorForTeam(team.colorIndex);
+              return (
+                <span
+                  key={team.code}
+                  style={{ background: color.bg, color: color.text }}
+                >
+                  Team {team.code}
+                </span>
+              );
+            })}
+            <span style={{ background: OFF_COLOR.bg, color: OFF_COLOR.text }}>
+              D 放假
+            </span>
+            <span style={{ background: PH_COLOR.bg, color: PH_COLOR.text }}>
+              D 補假
+            </span>
+            <span style={{ background: EARLY_COLOR.bg, color: EARLY_COLOR.text }}>
+              早更
+            </span>
+          </div>
+          <div className="table-scroll sales-sheet-scroll">
+            <table className="sales-roster-grid">
+              <thead>
+                <tr>
+                  <th className="sales-table-name-head">Sales</th>
+                  {days.map((day) => (
+                    <th
+                      key={day.date}
+                      className={
+                        day.weekday === 0 || day.weekday === 6
+                          ? "weekend"
+                          : ""
+                      }
+                    >
+                      <strong>{day.day}</strong>
+                      <small>{WEEKDAYS[day.weekday]}</small>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {supervisorMembers.length > 0 && (
+                  <>
+                    <tr className="sales-group-row">
+                      <th colSpan={days.length + 1}>主管</th>
+                    </tr>
+                    {supervisorMembers.map((member) => (
+                      <tr key={member.id} className="sales-member-row">
+                        <th>{memberName(member, false)}</th>
+                        {days.map((day) => {
+                          const row = shifts.get(`${member.id}|${day.date}`);
+                          return (
+                            <td key={day.date}>
+                              <button
+                                type="button"
+                                className="sales-shift-cell"
+                                data-assignment={row?.assignment ?? ""}
+                                data-shift={row?.workShift ?? ""}
+                                aria-label={`${member.name} ${day.date} 更表`}
+                                style={cellStyle(
+                                  row?.assignment,
+                                  row?.workShift,
+                                )}
+                                onClick={() => openCell(member, day.date)}
+                              >
+                                {cellText(row?.assignment)}
+                              </button>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </>
+                )}
+                {salesTeams.map((team) => {
+                  const color = colorForTeam(team.colorIndex);
+                  return (
+                    <React.Fragment key={team.code}>
+                      <tr className="sales-group-row">
+                        <th
+                          colSpan={days.length + 1}
+                          style={{ background: color.bg, color: color.text }}
+                        >
+                          Team {team.code}
+                        </th>
+                      </tr>
+                      {team.members.map((member) => (
+                        <tr key={member.id} className="sales-member-row">
+                          <th>{memberName(member)}</th>
+                          {days.map((day) => {
+                            const row = shifts.get(`${member.id}|${day.date}`);
+                            return (
+                              <td key={day.date}>
+                                <button
+                                  type="button"
+                                  className="sales-shift-cell"
+                                  data-assignment={row?.assignment ?? ""}
+                                  data-shift={row?.workShift ?? ""}
+                                  aria-label={`${member.name} ${day.date} 更表`}
+                                  style={cellStyle(
+                                    row?.assignment,
+                                    row?.workShift,
+                                  )}
+                                  onClick={() => openCell(member, day.date)}
+                                >
+                                  {cellText(row?.assignment)}
+                                </button>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      {addMember && (
+        <Dialog title="新增Sales／主管" onClose={() => setAddMember(false)}>
+          <div className="form-grid two">
+            <Field label="名稱" required>
+              <input
+                aria-label="新成員名稱"
+                value={newMember.name}
+                onChange={(event) =>
+                  setNewMember({ ...newMember, name: event.target.value })
+                }
+                placeholder="例如：Karen"
+              />
+            </Field>
+            <Field label="類型" required>
+              <select
+                aria-label="新成員類型"
+                value={newMember.kind}
+                onChange={(event) =>
+                  setNewMember({
+                    ...newMember,
+                    kind: event.target.value as "supervisor" | "sales",
+                  })
+                }
+              >
+                <option value="sales">Sale</option>
+                <option value="supervisor">主管</option>
+              </select>
+            </Field>
+            <Field label="Team" required>
+              <select
+                aria-label="新成員Team"
+                value={newMember.team}
+                onChange={(event) =>
+                  setNewMember({ ...newMember, team: event.target.value })
+                }
+              >
+                {schedule.teams.map((team) => (
+                  <option key={team.code} value={team.code}>
+                    Team {team.code}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
           <p className="schedule-day-note">
-            D 放假不會計入上班人數；D 補假以深綠色顯示；Team 地點空白代表全Team放假。
+            新增 Sale 後會自動安排：5日 D 放假、最少10日早更，其餘為日常更。
           </p>
+          <div className="dialog-actions">
+            <Button onClick={() => setAddMember(false)}>取消</Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                let saved = false;
+                run(() => {
+                  engine.addSalesRosterMember(actor, month, newMember);
+                  saved = true;
+                  return true;
+                }, "已新增成員並自動排班。");
+                if (saved) setAddMember(false);
+              }}
+            >
+              新增並自動排班
+            </Button>
+          </div>
+        </Dialog>
+      )}
+
+      {cell && (
+        <Dialog
+          title={`${cell.member.name} · ${cell.date} 更表`}
+          onClose={() => setCell(null)}
+        >
+          <div className="form-grid two">
+            <Field label="安排" required>
+              <select
+                aria-label="更表安排"
+                value={cell.assignment}
+                onChange={(event) =>
+                  setCell({ ...cell, assignment: event.target.value })
+                }
+              >
+                {schedule.teams.map((team) => (
+                  <option key={team.code} value={team.code}>
+                    Team {team.code}
+                  </option>
+                ))}
+                <option value={SALES_OFF_CODE}>D 放假</option>
+                <option value={SALES_PH_CODE}>D 補假</option>
+              </select>
+            </Field>
+            <Field label="更份">
+              <select
+                aria-label="更份"
+                value={cell.workShift}
+                disabled={
+                  cell.assignment === SALES_OFF_CODE ||
+                  cell.assignment === SALES_PH_CODE
+                }
+                onChange={(event) =>
+                  setCell({
+                    ...cell,
+                    workShift: event.target.value as SalesWorkShift,
+                  })
+                }
+              >
+                <option value="early">早更 9-6</option>
+                <option value="normal">日常 10-7</option>
+              </select>
+            </Field>
+          </div>
+          <div className="dialog-actions">
+            <Button onClick={() => setCell(null)}>取消</Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                run(
+                  () =>
+                    engine.setSalesShift(
+                      actor,
+                      cell.member.id,
+                      cell.date,
+                      cell.assignment,
+                      cell.workShift,
+                    ),
+                  "更表已更新。",
+                );
+                setCell(null);
+              }}
+            >
+              儲存
+            </Button>
+          </div>
         </Dialog>
       )}
 
@@ -629,24 +611,23 @@ export function SalesSchedule() {
           <div className="form-grid two">
             <Field label="Team" required>
               <select
+                aria-label="地點Team"
                 value={location.team}
                 disabled={actor.role === "supervisor"}
                 onChange={(event) =>
-                  setLocation({
-                    ...location,
-                    team: event.target.value as "A" | "B" | "C",
-                  })
+                  setLocation({ ...location, team: event.target.value })
                 }
               >
-                {TEAMS.map((team) => (
-                  <option key={team} value={team}>
-                    Team {team}
+                {schedule.teams.map((team) => (
+                  <option key={team.code} value={team.code}>
+                    Team {team.code}
                   </option>
                 ))}
               </select>
             </Field>
             <Field label="工作地點" required>
               <input
+                aria-label="工作地點"
                 value={location.location}
                 onChange={(event) =>
                   setLocation({ ...location, location: event.target.value })
@@ -656,6 +637,7 @@ export function SalesSchedule() {
             </Field>
             <Field label="開始日期" required>
               <input
+                aria-label="開始日期"
                 type="date"
                 min={`${month}-01`}
                 max={`${month}-${String(days.length).padStart(2, "0")}`}
@@ -667,6 +649,7 @@ export function SalesSchedule() {
             </Field>
             <Field label="結束日期" required>
               <input
+                aria-label="結束日期"
                 type="date"
                 min={`${month}-01`}
                 max={`${month}-${String(days.length).padStart(2, "0")}`}

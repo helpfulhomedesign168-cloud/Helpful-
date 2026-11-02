@@ -5267,3 +5267,209 @@ textarea {
 .schedule-day-empty {
   min-height: 112px;
 }
+
+/* Spreadsheet-style sales roster */
+.schedule-sheet-stack {
+  display: grid;
+  gap: 16px;
+}
+.sales-sheet-panel {
+  overflow: hidden;
+}
+.sales-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.sales-sheet-head p {
+  margin: 5px 0 0;
+  color: #737a6d;
+  font-size: 13px;
+}
+.sales-sheet-scroll {
+  overflow-x: auto;
+}
+.sales-location-grid,
+.sales-roster-grid {
+  min-width: 1430px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sales-location-grid th,
+.sales-location-grid td,
+.sales-roster-grid th,
+.sales-roster-grid td {
+  border-right: 1px solid #edf0e7;
+  border-bottom: 1px solid #edf0e7;
+  text-align: center;
+  vertical-align: middle;
+}
+.sales-location-grid thead th,
+.sales-roster-grid thead th {
+  height: 48px;
+  min-width: 40px;
+  color: #6f7768;
+  font-size: 11px;
+  background: #f7f8f3;
+}
+.sales-location-grid thead th strong,
+.sales-location-grid thead th small,
+.sales-roster-grid thead th strong,
+.sales-roster-grid thead th small {
+  display: block;
+}
+.sales-location-grid thead th small,
+.sales-roster-grid thead th small {
+  margin-top: 2px;
+  color: #959c8e;
+  font-size: 9px;
+  font-weight: 400;
+}
+.sales-location-grid th.weekend,
+.sales-roster-grid th.weekend {
+  background: #f1f4eb;
+}
+.sales-table-name-head {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  width: 155px;
+  min-width: 155px;
+  padding: 0 12px !important;
+  text-align: left !important;
+  background: #f7f8f3 !important;
+}
+.sales-location-name {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 155px;
+  min-width: 155px;
+  padding: 5px 9px !important;
+  text-align: left !important;
+}
+.sales-location-name span {
+  display: block;
+  font-size: 18px;
+}
+.sales-location-name button {
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 10px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.sales-location-grid td {
+  height: 42px;
+  padding: 0;
+  background: #fff;
+}
+.sales-location-cell {
+  width: 100%;
+  height: 40px;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: #4e5747;
+  font-size: 10px;
+  line-height: 1.15;
+  cursor: pointer;
+}
+.sales-location-grid tbody tr:nth-child(even) td {
+  background: #fcfdfa;
+}
+.sales-sheet-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 10px 20px 0;
+}
+.sales-sheet-legend span {
+  padding: 4px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.sales-group-row th {
+  height: 30px;
+  padding: 4px 12px !important;
+  text-align: left !important;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sales-member-row > th {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 155px;
+  min-width: 155px;
+  padding: 5px 9px !important;
+  text-align: left !important;
+  background: #fff;
+}
+.sales-table-name strong {
+  display: block;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sales-table-name small {
+  display: block;
+  margin-top: 2px;
+  color: #858d7e;
+  font-size: 9px;
+}
+.sales-table-name select {
+  width: 100%;
+  margin-top: 3px;
+  padding: 2px 4px;
+  font-size: 9px;
+}
+.sales-roster-grid td {
+  height: 42px;
+  padding: 0;
+  background: #fff;
+}
+.sales-shift-cell {
+  width: 100%;
+  min-width: 39px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sales-shift-cell:hover {
+  outline: 2px solid rgba(50, 65, 40, 0.35);
+  outline-offset: -2px;
+}
+
+/* Keep a full month visible on desktop */
+.sales-location-grid,
+.sales-roster-grid {
+  min-width: 1180px;
+}
+.sales-location-grid thead th:not(.sales-table-name-head),
+.sales-roster-grid thead th:not(.sales-table-name-head) {
+  min-width: 33px;
+  padding: 0 1px;
+}
+.sales-table-name-head,
+.sales-location-name,
+.sales-member-row > th {
+  width: 132px;
+  min-width: 132px;
+}
+.sales-location-cell,
+.sales-shift-cell {
+  min-width: 33px;
+}
