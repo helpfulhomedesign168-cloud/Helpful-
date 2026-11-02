@@ -4539,3 +4539,10 @@ textarea {
   border-radius: inherit;
   background: #59684d;
 }
+
+.team-performance-table td:first-child strong {
+  display: block;
+}
+.team-performance-table td:first-child small {
+  color: #7a8174;
+}

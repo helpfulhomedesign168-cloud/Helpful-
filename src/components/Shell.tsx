@@ -50,7 +50,11 @@ export function Shell() {
         ["/quotes/new", "建立報價", Plus],
         ["/customers", "客戶", Users],
         ["/product-styles", "產品款式", Palette],
-        ["/performance", "我的業績", ChartNoAxesCombined],
+        [
+          "/performance",
+          actor.role === "sales" ? "我的業績" : "團隊業績",
+          ChartNoAxesCombined,
+        ],
       ]
     : actor.role === "cs" || actor.role === "cs_supervisor"
       ? [

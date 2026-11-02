@@ -155,7 +155,13 @@ export function Quotes() {
   return (
     <>
       <PageHead
-        eyebrow="日常接單"
+        eyebrow={
+          actor.role === "head"
+            ? "全部 Team"
+            : actor.role === "supervisor"
+              ? `Team ${actor.team}`
+              : "日常接單"
+        }
         title="報價管理"
         actions={
           salesRoles.includes(actor.role) && (

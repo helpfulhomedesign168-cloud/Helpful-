@@ -633,6 +633,21 @@ export interface Performance {
   nextBonus?: number;
   entries: PerformanceEntry[];
 }
+export interface TeamMemberPerformance {
+  actorId: string;
+  name: string;
+  code: string;
+  team: "A" | "B";
+  quoteCount: number;
+  sales: number;
+  commission: number;
+}
+export interface TeamPerformance {
+  scopeLabel: string;
+  members: TeamMemberPerformance[];
+  sales: number;
+  commission: number;
+}
 export interface DraftInput {
   customer: Customer;
   lines: QuoteLine[];
