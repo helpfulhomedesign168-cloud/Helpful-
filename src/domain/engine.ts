@@ -2569,17 +2569,14 @@ export class Engine {
     const teamCodes = new Set(teams.map((team) => team.code));
     const fallbackTeam = teams[0]?.code ?? "A";
     let actorMembers = this.state.actors.filter(
-      (item) =>
-        item.role === "sales" ||
-        item.role === "supervisor" ||
-        item.role === "head",
+      (item) => item.role === "sales",
     );
     let addedMembers = this.state.salesRosterMembers.filter(
       (member) => member.month === month,
     );
     if (actor.role === "supervisor") {
       actorMembers = actorMembers.filter(
-        (item) => item.id === actor.id || item.team === actor.team,
+        (item) => item.team === actor.team,
       );
       addedMembers = addedMembers.filter(
         (member) =>
@@ -2600,9 +2597,7 @@ export class Engine {
       ...actorMembers.map((item) => ({
         id: item.id,
         name: item.name,
-        kind: (item.role === "sales" ? "sales" : "supervisor") as
-          | "sales"
-          | "supervisor",
+        kind: "sales" as const,
         team: this.scheduleMemberTeam(
           this.state,
           month,

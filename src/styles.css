@@ -5493,3 +5493,68 @@ textarea {
   text-decoration: underline !important;
   cursor: pointer;
 }
+
+.sales-location-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.sales-location-name-row span {
+  font-size: 17px;
+}
+.sales-location-name-row button {
+  margin-top: 0 !important;
+  white-space: nowrap;
+}
+.roster-editor-list {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.roster-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px;
+  border: 1px solid #e6e9e1;
+  border-radius: 7px;
+  font-size: 13px;
+}
+.roster-editor-row > span {
+  color: #7c8476;
+  font-size: 12px;
+}
+.roster-editor-row .sales-delete-link {
+  margin-left: auto;
+  margin-top: 0 !important;
+}
+.roster-editor-code {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.roster-editor-add {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e9ece5;
+}
+.roster-editor-add > strong {
+  display: block;
+  margin-bottom: 10px;
+}
+.roster-editor-add .btn {
+  margin-top: 10px;
+}
+.form-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 700px) {
+  .form-grid.three {
+    grid-template-columns: 1fr;
+  }
+}

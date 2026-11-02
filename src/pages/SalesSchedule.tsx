@@ -6,7 +6,6 @@ import {
   DEMO_TODAY,
   SALES_OFF_CODE,
   SALES_PH_CODE,
-  SALES_WORK_SHIFT_NAMES,
   SalesAssignment,
   SalesRosterMember,
   SalesScheduleMember,
@@ -56,8 +55,8 @@ type LocationDraft = {
 type CellDraft = {
   member: SalesScheduleMember;
   date: string;
-  assignment: string;
-  workShift: SalesWorkShift;
+  team: string;
+  mode: "early" | "normal" | "off" | "ph";
 };
 
 export function SalesSchedule() {
@@ -65,9 +64,8 @@ export function SalesSchedule() {
   const [month, setMonth] = useState(DEMO_TODAY.slice(0, 7));
   const [location, setLocation] = useState<LocationDraft | null>(null);
   const [cell, setCell] = useState<CellDraft | null>(null);
-  const [addMember, setAddMember] = useState(false);
-  const [teamEdit, setTeamEdit] = useState(false);
-  const [salesEdit, setSalesEdit] = useState(false);
+  const [teamEditor, setTeamEditor] = useState(false);
+  const [salesEditor, setSalesEditor] = useState(false);
   const [newMember, setNewMember] = useState<{
     name: string;
     kind: "supervisor" | "sales";
@@ -130,14 +128,22 @@ export function SalesSchedule() {
   const openCell = (member: SalesScheduleMember, date: string) => {
     if (!canEdit) return;
     const row = shifts.get(`${member.id}|${date}`);
-    const assignment =
-      row?.assignment ??
-      (member.kind === "sales" ? member.team : schedule.teams[0]?.code ?? "A");
+    const mode =
+      row?.assignment === SALES_OFF_CODE
+        ? "off"
+        : row?.assignment === SALES_PH_CODE
+          ? "ph"
+          : row?.workShift ?? "normal";
     setCell({
       member,
       date,
-      assignment,
-      workShift: row?.workShift ?? "normal",
+      team:
+        row?.assignment &&
+        row.assignment !== SALES_OFF_CODE &&
+        row.assignment !== SALES_PH_CODE
+          ? row.assignment
+          : member.team,
+      mode,
     });
   };
   const cellStyle = (assignment?: string, workShift?: SalesWorkShift) => {
@@ -167,25 +173,6 @@ export function SalesSchedule() {
   const memberName = (member: SalesScheduleMember) => (
     <div className="sales-table-name">
       <strong>{member.name}</strong>
-      {canAdd &&
-        salesEdit &&
-        member.kind === "sales" &&
-        !member.sourceActorId && (
-          <button
-            type="button"
-            className="sales-delete-link"
-            aria-label={`刪除 ${member.name}`}
-            onClick={() =>
-              run(
-                () =>
-                  engine.deleteSalesRosterMember(actor, month, member.id),
-                `${member.name} 已刪除。`,
-              )
-            }
-          >
-            刪除
-          </button>
-        )}
     </div>
   );
   return (
@@ -223,24 +210,9 @@ export function SalesSchedule() {
         <section className="list-panel sales-sheet-panel">
           <div className="sales-sheet-head">
             <strong>銷售地點</strong>
-            {canAdd &&
-              (teamEdit ? (
-                <div className="sales-edit-actions">
-                  <Button
-                    onClick={() =>
-                      run(
-                        () => engine.addSalesRosterTeam(actor, month),
-                        "已新增Team。",
-                      )
-                    }
-                  >
-                    <Plus size={18} /> Team
-                  </Button>
-                  <Button onClick={() => setTeamEdit(false)}>完成</Button>
-                </div>
-              ) : (
-                <Button onClick={() => setTeamEdit(true)}>編輯</Button>
-              ))}
+            {canAdd && (
+              <Button onClick={() => setTeamEditor(true)}>編輯</Button>
+            )}
           </div>
           <div className="table-scroll sales-sheet-scroll">
             <table className="sales-location-grid">
@@ -271,37 +243,17 @@ export function SalesSchedule() {
                         className="sales-location-name"
                         style={{ background: color.bg, color: color.text }}
                       >
-                        <span>{team.code}</span>
-                        {canEditTeam(team.code) && (
-                          <button
-                            type="button"
-                            onClick={() => openLocation(team.code)}
-                          >
-                            + 新增地方
-                          </button>
-                        )}
-                        {canAdd &&
-                          teamEdit &&
-                          !["A", "B", "C"].includes(team.code) && (
+                        <div className="sales-location-name-row">
+                          <span>{team.code}</span>
+                          {canEditTeam(team.code) && (
                             <button
                               type="button"
-                              className="sales-delete-link"
-                              aria-label={`刪除 Team ${team.code}`}
-                              onClick={() =>
-                                run(
-                                  () =>
-                                    engine.deleteSalesRosterTeam(
-                                      actor,
-                                      month,
-                                      team.code,
-                                    ),
-                                  `Team ${team.code} 已刪除。`,
-                                )
-                              }
+                              onClick={() => openLocation(team.code)}
                             >
-                              刪除
+                              + 新增地方
                             </button>
                           )}
+                        </div>
                       </th>
                       {days.map((day) => {
                         const place = locationFor(team.code, day.date);
@@ -335,26 +287,9 @@ export function SalesSchedule() {
         <section className="list-panel sales-sheet-panel">
           <div className="sales-sheet-head">
             <strong>銷售 Sales</strong>
-            {canAdd &&
-              (salesEdit ? (
-                <div className="sales-edit-actions">
-                  <Button
-                    onClick={() => {
-                      setNewMember({
-                        name: "",
-                        kind: "sales",
-                        team: schedule.teams[0]?.code ?? "A",
-                      });
-                      setAddMember(true);
-                    }}
-                  >
-                    <Plus size={18} /> Sale
-                  </Button>
-                  <Button onClick={() => setSalesEdit(false)}>完成</Button>
-                </div>
-              ) : (
-                <Button onClick={() => setSalesEdit(true)}>編輯</Button>
-              ))}
+            {canAdd && (
+              <Button onClick={() => setSalesEditor(true)}>編輯</Button>
+            )}
           </div>
           <div className="table-scroll sales-sheet-scroll">
             <table className="sales-roster-grid">
@@ -457,68 +392,161 @@ export function SalesSchedule() {
         </section>
       </div>
 
-      {addMember && (
-        <Dialog title="新增Sales／主管" onClose={() => setAddMember(false)}>
-          <div className="form-grid two">
-            <Field label="名稱" required>
-              <input
-                aria-label="新成員名稱"
-                value={newMember.name}
-                onChange={(event) =>
-                  setNewMember({ ...newMember, name: event.target.value })
-                }
-                placeholder="例如：Karen"
-              />
-            </Field>
-            <Field label="類型" required>
-              <select
-                aria-label="新成員類型"
-                value={newMember.kind}
-                onChange={(event) =>
-                  setNewMember({
-                    ...newMember,
-                    kind: event.target.value as "supervisor" | "sales",
-                  })
-                }
-              >
-                <option value="sales">Sale</option>
-                <option value="supervisor">主管</option>
-              </select>
-            </Field>
-            <Field label="Team" required>
-              <select
-                aria-label="新成員Team"
-                value={newMember.team}
-                onChange={(event) =>
-                  setNewMember({ ...newMember, team: event.target.value })
-                }
-              >
-                {schedule.teams.map((team) => (
-                  <option key={team.code} value={team.code}>
-                    Team {team.code}
-                  </option>
-                ))}
-              </select>
-            </Field>
+      {teamEditor && (
+        <Dialog title="編輯Team" onClose={() => setTeamEditor(false)}>
+          <div className="roster-editor-list">
+            {schedule.teams.map((team) => {
+              const color = colorForTeam(team.colorIndex);
+              return (
+                <div className="roster-editor-row" key={team.code}>
+                  <span
+                    className="roster-editor-code"
+                    style={{ background: color.bg, color: color.text }}
+                  >
+                    {team.code}
+                  </span>
+                  <strong>Team {team.code}</strong>
+                  {!["A", "B", "C"].includes(team.code) && (
+                    <button
+                      type="button"
+                      className="sales-delete-link"
+                      aria-label={`刪除 Team ${team.code}`}
+                      onClick={() =>
+                        run(
+                          () =>
+                            engine.deleteSalesRosterTeam(
+                              actor,
+                              month,
+                              team.code,
+                            ),
+                          `Team ${team.code} 已刪除。`,
+                        )
+                      }
+                    >
+                      刪除
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <p className="schedule-day-note">
-            新增 Sale 後會自動安排：5日 D 放假、最少10日早更，其餘為日常更。
-          </p>
+          <Button
+            onClick={() =>
+              run(
+                () => engine.addSalesRosterTeam(actor, month),
+                "已新增Team。",
+              )
+            }
+          >
+            <Plus size={18} /> Team
+          </Button>
           <div className="dialog-actions">
-            <Button onClick={() => setAddMember(false)}>取消</Button>
+            <Button variant="primary" onClick={() => setTeamEditor(false)}>
+              完成
+            </Button>
+          </div>
+        </Dialog>
+      )}
+
+      {salesEditor && (
+        <Dialog title="編輯Sales" onClose={() => setSalesEditor(false)}>
+          <div className="roster-editor-list">
+            {schedule.members.map((member) => (
+              <div className="roster-editor-row" key={member.id}>
+                <strong>{member.name}</strong>
+                <span>
+                  {member.kind === "supervisor" ? "主管" : "Sale"} · Team{" "}
+                  {member.team}
+                </span>
+                {!member.sourceActorId && (
+                  <button
+                    type="button"
+                    className="sales-delete-link"
+                    aria-label={`刪除 ${member.name}`}
+                    onClick={() =>
+                      run(
+                        () =>
+                          engine.deleteSalesRosterMember(
+                            actor,
+                            month,
+                            member.id,
+                          ),
+                        `${member.name} 已刪除。`,
+                      )
+                    }
+                  >
+                    刪除
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="roster-editor-add">
+            <strong>新增成員</strong>
+            <div className="form-grid three">
+              <Field label="名稱" required>
+                <input
+                  aria-label="新成員名稱"
+                  value={newMember.name}
+                  onChange={(event) =>
+                    setNewMember({ ...newMember, name: event.target.value })
+                  }
+                  placeholder="例如：Karen"
+                />
+              </Field>
+              <Field label="類型" required>
+                <select
+                  aria-label="新成員類型"
+                  value={newMember.kind}
+                  onChange={(event) =>
+                    setNewMember({
+                      ...newMember,
+                      kind: event.target.value as "supervisor" | "sales",
+                    })
+                  }
+                >
+                  <option value="sales">Sale</option>
+                  <option value="supervisor">主管</option>
+                </select>
+              </Field>
+              <Field label="Team" required>
+                <select
+                  aria-label="新成員Team"
+                  value={newMember.team}
+                  onChange={(event) =>
+                    setNewMember({ ...newMember, team: event.target.value })
+                  }
+                >
+                  {schedule.teams.map((team) => (
+                    <option key={team.code} value={team.code}>
+                      Team {team.code}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
             <Button
               variant="primary"
               onClick={() => {
-                let saved = false;
-                run(() => {
-                  engine.addSalesRosterMember(actor, month, newMember);
-                  saved = true;
-                  return true;
-                }, "已新增成員並自動排班。");
-                if (saved) setAddMember(false);
+                const saved = run(
+                  () =>
+                    engine.addSalesRosterMember(actor, month, newMember),
+                  "已新增成員並自動排班。",
+                );
+                if (saved) {
+                  setNewMember({
+                    ...newMember,
+                    name: "",
+                  });
+                }
               }}
             >
               新增並自動排班
+            </Button>
+          </div>
+          <div className="dialog-actions">
+            <Button variant="primary" onClick={() => setSalesEditor(false)}>
+              完成
             </Button>
           </div>
         </Dialog>
@@ -533,9 +561,10 @@ export function SalesSchedule() {
             <Field label="安排" required>
               <select
                 aria-label="更表安排"
-                value={cell.assignment}
+                value={cell.team}
+                disabled={cell.mode === "off" || cell.mode === "ph"}
                 onChange={(event) =>
-                  setCell({ ...cell, assignment: event.target.value })
+                  setCell({ ...cell, team: event.target.value })
                 }
               >
                 {schedule.teams.map((team) => (
@@ -543,27 +572,23 @@ export function SalesSchedule() {
                     Team {team.code}
                   </option>
                 ))}
-                <option value={SALES_OFF_CODE}>D 放假</option>
-                <option value={SALES_PH_CODE}>D 補假</option>
               </select>
             </Field>
-            <Field label="更份">
+            <Field label="更份" required>
               <select
                 aria-label="更份"
-                value={cell.workShift}
-                disabled={
-                  cell.assignment === SALES_OFF_CODE ||
-                  cell.assignment === SALES_PH_CODE
-                }
+                value={cell.mode}
                 onChange={(event) =>
                   setCell({
                     ...cell,
-                    workShift: event.target.value as SalesWorkShift,
+                    mode: event.target.value as CellDraft["mode"],
                   })
                 }
               >
                 <option value="early">早更 9-6</option>
                 <option value="normal">日常 10-7</option>
+                <option value="off">D 放假</option>
+                <option value="ph">D 補假</option>
               </select>
             </Field>
           </div>
@@ -572,14 +597,22 @@ export function SalesSchedule() {
             <Button
               variant="primary"
               onClick={() => {
+                const assignment =
+                  cell.mode === "off"
+                    ? SALES_OFF_CODE
+                    : cell.mode === "ph"
+                      ? SALES_PH_CODE
+                      : cell.team;
                 run(
                   () =>
                     engine.setSalesShift(
                       actor,
                       cell.member.id,
                       cell.date,
-                      cell.assignment,
-                      cell.workShift,
+                      assignment,
+                      cell.mode === "early" || cell.mode === "normal"
+                        ? cell.mode
+                        : undefined,
                     ),
                   "更表已更新。",
                 );
