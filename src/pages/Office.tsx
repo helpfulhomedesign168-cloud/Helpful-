@@ -7,6 +7,9 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
   FileText,
   Plus,
   Hammer,
@@ -752,15 +755,80 @@ export function Invoices() {
   const { actor, engine } = useApp();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<
+    "none" | "invoice" | "sales" | "status"
+  >("none");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const actors = engine.listActors();
+  let orders = [] as WorkOrder[];
+  try {
+    orders = engine.listOrders(actor);
+  } catch {}
+  const orderByInvoice = new Map(
+    orders.map((order) => [order.invoiceId, order]),
+  );
+  const salesName = (invoice: (typeof invoices)[number]) => {
+    const quote = engine.getQuote(actor, invoice.quoteId);
+    return actors.find((candidate) => candidate.id === quote.ownerId)?.name || "";
+  };
+  const engineeringLabel = (invoice: (typeof invoices)[number]) => {
+    const order = orderByInvoice.get(invoice.id);
+    if (order?.status === "completed") return "完成工程";
+    if (order?.csReleasedAt) return "已發工程部";
+    return "待收足50%";
+  };
+  const statusRank = (label: string) =>
+    label === "完成工程" ? 3 : label === "已發工程部" ? 2 : 1;
   const invoices = [...engine.listInvoices(actor)]
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .filter((invoice) =>
       `${invoice.number} ${invoice.customer.name} ${invoice.customer.address}`.includes(
         search,
       ),
-    );
-  const pager = usePagination(invoices, search);
-  const actors = engine.listActors();
+    )
+    .sort((a, b) => {
+      if (sortKey === "invoice")
+        return sortDir === "asc"
+          ? a.number.localeCompare(b.number)
+          : b.number.localeCompare(a.number);
+      if (sortKey === "sales")
+        return sortDir === "asc"
+          ? salesName(a).localeCompare(salesName(b), "zh-Hant")
+          : salesName(b).localeCompare(salesName(a), "zh-Hant");
+      if (sortKey === "status")
+        return sortDir === "asc"
+          ? statusRank(engineeringLabel(a)) - statusRank(engineeringLabel(b))
+          : statusRank(engineeringLabel(b)) - statusRank(engineeringLabel(a));
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+  const pager = usePagination(invoices, `${search}|${sortKey}|${sortDir}`);
+  const sortButton = (
+    key: "invoice" | "sales" | "status",
+    label: string,
+  ) => (
+    <button
+      type="button"
+      className={`sortable-th ${sortKey === key ? "active" : ""}`}
+      onClick={() => {
+        if (sortKey === key) {
+          setSortDir(sortDir === "asc" ? "desc" : "asc");
+        } else {
+          setSortKey(key);
+          setSortDir("asc");
+        }
+      }}
+    >
+      {label}
+      {sortKey === key ? (
+        sortDir === "asc" ? (
+          <ChevronUp size={14} />
+        ) : (
+          <ChevronDown size={14} />
+        )
+      ) : (
+        <ArrowUpDown size={13} />
+      )}
+    </button>
+  );
   return (
     <>
       <PageHead title="單據管理" />
@@ -782,12 +850,12 @@ export function Invoices() {
             <table>
               <thead>
                 <tr>
-                  <th>Invoice單</th>
+                  <th>{sortButton("invoice", "Invoice單")}</th>
                   <th>客戶／地區</th>
-                  <th>Sales</th>
+                  <th>{sortButton("sales", "Sales")}</th>
                   <th className="numeric">成交額</th>
                   <th>歸類／收款進度</th>
-                  <th>工程狀態</th>
+                  <th>{sortButton("status", "工程狀態")}</th>
                   <th />
                 </tr>
               </thead>
@@ -798,6 +866,8 @@ export function Invoices() {
                   const sales = actors.find(
                     (candidate) => candidate.id === quote.ownerId,
                   );
+                  const order = orderByInvoice.get(invoice.id);
+                  const engineering = engineeringLabel(invoice);
                   return (
                     <tr key={invoice.id}>
                       <td>
@@ -821,14 +891,37 @@ export function Invoices() {
                             ? INVOICE_CATEGORY_NAMES[invoice.category]
                             : "歷史未分類"}
                         </strong>
-                        <small>
-                          已核 {money(status.validPaid)}／{money(status.total)}{" "}
-                          · {status.percentPaid}%
-                        </small>
+                        <div className="payment-progress">
+                          <div className="payment-progress-label">
+                            <span>
+                              已核 {money(status.validPaid)}／
+                              {money(status.total)}
+                            </span>
+                            <strong>{status.percentPaid}%</strong>
+                          </div>
+                          <div
+                            className="payment-progress-track"
+                            role="progressbar"
+                            aria-valuenow={status.percentPaid}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                          >
+                            <span
+                              style={{
+                                width: `${Math.min(100, status.percentPaid)}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
                       </td>
                       <td>
-                        <Badge strong={status.releasedToCS}>
-                          {status.releasedToCS ? "已發工程部" : "待收足50%"}
+                        <Badge
+                          strong={
+                            engineering === "完成工程" ||
+                            Boolean(order?.csReleasedAt)
+                          }
+                        >
+                          {engineering}
                         </Badge>
                       </td>
                       <td>
@@ -1525,10 +1618,12 @@ function WorkOrderCalendar({
   order,
   assignments,
   extraWorks,
+  resources,
 }: {
   order: WorkOrder;
   assignments: Assignment[];
   extraWorks: ExtraWork[];
+  resources: Resource[];
 }) {
   const [month, setMonth] = useState(order.startDate.slice(0, 7));
   useEffect(() => {
@@ -1546,22 +1641,28 @@ function WorkOrderCalendar({
     const line = order.lines.find((item) =>
       assignment.lineIds.includes(item.id),
     );
+    const resource = resources.find(
+      (item) => item.id === assignment.resourceId,
+    );
     events.push({
       id: assignment.id,
       start: assignment.date,
       end: assignment.endDate ?? assignment.date,
-      label: `${line?.itemSnapshot.name ?? "施工"} · ${assignment.time}`,
+      label: `${line?.itemSnapshot.name ?? "施工"} · ${resource?.name ?? "未分派師傅"} · ${assignment.time}`,
     });
   });
   extraWorks.forEach((extra) => {
+    const resource = resources.find(
+      (item) => item.id === extra.resourceId,
+    );
     events.push({
       id: extra.id,
       start: extra.startDate,
       end: extra.endDate,
       label:
         extra.kind === "fabrication"
-          ? "造貨"
-          : `${EXTRA_WORK_LABELS[extra.kind]} · ${extra.time}`,
+          ? `造貨 · ${resource?.name ?? "未分派師傅"}`
+          : `${EXTRA_WORK_LABELS[extra.kind]} · ${resource?.name ?? "未分派師傅"} · ${extra.time}`,
     });
   });
   const cells: Array<string | null> = [
@@ -1967,10 +2068,28 @@ function OrderPanel({ order }: { order: WorkOrder }) {
     <>
       <div className="workorder-head">
         <h1>{order.number}</h1>
-        <Button onClick={() => nav("/documents/invoice/" + invoice.id)}>
-          <Printer size={20} />
-          Invoice
-        </Button>
+        <div className="workorder-head-actions">
+          {order.status === "completed" ? (
+            <Badge strong>完成工程</Badge>
+          ) : (
+            canEdit && (
+              <Button
+                onClick={() =>
+                  run(
+                    () => engine.completeWorkOrder(actor, order!.id),
+                    "工程已標記為完成。",
+                  )
+                }
+              >
+                <Check size={18} /> 完成工程
+              </Button>
+            )
+          )}
+          <Button onClick={() => nav("/documents/invoice/" + invoice.id)}>
+            <Printer size={20} />
+            Invoice
+          </Button>
+        </div>
       </div>
       <div className="order-banner order-banner-with-dates">
         <div>
@@ -2004,6 +2123,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         order={order}
         assignments={assignments}
         extraWorks={extraWorks}
+        resources={resources}
       />
       <Section title="工程內容" className="engineering-content-card">
         <div className="extra-works">
@@ -2566,7 +2686,7 @@ export function Orders() {
 
 export function OrderDetail() {
   const { id = "" } = useParams();
-  const { actor, engine } = useApp();
+  const { actor, engine, run } = useApp();
   const nav = useNavigate();
   let order: WorkOrder | undefined;
   try {

@@ -3258,6 +3258,32 @@ export class Engine {
     });
     return output;
   }
+  completeWorkOrder(actorInput: Actor, workOrderId: string): WorkOrder {
+    const actor = this.actor(actorInput);
+    if (!(isCsActor(actor) || actor.role === "admin"))
+      fail("只有CS或Super Admin可完成工程。");
+    let output!: WorkOrder;
+    this.mutate((state) => {
+      const order =
+        state.orders.find((item) => item.id === workOrderId) ??
+        fail("找不到工程單。");
+      if (!this.orderReadable(actor, order))
+        fail("你沒有完成此工程的權限。");
+      if (!order.csReleasedAt) fail("此工程尚未發工程部，未可完成。");
+      if (order.status !== "completed") {
+        order.status = "completed";
+        this.audit(state, {
+          quoteId: order.quoteId,
+          workOrderId: order.id,
+          actorId: actor.id,
+          action: "work_order_completed",
+          detail: `工程 ${order.number} 標記為完成工程`,
+        });
+      }
+      output = deepCopy(order);
+    });
+    return output;
+  }
   assign(
     actorInput: Actor,
     workOrderId: string,
@@ -3316,11 +3342,13 @@ export class Engine {
         createdAt: NOW,
       };
       state.assignments.push(output);
-      order.status = order.lines.every((line) =>
-        [...used, ...input.lineIds].includes(line.id),
-      )
-        ? "arranged"
-        : "pending";
+      if (order.status !== "completed") {
+        order.status = order.lines.every((line) =>
+          [...used, ...input.lineIds].includes(line.id),
+        )
+          ? "arranged"
+          : "pending";
+      }
       this.audit(state, {
         quoteId: order.quoteId,
         workOrderId: order.id,
