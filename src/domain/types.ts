@@ -438,7 +438,7 @@ export interface WorkOrder {
   createdAt: string;
   startDate: string;
   endDate: string;
-  status: "pending" | "arranged";
+  status: "pending" | "arranged" | "completed";
   /** 累計有效收款達成交額50%後才發給CS；未達標只供開單員查閱。 */
   csReleasedAt?: string;
   /** CS主管指派的跟進同事；與判頭／師傅Assignment分開。 */

@@ -4482,3 +4482,60 @@ textarea {
     flex: 1 1 160px;
   }
 }
+
+.workorder-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sortable-th {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.sortable-th:hover,
+.sortable-th.active {
+  color: #24271f;
+}
+.sortable-th svg {
+  opacity: 0.55;
+}
+.sortable-th.active svg {
+  opacity: 1;
+}
+.payment-progress {
+  min-width: 180px;
+  margin-top: 8px;
+}
+.payment-progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+  color: #737a6d;
+  font-size: 12px;
+}
+.payment-progress-label strong {
+  color: #30352b;
+  font-size: 12px;
+}
+.payment-progress-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9ece4;
+}
+.payment-progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #59684d;
+}
