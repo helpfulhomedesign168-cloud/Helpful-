@@ -503,6 +503,8 @@ export interface AppState {
   productStyles: ProductStyleSeries[];
   municipalOrders: MunicipalOrder[];
   salesShifts: SalesShift[];
+  salesMonthlyTeams: SalesMonthlyTeam[];
+  salesTeamLocations: SalesTeamLocation[];
   audits: AuditEvent[];
   notifications: Notification[];
   monthlySequences: Record<string, number>;
@@ -634,26 +636,43 @@ export interface Performance {
   nextBonus?: number;
   entries: PerformanceEntry[];
 }
-export type SalesShiftCode =
-  | "morning"
-  | "afternoon"
-  | "evening"
-  | "full"
-  | "off"
-  | "leave";
-export const SALES_SHIFT_NAMES: Record<SalesShiftCode, string> = {
-  morning: "早班",
-  afternoon: "午班",
-  evening: "晚班",
-  full: "全日",
-  off: "休息",
-  leave: "年假",
+export type SalesAssignment = "A" | "B" | "C" | "D" | "PH";
+export type SalesWorkShift = "early" | "normal";
+export const SALES_ASSIGNMENT_NAMES: Record<SalesAssignment, string> = {
+  A: "Team A",
+  B: "Team B",
+  C: "Team C",
+  D: "放假",
+  PH: "補假",
+};
+export const SALES_WORK_SHIFT_NAMES: Record<SalesWorkShift, string> = {
+  early: "早更 9-6",
+  normal: "日常 10-7",
 };
 export interface SalesShift {
   id: string;
   actorId: string;
   date: string;
-  shift: SalesShiftCode;
+  assignment: SalesAssignment;
+  workShift?: SalesWorkShift;
+  updatedBy: string;
+  updatedAt: string;
+}
+export interface SalesMonthlyTeam {
+  id: string;
+  actorId: string;
+  month: string;
+  team: "A" | "B" | "C";
+  updatedBy: string;
+  updatedAt: string;
+}
+export interface SalesTeamLocation {
+  id: string;
+  month: string;
+  team: "A" | "B" | "C";
+  startDate: string;
+  endDate: string;
+  location: string;
   updatedBy: string;
   updatedAt: string;
 }

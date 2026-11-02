@@ -4702,3 +4702,155 @@ textarea {
     justify-content: flex-start;
   }
 }
+
+/* Full monthly roster */
+.roster-stack {
+  display: grid;
+  gap: 16px;
+}
+.roster-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.roster-section-head p {
+  margin: 5px 0 0;
+  color: #737a6d;
+  font-size: 13px;
+}
+.monthly-team-table {
+  min-width: 520px;
+}
+.monthly-team-table td:first-child strong,
+.monthly-team-table td:first-child small {
+  display: block;
+}
+.monthly-team-table td:first-child small {
+  color: #8a9282;
+  font-size: 11px;
+}
+.monthly-team-table select {
+  min-width: 130px;
+}
+.roster-editor {
+  display: flex;
+  flex-direction: column;
+  height: 54px;
+}
+.roster-assignment {
+  flex: 1;
+  min-height: 32px;
+  font-weight: 700;
+}
+.roster-workshift {
+  height: 22px;
+  min-height: 22px !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+  font-size: 10px !important;
+}
+.roster-readonly {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 3px;
+  font-weight: 700;
+}
+.roster-readonly small {
+  font-size: 10px;
+  font-weight: 400;
+}
+.roster-cell.work-early {
+  background: #e6e6e4;
+}
+.roster-cell.work-normal {
+  background: #dcecf4;
+}
+.roster-cell.assignment-d {
+  background: #f6d9c9;
+}
+.roster-cell.assignment-ph {
+  background: #78986c;
+  color: #fff;
+}
+.roster-cell.assignment-ph select {
+  color: #fff;
+}
+.roster-legend [data-assignment="A"],
+.roster-legend [data-assignment="B"],
+.roster-legend [data-assignment="C"] {
+  background: #f3f4ef;
+}
+.roster-legend [data-assignment="D"] {
+  background: #f6d9c9;
+}
+.roster-legend [data-assignment="PH"] {
+  background: #78986c;
+  color: #fff;
+}
+.roster-legend [data-work="early"] {
+  background: #e6e6e4;
+}
+.roster-legend [data-work="normal"] {
+  background: #dcecf4;
+}
+.team-location-row th {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  padding: 0 12px !important;
+  text-align: left !important;
+  color: #59624f;
+  font-size: 12px;
+  background: #f7f8f3;
+}
+.team-location-row td {
+  height: 42px;
+  overflow: hidden;
+  padding: 0 3px !important;
+  color: #59624f;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: #fbfcf8;
+}
+.roster-location-panel {
+  padding-bottom: 8px;
+}
+.roster-location-list {
+  display: grid;
+  gap: 8px;
+  padding: 14px 20px;
+}
+.roster-location-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid #e4e7de;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.roster-location-item > strong {
+  margin-left: auto;
+}
+.roster-location-actions {
+  display: flex;
+  gap: 2px;
+}
+.roster-empty {
+  margin: 0;
+  padding: 18px 20px;
+  color: #7a8174;
+}
+@media (max-width: 800px) {
+  .roster-section-head {
+    flex-direction: column;
+  }
+  .roster-location-item {
+    flex-wrap: wrap;
+  }
+}

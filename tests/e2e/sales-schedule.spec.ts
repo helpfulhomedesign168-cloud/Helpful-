@@ -20,17 +20,46 @@ test("Sales阿頭可編排全部Team月度更表，普通Sales只讀自己排班
   await expect(
     page.getByRole("heading", { name: "Sales排班", exact: true }),
   ).toBeVisible();
+  const monthlyTeam = page.getByLabel("文文B MM 本月Team");
+  await monthlyTeam.selectOption("A");
+  await expect(monthlyTeam).toHaveValue("A");
+  await page
+    .locator(".monthly-team-table tr")
+    .filter({ hasText: "文文B MM" })
+    .getByRole("button", { name: "套用全月", exact: true })
+    .click();
+  await expect(page.getByLabel("文文B MM 2026-10-01 排班")).toHaveValue("A");
   const shift = page.getByLabel("文文B MM 2026-10-05 排班");
-  await shift.selectOption("morning");
-  await expect(shift).toHaveValue("morning");
+  await shift.selectOption("A");
+  await expect(shift).toHaveValue("A");
+  await page.getByLabel("文文B MM 2026-10-05 更份").selectOption("early");
+  await expect(page.getByLabel("文文B MM 2026-10-05 更份")).toHaveValue(
+    "early",
+  );
+  await page.getByLabel("文文B MM 2026-10-08 排班").selectOption("PH");
+
+  await page.getByRole("button", { name: "新增地點", exact: true }).click();
+  const locationDialog = page.getByRole("dialog", { name: "新增Team地點" });
+  await locationDialog.locator("select").selectOption("A");
+  await locationDialog.getByLabel("工作地點", { exact: false }).fill("恒安");
+  await locationDialog.getByLabel("開始日期", { exact: false }).fill("2026-10-01");
+  await locationDialog.getByLabel("結束日期", { exact: false }).fill("2026-10-03");
+  await locationDialog.getByRole("button", { name: "儲存地點", exact: true }).click();
+  await expect(
+    page.locator(".team-location-row").filter({ hasText: "Team A 地點" }),
+  ).toContainText("恒安");
   await expect(
     page.locator(".roster-coverage td").nth(4),
   ).toContainText("1");
 
   await page.reload();
   await expect(page.getByLabel("文文B MM 2026-10-05 排班")).toHaveValue(
-    "morning",
+    "A",
   );
+  await expect(page.getByLabel("文文B MM 本月Team")).toHaveValue("A");
+  await expect(
+    page.locator(".team-location-row").filter({ hasText: "Team A 地點" }),
+  ).toContainText("恒安");
 
   await switchRole(page, "嘉嘉B KK");
   await expect(
@@ -44,5 +73,5 @@ test("Sales阿頭可編排全部Team月度更表，普通Sales只讀自己排班
     page.getByRole("heading", { name: "我的排班", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".sales-roster-table select")).toHaveCount(0);
-  await expect(page.locator(".sales-roster-table tbody tr")).toHaveCount(2);
+  await expect(page.locator(".roster-person")).toHaveCount(1);
 });

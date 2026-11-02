@@ -172,12 +172,12 @@ it("Sales排班只准阿頭改全部Team、主管改自己Team，普通Sales只�
   const supervisor = actor(e, "supervisor-sh");
   const sales = actor(e, "sales-mm");
   expect(() =>
-    e.setSalesShift(sales, "sales-mm", "2026-10-05", "morning"),
+    e.setSalesShift(sales, "sales-mm", "2026-10-05", "A"),
   ).toThrow("只有Sales阿頭或主管");
   expect(() =>
-    e.setSalesShift(supervisor, "sales-mm", "2026-10-05", "morning"),
+    e.setSalesShift(supervisor, "sales-mm", "2026-10-05", "A"),
   ).toThrow("自己Team");
-  e.setSalesShift(head, "sales-mm", "2026-10-05", "morning");
+  e.setSalesShift(head, "sales-mm", "2026-10-05", "A");
   expect(
     e
       .listSalesSchedule(head, "2026-10")
