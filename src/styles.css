@@ -4467,3 +4467,18 @@ textarea {
 .municipal-principal-table td:first-child strong {
   display: block;
 }
+
+.list-toolbar > select {
+  width: 190px;
+  flex: 0 0 190px;
+}
+.list-toolbar > .muted {
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+@media (max-width: 800px) {
+  .list-toolbar > select {
+    width: auto;
+    flex: 1 1 160px;
+  }
+}

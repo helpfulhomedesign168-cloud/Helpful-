@@ -10,6 +10,11 @@ test("報價可多選訂單分類及標記加單來源", async ({ page }) => {
   page.on("pageerror", (event) => errors.push(event.message));
   await page.goto("/");
   await switchRole(page, "文文B MM");
+  await page.goto("/quotes?tab=draft");
+  await expect(page.locator("thead").getByText("日期", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("報價月份")).toBeVisible();
+  await page.getByLabel("報價月份").selectOption("2026-10");
+  await expect(page.locator("tbody tr").first()).toBeVisible();
   await page.goto("/quotes/quote-draft-1");
 
   const categories = page.locator(".order-category-chips");
