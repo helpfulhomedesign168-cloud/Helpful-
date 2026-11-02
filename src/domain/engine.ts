@@ -2693,24 +2693,52 @@ export class Engine {
         )
       )
         fail("找不到此Team。");
-      if (
-        state.salesMonthlyTeams.some(
-          (team) => team.month === month && team.team === code,
-        ) ||
-        state.salesRosterMembers.some(
-          (member) => member.month === month && member.team === code,
-        ) ||
-        state.salesTeamLocations.some(
-          (location) => location.month === month && location.team === code,
-        ) ||
-        state.salesShifts.some(
-          (shift) =>
-            shift.date.startsWith(month) && shift.assignment === code,
-        )
-      )
+      const currentMemberIds = new Set([
+        ...state.actors
+          .filter((member) => member.role === "sales")
+          .map((member) => member.id),
+        ...state.salesRosterMembers
+          .filter((member) => member.month === month)
+          .map((member) => member.id),
+      ]);
+      const hasMembers = [
+        ...state.actors.filter((member) => member.role === "sales"),
+        ...state.salesRosterMembers.filter(
+          (member) => member.month === month,
+        ),
+      ].some(
+        (member) =>
+          this.scheduleMemberTeam(
+            state,
+            month,
+            member.id,
+            member.team,
+          ) === code,
+      );
+      const hasShifts = state.salesShifts.some(
+        (shift) =>
+          shift.date.startsWith(month) &&
+          shift.assignment === code &&
+          currentMemberIds.has(shift.actorId),
+      );
+      const hasLocations = state.salesTeamLocations.some(
+        (location) => location.month === month && location.team === code,
+      );
+      if (hasMembers || hasShifts || hasLocations)
         fail("此Team仍有成員、地點或更表，請先清空才刪除。");
       state.salesRosterTeams = state.salesRosterTeams.filter(
         (team) => !(team.month === month && team.code === code),
+      );
+      state.salesMonthlyTeams = state.salesMonthlyTeams.filter(
+        (team) => !(team.month === month && team.team === code),
+      );
+      state.salesShifts = state.salesShifts.filter(
+        (shift) =>
+          !(
+            shift.date.startsWith(month) &&
+            shift.assignment === code &&
+            !currentMemberIds.has(shift.actorId)
+          ),
       );
       this.audit(state, {
         quoteId: "",

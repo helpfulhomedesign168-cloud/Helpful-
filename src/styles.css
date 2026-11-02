@@ -5558,3 +5558,16 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+.sales-location-span {
+  padding: 0 !important;
+}
+.sales-location-span .sales-location-cell {
+  min-height: 40px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.sales-location-span.empty {
+  background: #fff;
+}

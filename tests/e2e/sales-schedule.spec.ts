@@ -41,7 +41,10 @@ test("Sales阿頭用編輯popup管理Team/Sale，自動排班及每格可改", a
 
   const teamARow = page.locator(".sales-location-grid tbody tr").first();
   await teamARow.getByRole("button", { name: "+ 新增地方" }).click();
-  const locationDialog = page.getByRole("dialog", { name: "新增Team地點" });
+  const locationDialog = page.getByRole("dialog", {
+    name: /新增 Team A 地點/,
+  });
+  await expect(locationDialog.locator("select")).toHaveCount(0);
   await locationDialog.getByLabel("工作地點").fill("恒安");
   await locationDialog.getByLabel("開始日期").fill("2026-10-01");
   await locationDialog.getByLabel("結束日期").fill("2026-10-03");
@@ -49,6 +52,9 @@ test("Sales阿頭用編輯popup管理Team/Sale，自動排班及每格可改", a
     .getByRole("button", { name: "儲存地點", exact: true })
     .click();
   await expect(teamARow).toContainText("恒安");
+  await expect(
+    teamARow.getByRole("button", { name: "恒安", exact: true }),
+  ).toHaveCount(1);
 
   await salesPanel.getByRole("button", { name: "編輯", exact: true }).click();
   const salesDialog = page.getByRole("dialog", { name: "編輯Sales" });

@@ -125,6 +125,43 @@ it("CS可讀取工程單所屬報價版本的line金額，供6成師傅費計算
   expect(Object.values(amounts).every((amount) => amount > 0)).toBe(true);
 });
 
+it("空的Team即使有已刪成員的殘留monthlyTeam/shift仍可刪除", () => {
+  const state = createSeedState();
+  state.salesRosterTeams.push({
+    id: "team-d",
+    month: "2026-10",
+    code: "D",
+    colorIndex: 3,
+    order: 4,
+    createdBy: "head-don",
+    createdAt: "2026-10-22T12:00:00+08:00",
+  });
+  state.salesMonthlyTeams.push({
+    id: "stale-team",
+    actorId: "removed-sale",
+    month: "2026-10",
+    team: "D",
+    updatedBy: "head-don",
+    updatedAt: "2026-10-22T12:00:00+08:00",
+  });
+  state.salesShifts.push({
+    id: "stale-shift",
+    actorId: "removed-sale",
+    date: "2026-10-01",
+    assignment: "D",
+    updatedBy: "head-don",
+    updatedAt: "2026-10-22T12:00:00+08:00",
+  });
+  const e = new Engine(undefined, state);
+  const head = actor(e, "head-don");
+  e.deleteSalesRosterTeam(head, "2026-10", "D");
+  expect(
+    e
+      .getSalesSchedule(head, "2026-10")
+      .teams.some((team) => team.code === "D"),
+  ).toBe(false);
+});
+
 it("多項訂單分類按自費 > 8萬資助 > 團購決定收款分類", () => {
   const e = new Engine(undefined, createSeedState());
   const sales = actor(e, "sales-mm");

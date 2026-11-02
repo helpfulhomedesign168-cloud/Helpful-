@@ -91,6 +91,22 @@ export function SalesSchedule() {
       (row) =>
         row.team === team && row.startDate <= date && row.endDate >= date,
     );
+  const locationSegments = (team: string) => {
+    const segments: Array<{
+      start: number;
+      span: number;
+      location: string;
+      row?: SalesTeamLocation;
+    }> = [];
+    days.forEach((day, index) => {
+      const row = locationFor(team, day.date);
+      const location = row?.location ?? "";
+      const last = segments.at(-1);
+      if (last && last.location === location) last.span += 1;
+      else segments.push({ start: index, span: 1, location, row });
+    });
+    return segments;
+  };
   const supervisorMembers = schedule.members.filter(
     (member) => member.kind === "supervisor",
   );
@@ -255,27 +271,33 @@ export function SalesSchedule() {
                           )}
                         </div>
                       </th>
-                      {days.map((day) => {
-                        const place = locationFor(team.code, day.date);
-                        return (
-                          <td key={day.date}>
-                            {place ? (
-                              <button
-                                type="button"
-                                className="sales-location-cell"
-                                onClick={() =>
-                                  canEditTeam(team.code) &&
-                                  openLocation(team.code, place)
-                                }
-                              >
-                                {place.location}
-                              </button>
-                            ) : (
-                              <span />
-                            )}
+                      {locationSegments(team.code).map((segment, index) =>
+                        segment.location ? (
+                          <td
+                            key={`${team.code}-${segment.start}`}
+                            colSpan={segment.span}
+                            className="sales-location-span"
+                          >
+                            <button
+                              type="button"
+                              className="sales-location-cell"
+                              onClick={() =>
+                                canEditTeam(team.code) &&
+                                segment.row &&
+                                openLocation(team.code, segment.row)
+                              }
+                            >
+                              {segment.location}
+                            </button>
                           </td>
-                        );
-                      })}
+                        ) : (
+                          <td
+                            key={`${team.code}-empty-${segment.start}-${index}`}
+                            colSpan={segment.span}
+                            className="sales-location-span empty"
+                          />
+                        ),
+                      )}
                     </tr>
                   );
                 })}
@@ -627,26 +649,10 @@ export function SalesSchedule() {
 
       {location && (
         <Dialog
-          title={location.id ? "修改Team地點" : "新增Team地點"}
+          title={`${location.id ? "修改" : "新增"} Team ${location.team} 地點`}
           onClose={() => setLocation(null)}
         >
           <div className="form-grid two">
-            <Field label="Team" required>
-              <select
-                aria-label="地點Team"
-                value={location.team}
-                disabled={actor.role === "supervisor"}
-                onChange={(event) =>
-                  setLocation({ ...location, team: event.target.value })
-                }
-              >
-                {schedule.teams.map((team) => (
-                  <option key={team.code} value={team.code}>
-                    Team {team.code}
-                  </option>
-                ))}
-              </select>
-            </Field>
             <Field label="工作地點" required>
               <input
                 aria-label="工作地點"
