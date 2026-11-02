@@ -66,6 +66,8 @@ export function SalesSchedule() {
   const [location, setLocation] = useState<LocationDraft | null>(null);
   const [cell, setCell] = useState<CellDraft | null>(null);
   const [addMember, setAddMember] = useState(false);
+  const [teamEdit, setTeamEdit] = useState(false);
+  const [salesEdit, setSalesEdit] = useState(false);
   const [newMember, setNewMember] = useState<{
     name: string;
     kind: "supervisor" | "sales";
@@ -162,50 +164,33 @@ export function SalesSchedule() {
       return "D";
     return assignment;
   };
-  const memberName = (
-    member: SalesScheduleMember,
-    withTeamSelect = true,
-  ) => (
+  const memberName = (member: SalesScheduleMember) => (
     <div className="sales-table-name">
       <strong>{member.name}</strong>
-      {canEdit && member.kind === "sales" && withTeamSelect ? (
-        <select
-          aria-label={`${member.name} 本月Team`}
-          value={member.team}
-          onChange={(event) =>
-            run(
-              () =>
-                engine.setSalesMonthlyTeam(
-                  actor,
-                  member.id,
-                  month,
-                  event.target.value,
-                ),
-              `${member.name} 本月Team已更新。`,
-            )
-          }
-        >
-          {schedule.teams.map((team) => (
-            <option key={team.code} value={team.code}>
-              Team {team.code}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <small>{member.kind === "supervisor" ? "主管" : `Team ${member.homeTeam ?? member.team}`}</small>
-      )}
+      {canAdd &&
+        salesEdit &&
+        member.kind === "sales" &&
+        !member.sourceActorId && (
+          <button
+            type="button"
+            className="sales-delete-link"
+            aria-label={`刪除 ${member.name}`}
+            onClick={() =>
+              run(
+                () =>
+                  engine.deleteSalesRosterMember(actor, month, member.id),
+                `${member.name} 已刪除。`,
+              )
+            }
+          >
+            刪除
+          </button>
+        )}
     </div>
   );
   return (
     <>
       <PageHead
-        eyebrow={
-          actor.role === "head"
-            ? "全部 Team · 管理視圖"
-            : actor.role === "supervisor"
-              ? `Team ${actor.team} · 管理視圖`
-              : "只看本人"
-        }
         title={canEdit ? "Sales排班" : "我的排班"}
         actions={
           <div className="schedule-month-nav">
@@ -237,22 +222,25 @@ export function SalesSchedule() {
       <div className="schedule-sheet-stack">
         <section className="list-panel sales-sheet-panel">
           <div className="sales-sheet-head">
-            <div>
-              <strong>銷售地點</strong>
-              <p>每個Team可按日期分段設定工作地點；空白代表全Team放假。</p>
-            </div>
-            {canAdd && (
-              <Button
-                onClick={() =>
-                  run(
-                    () => engine.addSalesRosterTeam(actor, month),
-                    "已新增Team。",
-                  )
-                }
-              >
-                <Plus size={18} /> Team
-              </Button>
-            )}
+            <strong>銷售地點</strong>
+            {canAdd &&
+              (teamEdit ? (
+                <div className="sales-edit-actions">
+                  <Button
+                    onClick={() =>
+                      run(
+                        () => engine.addSalesRosterTeam(actor, month),
+                        "已新增Team。",
+                      )
+                    }
+                  >
+                    <Plus size={18} /> Team
+                  </Button>
+                  <Button onClick={() => setTeamEdit(false)}>完成</Button>
+                </div>
+              ) : (
+                <Button onClick={() => setTeamEdit(true)}>編輯</Button>
+              ))}
           </div>
           <div className="table-scroll sales-sheet-scroll">
             <table className="sales-location-grid">
@@ -292,6 +280,28 @@ export function SalesSchedule() {
                             + 新增地方
                           </button>
                         )}
+                        {canAdd &&
+                          teamEdit &&
+                          !["A", "B", "C"].includes(team.code) && (
+                            <button
+                              type="button"
+                              className="sales-delete-link"
+                              aria-label={`刪除 Team ${team.code}`}
+                              onClick={() =>
+                                run(
+                                  () =>
+                                    engine.deleteSalesRosterTeam(
+                                      actor,
+                                      month,
+                                      team.code,
+                                    ),
+                                  `Team ${team.code} 已刪除。`,
+                                )
+                              }
+                            >
+                              刪除
+                            </button>
+                          )}
                       </th>
                       {days.map((day) => {
                         const place = locationFor(team.code, day.date);
@@ -324,48 +334,27 @@ export function SalesSchedule() {
 
         <section className="list-panel sales-sheet-panel">
           <div className="sales-sheet-head">
-            <div>
-              <strong>銷售 Sales</strong>
-              <p>
-                每位每月自動5日 D 放假及最少10日早更；點擊任何更表格可修改。
-              </p>
-            </div>
-            {canAdd && (
-              <Button
-                onClick={() => {
-                  setNewMember({
-                    name: "",
-                    kind: "sales",
-                    team: schedule.teams[0]?.code ?? "A",
-                  });
-                  setAddMember(true);
-                }}
-              >
-                <Plus size={18} /> Sale
-              </Button>
-            )}
-          </div>
-          <div className="sales-sheet-legend">
-            {schedule.teams.map((team) => {
-              const color = colorForTeam(team.colorIndex);
-              return (
-                <span
-                  key={team.code}
-                  style={{ background: color.bg, color: color.text }}
-                >
-                  Team {team.code}
-                </span>
-              );
-            })}
-            <span style={{ background: OFF_COLOR.bg, color: OFF_COLOR.text }}>
-              D 放假
-            </span>
-            <span style={{ background: PH_COLOR.bg, color: PH_COLOR.text }}>
-              D 補假
-            </span>
-            <span style={{ background: EARLY_COLOR.bg, color: EARLY_COLOR.text }}>
-              早更
-            </span>
+            <strong>銷售 Sales</strong>
+            {canAdd &&
+              (salesEdit ? (
+                <div className="sales-edit-actions">
+                  <Button
+                    onClick={() => {
+                      setNewMember({
+                        name: "",
+                        kind: "sales",
+                        team: schedule.teams[0]?.code ?? "A",
+                      });
+                      setAddMember(true);
+                    }}
+                  >
+                    <Plus size={18} /> Sale
+                  </Button>
+                  <Button onClick={() => setSalesEdit(false)}>完成</Button>
+                </div>
+              ) : (
+                <Button onClick={() => setSalesEdit(true)}>編輯</Button>
+              ))}
           </div>
           <div className="table-scroll sales-sheet-scroll">
             <table className="sales-roster-grid">
@@ -395,7 +384,7 @@ export function SalesSchedule() {
                     </tr>
                     {supervisorMembers.map((member) => (
                       <tr key={member.id} className="sales-member-row">
-                        <th>{memberName(member, false)}</th>
+                        <th>{memberName(member)}</th>
                         {days.map((day) => {
                           const row = shifts.get(`${member.id}|${day.date}`);
                           return (

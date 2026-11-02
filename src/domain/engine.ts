@@ -2681,6 +2681,81 @@ export class Engine {
     });
     return code;
   }
+  deleteSalesRosterTeam(
+    actorInput: Actor,
+    month: string,
+    code: string,
+  ): void {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "head")
+      fail("只有Sales阿頭可刪除Team。");
+    if (["A", "B", "C"].includes(code))
+      fail("基本 Team A／B／C 不可刪除。");
+    this.mutate((state) => {
+      if (
+        !state.salesRosterTeams.some(
+          (team) => team.month === month && team.code === code,
+        )
+      )
+        fail("找不到此Team。");
+      if (
+        state.salesMonthlyTeams.some(
+          (team) => team.month === month && team.team === code,
+        ) ||
+        state.salesRosterMembers.some(
+          (member) => member.month === month && member.team === code,
+        ) ||
+        state.salesTeamLocations.some(
+          (location) => location.month === month && location.team === code,
+        ) ||
+        state.salesShifts.some(
+          (shift) =>
+            shift.date.startsWith(month) && shift.assignment === code,
+        )
+      )
+        fail("此Team仍有成員、地點或更表，請先清空才刪除。");
+      state.salesRosterTeams = state.salesRosterTeams.filter(
+        (team) => !(team.month === month && team.code === code),
+      );
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_roster_team_removed",
+        detail: `${month} 刪除 Team ${code}`,
+      });
+    });
+  }
+  deleteSalesRosterMember(
+    actorInput: Actor,
+    month: string,
+    memberId: string,
+  ): void {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "head")
+      fail("只有Sales阿頭可刪除排班成員。");
+    this.mutate((state) => {
+      const member = state.salesRosterMembers.find(
+        (item) => item.id === memberId && item.month === month,
+      );
+      if (!member || member.sourceActorId)
+        fail("只可刪除手動新增的排班成員。");
+      state.salesRosterMembers = state.salesRosterMembers.filter(
+        (item) => item.id !== memberId,
+      );
+      state.salesShifts = state.salesShifts.filter(
+        (shift) => shift.actorId !== memberId,
+      );
+      state.salesMonthlyTeams = state.salesMonthlyTeams.filter(
+        (team) => !(team.actorId === memberId && team.month === month),
+      );
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: "sales_roster_member_removed",
+        detail: `${month} 刪除排班成員 ${member.name}`,
+      });
+    });
+  }
   addSalesRosterMember(
     actorInput: Actor,
     month: string,

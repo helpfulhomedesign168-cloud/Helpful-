@@ -22,10 +22,17 @@ test("Sales阿頭可加Team、加地點、加Sale並自動排班，每格可改"
   await switchRole(page, "Don A DN（測試碼）");
   await gotoRoster(page);
 
-  await page.getByRole("button", { name: "Team", exact: true }).click();
+  const locationPanel = page.locator(".sales-sheet-panel").first();
+  const salesPanel = page.locator(".sales-sheet-panel").nth(1);
+  await locationPanel.getByRole("button", { name: "編輯", exact: true }).click();
+  await locationPanel.getByRole("button", { name: "Team", exact: true }).click();
   await expect(
     page.locator(".sales-location-name").filter({ hasText: "D" }),
   ).toHaveCount(1);
+  await page.getByRole("button", { name: "刪除 Team D" }).click();
+  await expect(
+    page.locator(".sales-location-name").filter({ hasText: "D" }),
+  ).toHaveCount(0);
 
   const teamARow = page.locator(".sales-location-grid tbody tr").first();
   await teamARow.getByRole("button", { name: "+ 新增地方" }).click();
@@ -38,7 +45,9 @@ test("Sales阿頭可加Team、加地點、加Sale並自動排班，每格可改"
     .click();
   await expect(teamARow).toContainText("恒安");
 
-  await page.getByRole("button", { name: "Sale", exact: true }).click();
+  await locationPanel.getByRole("button", { name: "完成", exact: true }).click();
+  await salesPanel.getByRole("button", { name: "編輯", exact: true }).click();
+  await salesPanel.getByRole("button", { name: "Sale", exact: true }).click();
   const addDialog = page.getByRole("dialog", { name: "新增Sales／主管" });
   await addDialog.getByLabel("新成員名稱").fill("Karen");
   await addDialog.getByLabel("新成員類型").selectOption("sales");
@@ -74,6 +83,12 @@ test("Sales阿頭可加Team、加地點、加Sale並自動排班，每格可改"
   await expect(
     page.getByRole("button", { name: "Karen 2026-10-01 更表" }),
   ).toHaveAttribute("data-assignment", "PH");
+
+  await salesPanel.getByRole("button", { name: "編輯", exact: true }).click();
+  await salesPanel.getByRole("button", { name: "刪除 Karen" }).click();
+  await expect(
+    page.locator(".sales-member-row").filter({ hasText: "Karen" }),
+  ).toHaveCount(0);
 });
 
 test("普通Sales只讀，沒有加Team／加Sale按鈕", async ({ page }) => {
@@ -87,10 +102,10 @@ test("普通Sales只讀，沒有加Team／加Sale按鈕", async ({ page }) => {
     page.getByRole("heading", { name: "我的排班", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Sale", exact: true }),
+    page.locator(".sales-sheet-head").getByRole("button", { name: "編輯" }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Team", exact: true }),
+    page.locator(".sales-sheet-legend"),
   ).toHaveCount(0);
 });
 
@@ -100,7 +115,9 @@ test("舊localStorage未有排班欄位仍可自動migration，不會爆filter�
   await page.goto("/");
   await switchRole(page, "Don A DN（測試碼）");
   await gotoRoster(page);
-  await page.getByRole("button", { name: "Team", exact: true }).click();
+  const locationPanel = page.locator(".sales-sheet-panel").first();
+  await locationPanel.getByRole("button", { name: "編輯", exact: true }).click();
+  await locationPanel.getByRole("button", { name: "Team", exact: true }).click();
   const state = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("homeflow-state-v1")!),
   );

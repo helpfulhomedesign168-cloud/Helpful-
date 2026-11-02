@@ -5473,3 +5473,23 @@ textarea {
 .sales-shift-cell {
   min-width: 33px;
 }
+
+.sales-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sales-sheet-head > strong {
+  align-self: center;
+  font-size: 20px;
+}
+.sales-delete-link {
+  margin-top: 3px !important;
+  padding: 0 !important;
+  border: 0;
+  background: transparent;
+  color: #a75542 !important;
+  font-size: 10px !important;
+  text-decoration: underline !important;
+  cursor: pointer;
+}
