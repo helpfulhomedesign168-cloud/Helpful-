@@ -5251,3 +5251,19 @@ textarea {
   color: #a1a79a;
   font-style: italic;
 }
+
+.schedule-day-hint {
+  display: block;
+  margin-top: 18px;
+  color: #a0a798;
+  font-size: 11px;
+}
+
+.schedule-day.compact,
+.schedule-day.compact + .schedule-day-empty {
+  min-height: 112px;
+}
+
+.schedule-day-empty {
+  min-height: 112px;
+}

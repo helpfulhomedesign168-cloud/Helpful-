@@ -69,6 +69,8 @@ export function SalesSchedule() {
     );
   const hasTeamLocations = (team: "A" | "B" | "C") =>
     schedule.locations.some((row) => row.team === team);
+  const hasRosterData =
+    schedule.shifts.length > 0 || schedule.locations.length > 0;
   const shiftAt = (actorId: string, date: string) =>
     shifts.get(`${actorId}|${date}`);
 
@@ -257,7 +259,7 @@ export function SalesSchedule() {
                         type="button"
                         className={`schedule-day ${weekend ? "weekend" : ""} ${
                           today ? "today" : ""
-                        }`}
+                        } ${!hasRosterData ? "compact" : ""}`}
                         key={day.date}
                         aria-label={`${day.date} 排班`}
                         onClick={() => setEditorDate(day.date)}
@@ -269,46 +271,56 @@ export function SalesSchedule() {
                         </header>
                         {canEdit ? (
                           <>
-                            <div className="schedule-team-lines">
-                              {TEAMS.map((team) => {
-                                const place = locationFor(team, day.date);
-                                const count = schedule.members.filter(
-                                  (member) =>
-                                    shiftAt(member.id, day.date)?.assignment ===
-                                    team,
-                                ).length;
-                                return (
-                                  <div
-                                    className={`schedule-team-line team-${team}`}
-                                    key={team}
-                                  >
-                                    <b>{team}</b>
-                                    <span
-                                      title={place?.location}
-                                      className={
-                                        !place && !hasTeamLocations(team)
-                                          ? "unconfigured"
-                                          : ""
-                                      }
+                            {hasRosterData ? (
+                              <div className="schedule-team-lines">
+                                {TEAMS.map((team) => {
+                                  const place = locationFor(team, day.date);
+                                  const people = schedule.members.filter(
+                                    (member) =>
+                                      shiftAt(member.id, day.date)
+                                        ?.assignment === team,
+                                  );
+                                  const count = people.length;
+                                  return (
+                                    <div
+                                      className={`schedule-team-line team-${team}`}
+                                      key={team}
+                                      title={people
+                                        .map((person) => person.name)
+                                        .join("、")}
                                     >
-                                      {place?.location ??
-                                        (hasTeamLocations(team)
-                                          ? "全Team放假"
-                                          : "未設定地點")}
-                                    </span>
-                                    <small
-                                      className={
-                                        place && count === 0
-                                          ? "empty-count"
-                                          : ""
-                                      }
-                                    >
-                                      {count}人
-                                    </small>
-                                  </div>
-                                );
-                              })}
-                            </div>
+                                      <b>{team}</b>
+                                      <span
+                                        title={place?.location}
+                                        className={
+                                          !place && !hasTeamLocations(team)
+                                            ? "unconfigured"
+                                            : ""
+                                        }
+                                      >
+                                        {place?.location ??
+                                          (hasTeamLocations(team)
+                                            ? "全Team放假"
+                                            : "未設定地點")}
+                                      </span>
+                                      <small
+                                        className={
+                                          place && count === 0
+                                            ? "empty-count"
+                                            : ""
+                                        }
+                                      >
+                                        {place ? `${count}人` : "—"}
+                                      </small>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <span className="schedule-day-hint">
+                                未排更 · 點擊設定
+                              </span>
+                            )}
                             {(offCount > 0 || phCount > 0) && (
                               <footer>
                                 {offCount > 0 && <span>D {offCount}</span>}
