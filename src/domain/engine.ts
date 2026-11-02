@@ -717,6 +717,11 @@ export class Engine {
       migrated.suppliers ??= [];
       migrated.productStyles ??= [];
       migrated.municipalOrders ??= [];
+      migrated.salesShifts = Array.isArray(migrated.salesShifts)
+        ? migrated.salesShifts.filter((shift) => Boolean(shift.assignment))
+        : [];
+      migrated.salesMonthlyTeams ??= [];
+      migrated.salesTeamLocations ??= [];
       migrated.municipalOrders.forEach((municipal) => {
         const invoice = migrated.invoices.find(
           (item) => item.id === municipal.invoiceId,

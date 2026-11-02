@@ -75,3 +75,35 @@ test("Sales阿頭可編排全部Team月度更表，普通Sales只讀自己排班
   await expect(page.locator(".sales-roster-table select")).toHaveCount(0);
   await expect(page.locator(".roster-person")).toHaveCount(1);
 });
+
+test("舊localStorage未有排班欄位仍可自動migration，不會爆filter錯誤", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await switchRole(page, "Don A DN（測試碼）");
+  await page
+    .locator("nav")
+    .getByRole("link", { name: "Sales排班", exact: true })
+    .click();
+  await page.getByLabel("文文B MM 2026-10-05 排班").selectOption("A");
+  const state = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("homeflow-state-v1")!),
+  );
+  delete state.salesMonthlyTeams;
+  delete state.salesTeamLocations;
+  delete state.salesShifts;
+  await page.evaluate((next) => {
+    localStorage.setItem("homeflow-state-v1", JSON.stringify(next));
+  }, state);
+  await page.reload();
+  await expect(
+    page.getByText("原型遇到問題", { exact: false }),
+  ).toHaveCount(0);
+  await page
+    .locator("nav")
+    .getByRole("link", { name: "Sales排班", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Sales排班", exact: true }),
+  ).toBeVisible();
+});
