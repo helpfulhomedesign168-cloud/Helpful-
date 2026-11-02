@@ -763,11 +763,7 @@ export function Invoices() {
   const actors = engine.listActors();
   return (
     <>
-      <PageHead
-        eyebrow="開單工作區"
-        title="單據管理"
-        description="已開Invoice、收款進度及收據均在同一來源管理。"
-      />
+      <PageHead title="單據管理" />
       <div className="list-panel">
         <div className="list-toolbar">
           <Search

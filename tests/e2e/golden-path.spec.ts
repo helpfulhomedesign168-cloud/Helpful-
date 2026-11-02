@@ -90,9 +90,17 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   await expect(
     page.getByRole("heading", { name: "UI測試新客戶的報價", exact: true }),
   ).toBeVisible();
-  const qNumber = (await page.locator(".page-head .eyebrow").innerText()).split(
-    " · ",
-  )[0];
+  const qNumber = await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem("homeflow-state-v1")!);
+    const quote = [...state.quotes]
+      .reverse()
+      .find((item: any) =>
+        item.versions?.some(
+          (version: any) => version.customer?.name === "UI測試新客戶",
+        ),
+      );
+    return quote.number as string;
+  });
   let row: Locator;
   await expect(qNumber).toMatch(/^QDNMM2610\d{4}$/);
   await expect(

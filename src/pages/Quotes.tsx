@@ -124,7 +124,13 @@ export function Quotes() {
   const [tab, setTab] = useState(
     new URLSearchParams(location.search).get("tab") || "pending",
   );
+  const [monthFilter, setMonthFilter] = useState("all");
   const qs = engine.listQuotes(actor);
+  const quoteMonths = [...new Set(
+    qs.map((quote) => currentVersion(quote).createdAt.slice(0, 7)),
+  )]
+    .sort()
+    .reverse();
   function bucket(q: Quote) {
     if (q.archived) return "archived";
     if (q.submission || q.invoiceId) return "submitted";
@@ -133,13 +139,19 @@ export function Quotes() {
   }
   const shown = qs
     .filter((q) => bucket(q) === tab)
-    .filter((q) =>
-      `${q.number} ${currentVersion(q).customer.name} ${currentVersion(q).customer.district} ${currentVersion(q).customer.phone}`
-        .toLowerCase()
-        .includes(search.toLowerCase()),
+    .filter(
+      (q) =>
+        (monthFilter === "all" ||
+          currentVersion(q).createdAt.startsWith(monthFilter)) &&
+        `${q.number} ${currentVersion(q).customer.name} ${currentVersion(q).customer.district} ${currentVersion(q).customer.phone}`
+          .toLowerCase()
+          .includes(search.toLowerCase()),
     )
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const pager = usePagination(shown, `${tab}|${search}`);
+  const pager = usePagination(
+    shown,
+    `${tab}|${search}|${monthFilter}`,
+  );
   return (
     <>
       <PageHead
@@ -161,6 +173,18 @@ export function Quotes() {
             onChange={setSearch}
             placeholder="搜尋報價編號、客戶或電話"
           />
+          <select
+            aria-label="報價月份"
+            value={monthFilter}
+            onChange={(event) => setMonthFilter(event.target.value)}
+          >
+            <option value="all">全部月份</option>
+            {quoteMonths.map((month) => (
+              <option key={month} value={month}>
+                {month.replace("-", "年")}月
+              </option>
+            ))}
+          </select>
           <span className="muted">{qs.length} 張報價</span>
         </div>
         <div className="tabs">
@@ -202,6 +226,7 @@ export function Quotes() {
               <thead>
                 <tr>
                   <th>報價／版本</th>
+                  <th>日期</th>
                   <th>客戶／工程地區</th>
                   <th className="numeric">成交金額</th>
                   <th>目前進度</th>
@@ -219,8 +244,8 @@ export function Quotes() {
                         <Link className="source-link" to={"/quotes/" + q.id}>
                           {q.number}
                         </Link>
-                        <small>版本 {v.index}</small>
                       </td>
+                      <td>{v.createdAt.slice(0, 10)}</td>
                       <td>
                         <strong>{v.customer.name || "未填客戶"}</strong>
                         <small>
@@ -626,11 +651,6 @@ export function QuoteEditor() {
   return (
     <>
       <PageHead
-        eyebrow={
-          existing
-            ? `${existing.number} · 版本 ${base?.index}`
-            : "報價管理 / 新報價"
-        }
         title={existing ? "修改報價" : "建立報價"}
         actions={
           <>
@@ -1359,6 +1379,15 @@ export function QuoteDetail() {
     .listQuotes(actor)
     .filter((item) => item.ownerId === actor.id && item.id !== q.id)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const sameCustomerPrevious = ownPreviousQuotes.find((item) => {
+    const customer = currentVersion(item).customer;
+    return (
+      (v.customer.id && customer.id === v.customer.id) ||
+      (v.customer.phone &&
+        customer.phone.replace(/\s+/g, "") ===
+          v.customer.phone.replace(/\s+/g, ""))
+    );
+  });
   useEffect(() => {
     setAdditionalOrder(Boolean(q.isAdditionalOrder));
     setParentQuoteId(q.parentQuoteId ?? "");
@@ -1385,7 +1414,6 @@ export function QuoteDetail() {
   return (
     <>
       <PageHead
-        eyebrow={`${q.number} · 版本 ${v.index}`}
         title={v.customer.name ? `${v.customer.name}的報價` : "報價詳情"}
         actions={
           <>
@@ -1420,10 +1448,7 @@ export function QuoteDetail() {
       <Progress q={q} e={e} />
       <div className="detail-layout">
         <div>
-          <Section
-            title="工程內容"
-            action={<Badge strong={e.hasSubmission}>{e.label}</Badge>}
-          >
+          <Section title="工程內容">
             <div className="customer-strip">
               <strong>{v.customer.name || "未填客戶"}</strong>
               <span>{v.customer.phone}</span>
@@ -1734,7 +1759,6 @@ export function QuoteDetail() {
           )}
         </div>
         <aside className="quote-summary">
-          <span className="eyebrow">版本 {v.index} 的金額</span>
           <h2>成交摘要</h2>
           <div className="summary-row">
             <span>工程小計</span>
@@ -1782,11 +1806,6 @@ export function QuoteDetail() {
                 },
               )}
             </div>
-            {(q.orderCategories?.length ?? 0) > 1 && (
-              <small className="summary-order-hint">
-                多於一個分類時，收款計劃按自費 ＞ 8萬資助 ＞ 團購的優先次序計算。
-              </small>
-            )}
           </div>
           <div className="summary-order-block">
             <span className="summary-order-label">是否加單？</span>
@@ -1813,7 +1832,19 @@ export function QuoteDetail() {
                 type="button"
                 className={additionalOrder ? "selected" : ""}
                 disabled={!canEditOrderMeta}
-                onClick={() => setAdditionalOrder(true)}
+                onClick={() => {
+                  setAdditionalOrder(true);
+                  if (!sameCustomerPrevious) return;
+                  setParentQuoteId(sameCustomerPrevious.id);
+                  run(
+                    () =>
+                      engine.updateQuoteOrderMeta(actor, q.id, {
+                        isAdditionalOrder: true,
+                        parentQuoteId: sameCustomerPrevious.id,
+                      }),
+                    `已自動配對同客戶舊報價 ${sameCustomerPrevious.number}。`,
+                  );
+                }}
               >
                 是
               </button>
@@ -1847,7 +1878,6 @@ export function QuoteDetail() {
               </select>
             )}
           </div>
-          <Badge strong={e.hasInvoice}>{e.label}</Badge>
           {q.invoiceId && (
             <Button
               className="full-width"
