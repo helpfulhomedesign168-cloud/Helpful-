@@ -294,7 +294,7 @@ export function SalesSchedule() {
                           <td
                             key={`${team.code}-empty-${segment.start}-${index}`}
                             colSpan={segment.span}
-                            className="sales-location-span empty"
+                            className="sales-location-span location-gap"
                           />
                         ),
                       )}
