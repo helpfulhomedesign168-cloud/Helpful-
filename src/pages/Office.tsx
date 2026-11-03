@@ -45,6 +45,7 @@ import {
   currentVersion,
   money,
   WorkOrder,
+  Invoice,
   InvoiceCategory,
   INVOICE_CATEGORY_NAMES,
   ROLE_NAMES,
@@ -522,6 +523,9 @@ export function Submissions() {
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<
+    "all" | InvoiceCategory
+  >("all");
   const [teamFilter, setTeamFilter] = useState<"all" | "A" | "B">("all");
   const [salesFilter, setSalesFilter] = useState("all");
   const [activePayment, setActivePayment] = useState<Payment | null>(null);
@@ -532,12 +536,22 @@ export function Submissions() {
   const sources = engine.listQuotes(actor)
     .filter((quote) => quote.submission && !quote.invoiceId && !quote.archived)
     .filter(
-      (quote) =>
-        (teamFilter === "all" || quote.team === teamFilter) &&
-        (salesFilter === "all" || quote.ownerId === salesFilter) &&
-        `${quote.number} ${currentVersion(quote).customer.name} ${currentVersion(quote).customer.address} ${parentSummaryOf(quote)?.number ?? ""}`.includes(
-          search,
-        ),
+      (quote) => {
+        const categories = quote.orderCategories?.length
+          ? quote.orderCategories
+          : quote.officeCategory
+            ? [quote.officeCategory]
+            : [];
+        return (
+          (categoryFilter === "all" ||
+            categories.includes(categoryFilter)) &&
+          (teamFilter === "all" || quote.team === teamFilter) &&
+          (salesFilter === "all" || quote.ownerId === salesFilter) &&
+          `${quote.number} ${currentVersion(quote).customer.name} ${currentVersion(quote).customer.address} ${parentSummaryOf(quote)?.number ?? ""}`.includes(
+            search,
+          )
+        );
+      },
     );
   const sortedSources = [...sources].sort((a, b) =>
     (b.submission?.createdAt ?? b.updatedAt).localeCompare(
@@ -546,7 +560,7 @@ export function Submissions() {
   );
   const pager = usePagination(
     sortedSources,
-    `${search}|${teamFilter}|${salesFilter}`,
+    `${search}|${categoryFilter}|${teamFilter}|${salesFilter}`,
   );
   const payments = engine.listPayments(actor);
   const salesActors = engine
@@ -562,9 +576,27 @@ export function Submissions() {
           <Search
             value={search}
             onChange={setSearch}
-            placeholder="搜尋Q號、客戶、地址或Sales"
+            placeholder="搜尋工程名稱或代號"
           />
           <div className="submission-filters">
+            <select
+              aria-label="來源分類"
+              value={categoryFilter}
+              onChange={(event) =>
+                setCategoryFilter(
+                  event.target.value as "all" | InvoiceCategory,
+                )
+              }
+            >
+              <option value="all">全部分類</option>
+              {(Object.keys(INVOICE_CATEGORY_NAMES) as InvoiceCategory[]).map(
+                (category) => (
+                  <option key={category} value={category}>
+                    {INVOICE_CATEGORY_NAMES[category]}
+                  </option>
+                ),
+              )}
+            </select>
             <select
               aria-label="來源Team"
               value={teamFilter}
@@ -590,6 +622,10 @@ export function Submissions() {
             </select>
           </div>
         </div>
+        <div className="submission-legend">
+          <span className="normal-dot">正單</span>
+          <span className="additional-dot">加單</span>
+        </div>
         {sources.length === 0 ? (
           <Empty
             title="暫無已提交報價"
@@ -600,12 +636,11 @@ export function Submissions() {
             <table className="submission-table">
               <thead>
                 <tr>
-                  <th scope="col">報價單</th>
                   <th scope="col">日期</th>
+                  <th scope="col">報價單</th>
                   <th scope="col">客戶／地區</th>
                   <th scope="col">Sales</th>
                   <th scope="col" className="numeric">成交額</th>
-                  <th scope="col" className="numeric">首訂金額</th>
                   <th scope="col">分類</th>
                   <th scope="col">狀態</th>
                 </tr>
@@ -635,36 +670,53 @@ export function Submissions() {
                   return (
                     <tr key={quote.id}>
                       <td>
-                        <div className="submission-quote-heading">
-                          <strong>{quote.number}</strong>
-                          {!quote.invoiceId && (
-                            <Button
-                              variant="ghost"
-                              aria-label={`編輯${quote.number}報價單`}
-                              onClick={() => nav("/quotes/" + quote.id + "/edit")}
-                            >
-                              <PenLine size={16} />
-                            </Button>
-                          )}
-                        </div>
-                        {quote.isAdditionalOrder && (
-                          <div className="additional-order-mark">
-                            <Badge strong>加單</Badge>
-                            <small>
-                              原單{" "}
-                              {parentSummaryOf(quote)?.number ?? "未能讀取"}
-                              {parentSummaryOf(quote)
-                                ? ` · ${parentSummaryOf(quote)!.customerName}`
-                                : ""}
-                            </small>
-                          </div>
-                        )}
-                      </td>
-                      <td>
                         {(quote.submission?.createdAt ?? quote.updatedAt).slice(
                           0,
                           10,
                         )}
+                      </td>
+                      <td>
+                        <div
+                          className={`submission-quote-cell ${
+                            quote.isAdditionalOrder ? "additional" : ""
+                          }`}
+                        >
+                          <div className="submission-quote-heading">
+                            <strong>{quote.number}</strong>
+                            {!quote.invoiceId && (
+                              <Button
+                                variant="ghost"
+                                aria-label={`編輯${quote.number}報價單`}
+                                onClick={() =>
+                                  nav("/quotes/" + quote.id + "/edit")
+                                }
+                              >
+                                <PenLine size={16} />
+                              </Button>
+                            )}
+                            {Boolean(quote.clerkCorrectionCount) && (
+                              <Button
+                                variant="ghost"
+                                aria-label={`列印${quote.number}報價單`}
+                                onClick={() =>
+                                  nav("/documents/quote/" + quote.id)
+                                }
+                              >
+                                <Printer size={16} />
+                              </Button>
+                            )}
+                          </div>
+                          {Boolean(quote.clerkCorrectionCount) && (
+                            <small className="quote-version-marker">
+                              (V{quote.clerkCorrectionCount})
+                            </small>
+                          )}
+                          {quote.isAdditionalOrder && (
+                            <small>
+                              {parentSummaryOf(quote)?.number ?? "原單未能讀取"}
+                            </small>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <strong>{version.customer.name}</strong>
@@ -676,13 +728,6 @@ export function Submissions() {
                       </td>
                       <td className="numeric money">
                         {money(engine.pricing(actor, quote.id).total)}
-                      </td>
-                      <td className="numeric money">
-                        {eligibility.officeCategory ? (
-                          money(eligibility.firstDue)
-                        ) : (
-                          <span className="pending-value">待分類</span>
-                        )}
                       </td>
                       <td>
                         {quote.orderCategories?.length ||
@@ -755,11 +800,17 @@ export function Invoices() {
   const { actor, engine } = useApp();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [teamFilter, setTeamFilter] = useState<"all" | "A" | "B">("all");
+  const [salesFilter, setSalesFilter] = useState("all");
   const [sortKey, setSortKey] = useState<
     "none" | "invoice" | "sales" | "status"
   >("none");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const actors = engine.listActors();
+  const salesActors = actors.filter((candidate) =>
+    ["sales", "supervisor", "head"].includes(candidate.role),
+  );
   let orders = [] as WorkOrder[];
   try {
     orders = engine.listOrders(actor);
@@ -773,18 +824,42 @@ export function Invoices() {
   };
   const engineeringLabel = (invoice: (typeof invoices)[number]) => {
     const order = orderByInvoice.get(invoice.id);
-    if (order?.status === "completed") return "工程完成";
+    if (order?.status === "completed") return "已完成工程";
     if (order?.csReleasedAt) return "已發工程部";
-    return "待收足50%";
+    return "待收足訂金";
   };
   const statusRank = (label: string) =>
-    label === "工程完成" ? 3 : label === "已發工程部" ? 2 : 1;
-  const invoices = [...engine.listInvoices(actor)]
-    .filter((invoice) =>
-      `${invoice.number} ${invoice.customer.name} ${invoice.customer.address}`.includes(
-        search,
-      ),
-    )
+    label === "已完成工程" ? 3 : label === "已發工程部" ? 2 : 1;
+  const quoteOf = (invoice: Invoice) =>
+    engine.getQuote(actor, invoice.quoteId);
+  const parentOf = (invoice: Invoice) => {
+    const quote = quoteOf(invoice);
+    return quote.parentQuoteId
+      ? engine.quoteParentSummary(actor, quote.id)
+      : undefined;
+  };
+  const statusKeyOf = (invoice: Invoice) => {
+    const label = engineeringLabel(invoice);
+    return label === "已完成工程"
+      ? "completed"
+      : label === "已發工程部"
+        ? "released"
+        : "pending";
+  };
+  const invoices: Invoice[] = [...engine.listInvoices(actor)]
+    .filter((invoice) => {
+      const quote = quoteOf(invoice);
+      const parent = parentOf(invoice);
+      return (
+        (statusFilter === "all" ||
+          statusKeyOf(invoice) === statusFilter) &&
+        (teamFilter === "all" || quote.team === teamFilter) &&
+        (salesFilter === "all" || quote.ownerId === salesFilter) &&
+        `${invoice.number} ${invoice.customer.name} ${invoice.customer.address} ${parent?.number ?? ""}`.includes(
+          search,
+        )
+      );
+    })
     .sort((a, b) => {
       if (sortKey === "invoice")
         return sortDir === "asc"
@@ -800,7 +875,10 @@ export function Invoices() {
           : statusRank(engineeringLabel(b)) - statusRank(engineeringLabel(a));
       return b.createdAt.localeCompare(a.createdAt);
     });
-  const pager = usePagination(invoices, `${search}|${sortKey}|${sortDir}`);
+  const pager = usePagination(
+    invoices,
+    `${search}|${statusFilter}|${teamFilter}|${salesFilter}|${sortKey}|${sortDir}`,
+  );
   const sortButton = (
     key: "invoice" | "sales" | "status",
     label: string,
@@ -833,12 +911,51 @@ export function Invoices() {
     <>
       <PageHead title="單據管理" />
       <div className="list-panel">
-        <div className="list-toolbar">
+        <div className="submission-toolbar invoice-toolbar">
           <Search
             value={search}
             onChange={setSearch}
-            placeholder="搜尋Invoice、客戶或地址"
+            placeholder="搜尋工程名稱或代號"
           />
+          <div className="submission-filters">
+            <select
+              aria-label="Invoice狀態"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
+              <option value="all">全部狀態</option>
+              <option value="pending">待收足訂金</option>
+              <option value="released">已發工程部</option>
+              <option value="completed">已完成工程</option>
+            </select>
+            <select
+              aria-label="Invoice Team"
+              value={teamFilter}
+              onChange={(event) =>
+                setTeamFilter(event.target.value as "all" | "A" | "B")
+              }
+            >
+              <option value="all">全部 Team</option>
+              <option value="A">Team A</option>
+              <option value="B">Team B</option>
+            </select>
+            <select
+              aria-label="Invoice Sales"
+              value={salesFilter}
+              onChange={(event) => setSalesFilter(event.target.value)}
+            >
+              <option value="all">全部 Sales</option>
+              {salesActors.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="submission-legend invoice-legend">
+          <span className="normal-dot">正單</span>
+          <span className="additional-dot">加單</span>
         </div>
         {invoices.length === 0 ? (
           <Empty
@@ -847,16 +964,16 @@ export function Invoices() {
           />
         ) : (
           <div className="table-scroll">
-            <table>
+            <table className="invoice-list-table">
               <thead>
                 <tr>
+                  <th>日期</th>
                   <th>{sortButton("invoice", "Invoice單")}</th>
                   <th>客戶／地區</th>
                   <th>{sortButton("sales", "Sales")}</th>
-                  <th className="numeric">成交額</th>
-                  <th>歸類／收款進度</th>
-                  <th>{sortButton("status", "工程狀態")}</th>
-                  <th />
+                  <th>收款進度</th>
+                  <th>分類</th>
+                  <th>{sortButton("status", "狀態")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -870,9 +987,32 @@ export function Invoices() {
                   const engineering = engineeringLabel(invoice);
                   return (
                     <tr key={invoice.id}>
+                      <td>{invoice.createdAt.slice(0, 10)}</td>
                       <td>
-                        <strong>{invoice.number}</strong>
-                        <small>{invoice.createdAt.slice(0, 10)}</small>
+                        <div
+                          className={`invoice-number-cell ${
+                            quote.isAdditionalOrder ? "additional" : ""
+                          }`}
+                        >
+                          <div className="invoice-number-row">
+                            <strong>{invoice.number}</strong>
+                            <Button
+                              variant="ghost"
+                              aria-label={`查看／修改 ${invoice.number}`}
+                              onClick={() =>
+                                nav("/invoices/" + invoice.id)
+                              }
+                            >
+                              <PenLine size={18} />
+                            </Button>
+                          </div>
+                          {quote.isAdditionalOrder && (
+                            <small>
+                              {engine.quoteParentSummary(actor, quote.id)
+                                ?.number ?? "原單未能讀取"}
+                            </small>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <strong>{invoice.customer.name}</strong>
@@ -882,21 +1022,10 @@ export function Invoices() {
                         </small>
                       </td>
                       <td>{sales?.name || "—"}</td>
-                      <td className="numeric money">
-                        {money(invoice.netTotal)}
-                      </td>
                       <td>
-                        <strong>
-                          {invoice.category
-                            ? INVOICE_CATEGORY_NAMES[invoice.category]
-                            : "歷史未分類"}
-                        </strong>
                         <div className="payment-progress">
                           <div className="payment-progress-label">
-                            <span>
-                              已核 {money(status.validPaid)}／
-                              {money(status.total)}
-                            </span>
+                            <span>已核 {money(status.validPaid)}</span>
                             <strong>{status.percentPaid}%</strong>
                           </div>
                           <div
@@ -915,18 +1044,26 @@ export function Invoices() {
                         </div>
                       </td>
                       <td>
-                        <Badge
-                          strong={
-                            engineering === "工程完成" ||
-                            Boolean(order?.csReleasedAt)
-                          }
-                        >
-                          {engineering}
-                        </Badge>
+                        <div className="submission-category-list">
+                          {invoice.category ? (
+                            <Badge strong>
+                              {INVOICE_CATEGORY_NAMES[invoice.category]}
+                            </Badge>
+                          ) : (
+                            <span className="pending-value">歷史未分類</span>
+                          )}
+                        </div>
                       </td>
                       <td>
-                        <Button onClick={() => nav("/invoices/" + invoice.id)}>
-                          詳情 <ArrowRight size={18} />
+                        <Button
+                          variant={
+                            engineering === "已完成工程"
+                              ? "primary"
+                              : "secondary"
+                          }
+                          onClick={() => nav("/invoices/" + invoice.id)}
+                        >
+                          {engineering}
                         </Button>
                       </td>
                     </tr>

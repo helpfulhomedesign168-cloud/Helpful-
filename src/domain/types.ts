@@ -211,6 +211,8 @@ export interface Quote {
   /** Sales標記此報價是否加單，並可指向自己之前的報價。 */
   isAdditionalOrder?: boolean;
   parentQuoteId?: string;
+  /** 開單員完整更正次數；顯示為 (V1)、(V2)… */
+  clerkCorrectionCount?: number;
   invoiceId?: string;
 }
 export interface Payment {

@@ -5571,3 +5571,293 @@ textarea {
 .sales-location-span.location-gap {
   background: #fff;
 }
+
+/* Submission queue matching office reference */
+.submission-toolbar {
+  flex-wrap: nowrap;
+}
+.submission-toolbar .search {
+  flex: 1 1 320px;
+}
+.submission-filters {
+  gap: 8px;
+}
+.submission-filters select {
+  min-width: 132px;
+}
+@media (max-width: 900px) {
+  .submission-toolbar {
+    flex-wrap: wrap;
+  }
+}
+.submission-legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 25px 15px;
+  color: #3f443b;
+  font-size: 14px;
+}
+.submission-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.submission-legend span::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #24271f;
+}
+.submission-legend .additional-dot::before {
+  background: #b8bcb3;
+}
+.submission-quote-cell strong {
+  display: block;
+}
+.submission-quote-cell.additional strong {
+  color: #959b91;
+}
+.submission-quote-cell > small {
+  display: block;
+  margin-top: 3px;
+  color: #959b91;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+.submission-table {
+  min-width: 1220px;
+}
+.submission-table th:nth-child(1),
+.submission-table td:nth-child(1) {
+  width: 10%;
+}
+.submission-table th:nth-child(2),
+.submission-table td:nth-child(2) {
+  width: 18%;
+}
+.submission-table th:nth-child(3),
+.submission-table td:nth-child(3) {
+  width: 17%;
+}
+.submission-table th:nth-child(4),
+.submission-table td:nth-child(4) {
+  width: 12%;
+}
+.submission-table th:nth-child(5),
+.submission-table td:nth-child(5) {
+  width: 13%;
+}
+.submission-table th:nth-child(6),
+.submission-table td:nth-child(6) {
+  width: 20%;
+}
+.submission-table th:nth-child(7),
+.submission-table td:nth-child(7) {
+  width: 10%;
+}
+.submission-table th:nth-child(8),
+.submission-table td:nth-child(8),
+.submission-table th:nth-child(9),
+.submission-table td:nth-child(9) {
+  width: auto;
+}
+
+/* Invoice list matching status reference */
+.invoice-list-table {
+  min-width: 1180px;
+  table-layout: fixed;
+}
+.invoice-list-table th:nth-child(1),
+.invoice-list-table td:nth-child(1) {
+  width: 10%;
+}
+.invoice-list-table th:nth-child(2),
+.invoice-list-table td:nth-child(2) {
+  width: 18%;
+}
+.invoice-list-table th:nth-child(3),
+.invoice-list-table td:nth-child(3) {
+  width: 17%;
+}
+.invoice-list-table th:nth-child(4),
+.invoice-list-table td:nth-child(4) {
+  width: 12%;
+}
+.invoice-list-table th:nth-child(5),
+.invoice-list-table td:nth-child(5) {
+  width: 20%;
+}
+.invoice-list-table th:nth-child(6),
+.invoice-list-table td:nth-child(6) {
+  width: 11%;
+}
+.invoice-list-table th:nth-child(7),
+.invoice-list-table td:nth-child(7) {
+  width: 12%;
+}
+.invoice-list-table td:last-child .btn {
+  width: 100%;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* Final column balance for office lists */
+.submission-table th:nth-child(1),
+.submission-table td:nth-child(1) {
+  width: 9%;
+}
+.submission-table th:nth-child(2),
+.submission-table td:nth-child(2) {
+  width: 16%;
+}
+.submission-table th:nth-child(3),
+.submission-table td:nth-child(3) {
+  width: 15%;
+}
+.submission-table th:nth-child(4),
+.submission-table td:nth-child(4) {
+  width: 11%;
+}
+.submission-table th:nth-child(5),
+.submission-table td:nth-child(5) {
+  width: 12%;
+}
+.submission-table th:nth-child(6),
+.submission-table td:nth-child(6) {
+  width: 21%;
+}
+.submission-table th:nth-child(7),
+.submission-table td:nth-child(7) {
+  width: 16%;
+}
+.invoice-list-table th:nth-child(1),
+.invoice-list-table td:nth-child(1) {
+  width: 12%;
+  white-space: nowrap;
+}
+.invoice-list-table th:nth-child(2),
+.invoice-list-table td:nth-child(2) {
+  width: 17%;
+}
+.invoice-list-table th:nth-child(3),
+.invoice-list-table td:nth-child(3) {
+  width: 16%;
+}
+.invoice-list-table th:nth-child(4),
+.invoice-list-table td:nth-child(4) {
+  width: 11%;
+}
+.invoice-list-table th:nth-child(5),
+.invoice-list-table td:nth-child(5) {
+  width: 20%;
+}
+.invoice-list-table th:nth-child(6),
+.invoice-list-table td:nth-child(6) {
+  width: 10%;
+}
+.invoice-list-table th:nth-child(7),
+.invoice-list-table td:nth-child(7) {
+  width: 14%;
+}
+
+.invoice-toolbar {
+  padding-bottom: 10px;
+}
+.invoice-legend {
+  padding-top: 0;
+}
+.invoice-number-cell strong {
+  display: block;
+}
+.invoice-number-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.invoice-number-row .btn {
+  min-height: 28px;
+  padding: 2px;
+}
+.invoice-number-cell.additional > strong,
+.invoice-number-cell.additional .invoice-number-row strong {
+  color: #959b91;
+}
+.invoice-number-cell > small {
+  display: block;
+  margin-top: 3px;
+  color: #959b91;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+.quote-version-marker {
+  color: #666d61 !important;
+  font-size: 15px !important;
+  letter-spacing: 0.04em;
+}
+
+.municipal-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 16px;
+  align-items: start;
+}
+.municipal-editor-main {
+  min-width: 0;
+}
+.municipal-summary {
+  position: sticky;
+  top: 20px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+.municipal-summary h2 {
+  margin: 0 0 16px;
+  font-size: 21px;
+}
+.municipal-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf0e7;
+  color: #70786a;
+  font-size: 14px;
+}
+.municipal-summary-row strong {
+  color: #2c3128;
+}
+.municipal-summary-total {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 0 14px;
+  border-bottom: 1px solid #edf0e7;
+}
+.municipal-summary-total span {
+  color: #70786a;
+  font-size: 14px;
+}
+.municipal-summary-total strong {
+  font-size: 24px;
+}
+.municipal-summary p {
+  color: #7b8375;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.municipal-summary .btn {
+  margin-top: 8px;
+}
+@media (max-width: 1000px) {
+  .municipal-editor-layout {
+    grid-template-columns: 1fr;
+  }
+  .municipal-summary {
+    position: static;
+  }
+}
