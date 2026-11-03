@@ -3069,9 +3069,9 @@ export class Engine {
         action: "sales_shift_updated",
         detail: `${rosterMember?.name ?? actorMember?.name ?? memberId} ${date}：${
           assignment === SALES_OFF_CODE
-            ? "D 放假"
+            ? "Off 放假"
             : assignment === SALES_PH_CODE
-              ? "D 補假"
+              ? "補假"
               : assignment ?? "清除"
         }`,
       });

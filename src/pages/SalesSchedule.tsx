@@ -182,8 +182,8 @@ export function SalesSchedule() {
   };
   const cellText = (assignment?: string) => {
     if (!assignment) return "—";
-    if (assignment === SALES_OFF_CODE || assignment === SALES_PH_CODE)
-      return "D";
+    if (assignment === SALES_OFF_CODE) return "Off";
+    if (assignment === SALES_PH_CODE) return "補";
     return assignment;
   };
   const memberName = (member: SalesScheduleMember) => (
@@ -609,8 +609,8 @@ export function SalesSchedule() {
               >
                 <option value="early">早更 9-6</option>
                 <option value="normal">日常 10-7</option>
-                <option value="off">D 放假</option>
-                <option value="ph">D 補假</option>
+                <option value="off">Off 放假</option>
+                <option value="ph">補假</option>
               </select>
             </Field>
           </div>
