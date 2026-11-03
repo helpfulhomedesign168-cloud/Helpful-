@@ -39,10 +39,28 @@ test("8萬資助開Invoice會建立正單A及可修改市政單B", async ({ page
 
   await page.getByLabel("第1項名稱").fill("市政測試項目");
   await page.getByLabel("第1項金額").fill("1234");
-  await page.getByRole("button", { name: "儲存市政單", exact: true }).click();
+  await page
+    .getByRole("button", { name: "儲存市政單", exact: true })
+    .first()
+    .click();
   await page.reload();
   await expect(page.getByLabel("第1項名稱")).toHaveValue("市政測試項目");
   await expect(page.getByLabel("第1項金額")).toHaveValue("1234");
+
+  await page
+    .getByRole("button", { name: "預覽", exact: true })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/documents\/municipal\//);
+  await expect(
+    page.getByRole("heading", { name: "市政單", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "列印／另存PDF", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".document-sheet")).toContainText(
+    municipalNumber,
+  );
 
   await page.goto("/handoff");
   await expect(
@@ -69,7 +87,16 @@ test("開單員可開啟完整報價編輯器並建立更正版本", async ({ pa
     .fill("開單員更正測試");
   await page.getByRole("button", { name: "儲存更正", exact: true }).first().click();
   await expect(page).toHaveURL(/\/submissions$/);
-  await expect(
-    page.locator(".submission-table tbody tr").filter({ hasText: "李好波更正" }),
-  ).toBeVisible();
+  const correctedRow = page
+    .locator(".submission-table tbody tr")
+    .filter({ hasText: "李好波更正" });
+  await expect(correctedRow).toBeVisible();
+  await expect(correctedRow).toContainText("(V1)");
+  await correctedRow
+    .getByRole("button", { name: /列印QSHMM26100004報價單/ })
+    .click();
+  await expect(page).toHaveURL(/\/documents\/quote\//);
+  await expect(page.locator(".document-number")).toContainText(
+    "QSHMM26100004（V1）",
+  );
 });

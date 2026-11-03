@@ -11,20 +11,40 @@ test("單據管理顯示收款status bar並可按Invoice／Sales／工程狀態�
   await page.goto("/");
   await switchRole(page, "開單員");
   await page.goto("/invoices");
+  await expect(
+    page.getByPlaceholder("搜尋工程名稱或代號"),
+  ).toBeVisible();
+  const statusFilter = page.getByLabel("Invoice狀態", { exact: true });
+  const teamFilter = page.getByLabel("Invoice Team", { exact: true });
+  const salesFilter = page.getByLabel("Invoice Sales", { exact: true });
+  await expect(statusFilter).toBeVisible();
+  await expect(teamFilter).toBeVisible();
+  await expect(salesFilter).toBeVisible();
+  await expect(
+    page.locator(".invoice-legend .normal-dot"),
+  ).toHaveText("正單");
+  await expect(
+    page.locator(".invoice-legend .additional-dot"),
+  ).toHaveText("加單");
+  await expect(
+    page.getByRole("button", { name: /查看／修改 SHMM/ }).first(),
+  ).toBeVisible();
   const progress = page.locator(".payment-progress-track").first();
   await expect(progress).toBeVisible();
   await expect(progress).toHaveAttribute("aria-valuenow", /^[0-9.]+$/);
 
   const invoiceSort = page.getByRole("button", { name: /Invoice單/ });
   const salesSort = page.getByRole("button", { name: /^Sales/ });
-  const statusSort = page.getByRole("button", { name: /工程狀態/ });
+  const statusSort = page.getByRole("button", { name: /^狀態/ });
   await invoiceSort.click();
   await expect(invoiceSort).toHaveClass(/active/);
   await salesSort.click();
   await expect(salesSort).toHaveClass(/active/);
   await statusSort.click();
   await expect(statusSort).toHaveClass(/active/);
-  await expect(page.getByText("工程完成", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "已完成工程", exact: true }),
+  ).toHaveCount(0);
 });
 
 test("CS可標記工程完成，Invoice列表顯示工程完成並通知開單員收尾數", async ({ page }) => {
@@ -42,7 +62,7 @@ test("CS可標記工程完成，Invoice列表顯示工程完成並通知開單�
   const invoiceRow = page
     .locator("tbody tr")
     .filter({ hasText: "SHMM26100001" });
-  await expect(invoiceRow).toContainText("工程完成");
+  await expect(invoiceRow).toContainText("已完成工程");
 
   await page.getByRole("button", { name: "通知" }).click();
   const notice = page

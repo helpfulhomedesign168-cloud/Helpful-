@@ -211,6 +211,8 @@ export interface Quote {
   /** Sales標記此報價是否加單，並可指向自己之前的報價。 */
   isAdditionalOrder?: boolean;
   parentQuoteId?: string;
+  /** 開單員完整更正次數；顯示為 (V1)、(V2)… */
+  clerkCorrectionCount?: number;
   invoiceId?: string;
 }
 export interface Payment {
@@ -328,10 +330,16 @@ export interface MunicipalOrderLine {
   sourceLineId?: string;
   name: string;
   description: string;
+  position?: string;
+  measure?: "area" | "length" | "quantity" | "fixed";
+  length?: number;
+  width?: number;
+  dimensionUnit?: "呎" | "寸";
   quantity: number;
   unit: string;
   unitPrice: number;
   amount: number;
+  productStyleText?: string;
 }
 export interface MunicipalOrder {
   id: string;
@@ -502,6 +510,11 @@ export interface AppState {
   suppliers: Supplier[];
   productStyles: ProductStyleSeries[];
   municipalOrders: MunicipalOrder[];
+  salesShifts: SalesShift[];
+  salesMonthlyTeams: SalesMonthlyTeam[];
+  salesTeamLocations: SalesTeamLocation[];
+  salesRosterTeams: SalesRosterTeam[];
+  salesRosterMembers: SalesRosterMember[];
   audits: AuditEvent[];
   notifications: Notification[];
   monthlySequences: Record<string, number>;
@@ -647,6 +660,79 @@ export interface TeamPerformance {
   members: TeamMemberPerformance[];
   sales: number;
   commission: number;
+}
+export type SalesAssignment = string;
+export const SALES_OFF_CODE = "OFF";
+export const SALES_PH_CODE = "PH";
+export type SalesWorkShift = "early" | "normal";
+export const SALES_WORK_SHIFT_NAMES: Record<SalesWorkShift, string> = {
+  early: "早更 9-6",
+  normal: "日常 10-7",
+};
+export interface SalesShift {
+  id: string;
+  actorId: string;
+  date: string;
+  assignment: SalesAssignment;
+  workShift?: SalesWorkShift;
+  updatedBy: string;
+  updatedAt: string;
+}
+export interface SalesMonthlyTeam {
+  id: string;
+  actorId: string;
+  month: string;
+  team: string;
+  updatedBy: string;
+  updatedAt: string;
+}
+export interface SalesTeamLocation {
+  id: string;
+  month: string;
+  team: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  updatedBy: string;
+  updatedAt: string;
+}
+export interface SalesRosterTeam {
+  id: string;
+  month: string;
+  code: string;
+  colorIndex: number;
+  order: number;
+  createdBy: string;
+  createdAt: string;
+}
+export interface SalesRosterMember {
+  id: string;
+  month: string;
+  name: string;
+  kind: "supervisor" | "sales";
+  team: string;
+  sourceActorId?: string;
+  createdBy: string;
+  createdAt: string;
+}
+export interface SalesScheduleMember {
+  id: string;
+  name: string;
+  kind: "supervisor" | "sales";
+  team: string;
+  homeTeam?: string;
+  sourceActorId?: string;
+}
+export interface SalesScheduleTeam {
+  code: string;
+  colorIndex: number;
+  order: number;
+}
+export interface SalesScheduleData {
+  members: SalesScheduleMember[];
+  teams: SalesScheduleTeam[];
+  shifts: SalesShift[];
+  locations: SalesTeamLocation[];
 }
 export interface DraftInput {
   customer: Customer;

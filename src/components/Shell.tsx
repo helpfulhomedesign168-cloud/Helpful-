@@ -11,6 +11,7 @@ import {
   ArrowRightLeft,
   SlidersHorizontal,
   ChartNoAxesCombined,
+  CalendarDays,
   Menu,
   ChevronDown,
   ArrowUpRight,
@@ -50,6 +51,11 @@ export function Shell() {
         ["/quotes/new", "建立報價", Plus],
         ["/customers", "客戶", Users],
         ["/product-styles", "產品款式", Palette],
+        [
+          "/sales-schedule",
+          actor.role === "sales" ? "我的排班" : "Sales排班",
+          CalendarDays,
+        ],
         [
           "/performance",
           actor.role === "sales" ? "我的業績" : "團隊業績",

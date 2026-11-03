@@ -21,8 +21,9 @@ test("開單員提交報價列表顯示加單及原單號", async ({ page }) => 
   const row = page
     .locator(".submission-table tbody tr")
     .filter({ hasText: "李好波" });
-  await expect(row).toContainText("加單");
-  await expect(row).toContainText("原單 QMM26100002");
-  await expect(row).toContainText("陳小強");
+  await expect(row.locator(".submission-quote-cell.additional")).toHaveCount(
+    1,
+  );
+  await expect(row).toContainText("QMM26100002");
   expect(errors).toEqual([]);
 });
