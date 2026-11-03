@@ -645,6 +645,8 @@ export interface Performance {
   nextTarget?: number;
   nextBonus?: number;
   entries: PerformanceEntry[];
+  /** 管理Bonus／個人Bonus所用的同一場合資格來源。 */
+  bonusEntries?: PerformanceEntry[];
 }
 export interface TeamMemberPerformance {
   actorId: string;

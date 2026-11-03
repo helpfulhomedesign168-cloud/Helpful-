@@ -2408,6 +2408,17 @@ export class Engine {
   performance(actorInput: Actor, month: string): Performance {
     const actor = this.actor(actorInput);
     const entries: PerformanceEntry[] = [];
+    const qualified: Array<{
+      quoteId: string;
+      number: string;
+      customerName: string;
+      total: number;
+      low: boolean;
+      date: string;
+      ownerId: string;
+      supervisorId: string;
+      team: "A" | "B";
+    }> = [];
     this.state.quotes.forEach((quote) => {
       const version = currentVersion(quote);
       const signature = version.signature;
@@ -2453,6 +2464,17 @@ export class Engine {
         (a) => a.id === signature.supervisorId,
       );
       if (!owner || !supervisor) return;
+      qualified.push({
+        quoteId: quote.id,
+        number: quote.number,
+        customerName: version.customer.name,
+        total: raw.total,
+        low,
+        date: qualificationDate,
+        ownerId: owner.id,
+        supervisorId: supervisor.id,
+        team: quote.team,
+      });
       let rate = 0;
       if (actor.id === owner.id) rate += low ? 0.06 : 0.08;
       if (quote.team === "A" && actor.id === supervisor.id)
@@ -2471,18 +2493,39 @@ export class Engine {
         date: qualificationDate,
       });
     });
-    const managementEntries =
+    const bonusSources =
       actor.role === "head"
-        ? entries.filter((entry) => this.findQuote(entry.quoteId).team === "A")
+        ? qualified.filter((entry) => entry.team === "A")
         : actor.role === "supervisor"
-          ? entries.filter(
-              (entry) =>
-                currentVersion(this.findQuote(entry.quoteId)).signature
-                  ?.supervisorId === actor.id,
+          ? qualified.filter(
+              (entry) => entry.supervisorId === actor.id,
             )
-          : entries;
+          : qualified.filter((entry) => entry.ownerId === actor.id);
+    const bonusEntries: PerformanceEntry[] = bonusSources.map((entry) => {
+      const rate =
+        actor.role === "head"
+          ? entry.low
+            ? 0.03
+            : 0.04
+          : actor.role === "supervisor"
+            ? entry.low
+              ? 0.02
+              : 0.03
+            : entry.low
+              ? 0.06
+              : 0.08;
+      return {
+        quoteId: entry.quoteId,
+        number: entry.number,
+        customerName: entry.customerName,
+        total: entry.total,
+        rate,
+        commission: moneyValue(D(entry.total).mul(rate)),
+        date: entry.date,
+      };
+    });
     const sales = moneyValue(
-      managementEntries.reduce((sum, entry) => D(sum).plus(entry.total), D(0)),
+      bonusSources.reduce((sum, entry) => D(sum).plus(entry.total), D(0)),
     );
     const commission = moneyValue(
       entries.reduce((sum, entry) => D(sum).plus(entry.commission), D(0)),
@@ -2517,7 +2560,15 @@ export class Engine {
         nextBonus = reward;
       }
     });
-    return { sales, commission, bonus, nextTarget, nextBonus, entries };
+    return {
+      sales,
+      commission,
+      bonus,
+      nextTarget,
+      nextBonus,
+      entries,
+      bonusEntries,
+    };
   }
 
   teamPerformance(actorInput: Actor, month: string): TeamPerformance {
