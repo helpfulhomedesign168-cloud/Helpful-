@@ -45,6 +45,7 @@ import {
   currentVersion,
   money,
   WorkOrder,
+  Invoice,
   InvoiceCategory,
   INVOICE_CATEGORY_NAMES,
   ROLE_NAMES,
@@ -783,11 +784,17 @@ export function Invoices() {
   const { actor, engine } = useApp();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [teamFilter, setTeamFilter] = useState<"all" | "A" | "B">("all");
+  const [salesFilter, setSalesFilter] = useState("all");
   const [sortKey, setSortKey] = useState<
     "none" | "invoice" | "sales" | "status"
   >("none");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const actors = engine.listActors();
+  const salesActors = actors.filter((candidate) =>
+    ["sales", "supervisor", "head"].includes(candidate.role),
+  );
   let orders = [] as WorkOrder[];
   try {
     orders = engine.listOrders(actor);
@@ -807,12 +814,36 @@ export function Invoices() {
   };
   const statusRank = (label: string) =>
     label === "已完成工程" ? 3 : label === "已發工程部" ? 2 : 1;
-  const invoices = [...engine.listInvoices(actor)]
-    .filter((invoice) =>
-      `${invoice.number} ${invoice.customer.name} ${invoice.customer.address}`.includes(
-        search,
-      ),
-    )
+  const quoteOf = (invoice: Invoice) =>
+    engine.getQuote(actor, invoice.quoteId);
+  const parentOf = (invoice: Invoice) => {
+    const quote = quoteOf(invoice);
+    return quote.parentQuoteId
+      ? engine.quoteParentSummary(actor, quote.id)
+      : undefined;
+  };
+  const statusKeyOf = (invoice: Invoice) => {
+    const label = engineeringLabel(invoice);
+    return label === "已完成工程"
+      ? "completed"
+      : label === "已發工程部"
+        ? "released"
+        : "pending";
+  };
+  const invoices: Invoice[] = [...engine.listInvoices(actor)]
+    .filter((invoice) => {
+      const quote = quoteOf(invoice);
+      const parent = parentOf(invoice);
+      return (
+        (statusFilter === "all" ||
+          statusKeyOf(invoice) === statusFilter) &&
+        (teamFilter === "all" || quote.team === teamFilter) &&
+        (salesFilter === "all" || quote.ownerId === salesFilter) &&
+        `${invoice.number} ${invoice.customer.name} ${invoice.customer.address} ${parent?.number ?? ""}`.includes(
+          search,
+        )
+      );
+    })
     .sort((a, b) => {
       if (sortKey === "invoice")
         return sortDir === "asc"
@@ -828,7 +859,10 @@ export function Invoices() {
           : statusRank(engineeringLabel(b)) - statusRank(engineeringLabel(a));
       return b.createdAt.localeCompare(a.createdAt);
     });
-  const pager = usePagination(invoices, `${search}|${sortKey}|${sortDir}`);
+  const pager = usePagination(
+    invoices,
+    `${search}|${statusFilter}|${teamFilter}|${salesFilter}|${sortKey}|${sortDir}`,
+  );
   const sortButton = (
     key: "invoice" | "sales" | "status",
     label: string,
@@ -861,12 +895,51 @@ export function Invoices() {
     <>
       <PageHead title="單據管理" />
       <div className="list-panel">
-        <div className="list-toolbar">
+        <div className="submission-toolbar invoice-toolbar">
           <Search
             value={search}
             onChange={setSearch}
-            placeholder="搜尋Invoice、客戶或地址"
+            placeholder="搜尋工程名稱或代號"
           />
+          <div className="submission-filters">
+            <select
+              aria-label="Invoice狀態"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
+              <option value="all">全部狀態</option>
+              <option value="pending">待收足訂金</option>
+              <option value="released">已發工程部</option>
+              <option value="completed">已完成工程</option>
+            </select>
+            <select
+              aria-label="Invoice Team"
+              value={teamFilter}
+              onChange={(event) =>
+                setTeamFilter(event.target.value as "all" | "A" | "B")
+              }
+            >
+              <option value="all">全部 Team</option>
+              <option value="A">Team A</option>
+              <option value="B">Team B</option>
+            </select>
+            <select
+              aria-label="Invoice Sales"
+              value={salesFilter}
+              onChange={(event) => setSalesFilter(event.target.value)}
+            >
+              <option value="all">全部 Sales</option>
+              {salesActors.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="submission-legend invoice-legend">
+          <span className="normal-dot">正單</span>
+          <span className="additional-dot">加單</span>
         </div>
         {invoices.length === 0 ? (
           <Empty
@@ -900,7 +973,30 @@ export function Invoices() {
                     <tr key={invoice.id}>
                       <td>{invoice.createdAt.slice(0, 10)}</td>
                       <td>
-                        <strong>{invoice.number}</strong>
+                        <div
+                          className={`invoice-number-cell ${
+                            quote.isAdditionalOrder ? "additional" : ""
+                          }`}
+                        >
+                          <div className="invoice-number-row">
+                            <strong>{invoice.number}</strong>
+                            <Button
+                              variant="ghost"
+                              aria-label={`查看／修改 ${invoice.number}`}
+                              onClick={() =>
+                                nav("/invoices/" + invoice.id)
+                              }
+                            >
+                              <PenLine size={18} />
+                            </Button>
+                          </div>
+                          {quote.isAdditionalOrder && (
+                            <small>
+                              {engine.quoteParentSummary(actor, quote.id)
+                                ?.number ?? "原單未能讀取"}
+                            </small>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <strong>{invoice.customer.name}</strong>

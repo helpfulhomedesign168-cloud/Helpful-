@@ -11,6 +11,24 @@ test("單據管理顯示收款status bar並可按Invoice／Sales／工程狀態�
   await page.goto("/");
   await switchRole(page, "開單員");
   await page.goto("/invoices");
+  await expect(
+    page.getByPlaceholder("搜尋工程名稱或代號"),
+  ).toBeVisible();
+  const statusFilter = page.getByLabel("Invoice狀態", { exact: true });
+  const teamFilter = page.getByLabel("Invoice Team", { exact: true });
+  const salesFilter = page.getByLabel("Invoice Sales", { exact: true });
+  await expect(statusFilter).toBeVisible();
+  await expect(teamFilter).toBeVisible();
+  await expect(salesFilter).toBeVisible();
+  await expect(
+    page.locator(".invoice-legend .normal-dot"),
+  ).toHaveText("正單");
+  await expect(
+    page.locator(".invoice-legend .additional-dot"),
+  ).toHaveText("加單");
+  await expect(
+    page.getByRole("button", { name: /查看／修改 SHMM/ }).first(),
+  ).toBeVisible();
   const progress = page.locator(".payment-progress-track").first();
   await expect(progress).toBeVisible();
   await expect(progress).toHaveAttribute("aria-valuenow", /^[0-9.]+$/);
@@ -24,7 +42,9 @@ test("單據管理顯示收款status bar並可按Invoice／Sales／工程狀態�
   await expect(salesSort).toHaveClass(/active/);
   await statusSort.click();
   await expect(statusSort).toHaveClass(/active/);
-  await expect(page.getByText("已完成工程", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "已完成工程", exact: true }),
+  ).toHaveCount(0);
 });
 
 test("CS可標記工程完成，Invoice列表顯示工程完成並通知開單員收尾數", async ({ page }) => {

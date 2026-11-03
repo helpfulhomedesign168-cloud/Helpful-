@@ -5761,3 +5761,33 @@ textarea {
 .invoice-list-table td:nth-child(7) {
   width: 14%;
 }
+
+.invoice-toolbar {
+  padding-bottom: 10px;
+}
+.invoice-legend {
+  padding-top: 0;
+}
+.invoice-number-cell strong {
+  display: block;
+}
+.invoice-number-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.invoice-number-row .btn {
+  min-height: 28px;
+  padding: 2px;
+}
+.invoice-number-cell.additional > strong,
+.invoice-number-cell.additional .invoice-number-row strong {
+  color: #959b91;
+}
+.invoice-number-cell > small {
+  display: block;
+  margin-top: 3px;
+  color: #959b91;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
