@@ -1308,16 +1308,6 @@ export class Engine {
     );
     const lines: MunicipalOrderLine[] = invoice.lines.map((line) => {
       const priced = amounts.get(line.id);
-      const quantity =
-        priced?.billedQty ?? line.quantity ?? 0;
-      const dimensions =
-        line.itemSnapshot.measure === "area"
-          ? `${line.length} × ${line.width} ${line.dimensionUnit}`
-          : line.itemSnapshot.measure === "length"
-            ? `${line.length} ${line.dimensionUnit}`
-            : line.itemSnapshot.measure === "fixed"
-              ? "一式"
-              : `${line.quantity} ${line.itemSnapshot.unit}`;
       const style = line.productStyle
         ? `${line.productStyle.factoryName} · ${line.productStyle.seriesName} · ${line.productStyle.productCode}`
         : line.style;
@@ -1325,18 +1315,17 @@ export class Engine {
         id: uid("municipal-line"),
         sourceLineId: line.id,
         name: line.itemSnapshot.name,
-        description: [
-          line.position,
-          dimensions,
-          line.itemSnapshot.details,
-          style,
-        ]
-          .filter(Boolean)
-          .join(" · "),
-        quantity,
+        description: line.itemSnapshot.details || "",
+        position: line.position,
+        measure: line.itemSnapshot.measure,
+        length: line.length,
+        width: line.width,
+        dimensionUnit: line.dimensionUnit,
+        quantity: line.quantity ?? 1,
         unit: line.itemSnapshot.unit,
         unitPrice: line.itemSnapshot.price,
         amount: priced?.amount ?? 0,
+        productStyleText: style,
       };
     });
     return {
@@ -2288,15 +2277,26 @@ export class Engine {
         !isFiniteNonNegative(line.amount)
       )
         fail(`第 ${index + 1} 項的數量或價錢無效。`);
+      if (
+        line.length !== undefined &&
+        (!isFiniteNonNegative(line.length) || !isFiniteNonNegative(line.width ?? 0))
+      )
+        fail(`第 ${index + 1} 項的尺寸無效。`);
       return {
         id: line.id || uid("municipal-line"),
         sourceLineId: line.sourceLineId,
         name: line.name.trim(),
         description: line.description?.trim() || "",
+        position: line.position?.trim() || "",
+        measure: line.measure,
+        length: line.length,
+        width: line.width,
+        dimensionUnit: line.dimensionUnit,
         quantity: line.quantity,
         unit: line.unit?.trim() || "項",
         unitPrice: line.unitPrice,
         amount: line.amount,
+        productStyleText: line.productStyleText,
       };
     });
     let output!: MunicipalOrder;

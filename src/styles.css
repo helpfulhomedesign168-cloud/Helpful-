@@ -5861,3 +5861,87 @@ textarea {
     position: static;
   }
 }
+
+.municipal-line-cards {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 22px;
+}
+.municipal-line-card {
+  padding: 16px;
+  border: 1px solid #dfe3d9;
+  border-radius: 9px;
+  background: #fff;
+}
+.municipal-line-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+.municipal-line-title > div {
+  flex: 1;
+  min-width: 0;
+}
+.municipal-line-index {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 5px;
+  background: #edf0e7;
+  color: #67705e;
+  font-size: 11px;
+  font-weight: 700;
+}
+.municipal-line-name-input {
+  width: 100%;
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  font-size: 17px;
+  font-weight: 700;
+}
+.municipal-line-title small {
+  display: block;
+  margin-top: 4px;
+  color: #7c8476;
+  font-size: 12px;
+}
+.municipal-line-fields {
+  align-items: start;
+  margin-bottom: 2px;
+}
+.municipal-line-fields .field {
+  margin-bottom: 10px;
+}
+.municipal-line-calculation {
+  margin: 4px 0 12px;
+  color: #70786a;
+  font-size: 12px;
+}
+.municipal-line-calculation span {
+  margin-left: 6px;
+  color: #9aa193;
+}
+.municipal-line-style {
+  margin: 6px 0 0;
+  color: #4e5b47;
+  font-size: 13px;
+}
+.municipal-line-amount {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #edf0e7;
+  color: #727a6c;
+  font-size: 13px;
+}
+.municipal-line-amount strong {
+  color: #24271f;
+  font-size: 18px;
+}

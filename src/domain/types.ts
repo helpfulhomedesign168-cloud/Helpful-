@@ -330,10 +330,16 @@ export interface MunicipalOrderLine {
   sourceLineId?: string;
   name: string;
   description: string;
+  position?: string;
+  measure?: "area" | "length" | "quantity" | "fixed";
+  length?: number;
+  width?: number;
+  dimensionUnit?: "呎" | "寸";
   quantity: number;
   unit: string;
   unitPrice: number;
   amount: number;
+  productStyleText?: string;
 }
 export interface MunicipalOrder {
   id: string;

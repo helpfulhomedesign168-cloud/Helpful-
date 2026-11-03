@@ -910,7 +910,7 @@ export function QuoteEditor() {
               </div>
             )}
           </Section>
-          {base?.signature && (
+          {(base?.signature || clerkEditor) && (
             <Section title="版本修改原因">
               <Field label="修改原因" required>
                 <textarea
