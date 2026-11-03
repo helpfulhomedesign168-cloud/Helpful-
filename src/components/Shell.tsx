@@ -18,6 +18,7 @@ import {
   LogOut,
   HardHat,
   Truck,
+  UserCog,
   Palette,
   Tags,
 } from "lucide-react";
@@ -84,6 +85,7 @@ export function Shell() {
               ["/customers", "客戶", Users],
             ]
           : [
+              ["/users", "用戶管理", UserCog],
               ["/handoff", "工程單", ArrowRightLeft],
               ["/orders", "工程管理", Hammer],
               ["/contractors", "工程師傅", HardHat],
@@ -186,7 +188,10 @@ export function Shell() {
         <Dialog title="切換測試角色" onClose={() => setRoles(false)}>
           <p className="muted">切換角色後，保留同一張單的最新進度。</p>
           <div className="role-list">
-            {engine.listActors().map((a) => (
+            {engine
+              .listActors()
+              .filter((a) => a.active !== false)
+              .map((a) => (
               <button
                 key={a.id}
                 className={`role-option ${a.id === actor.id ? "selected" : ""}`}
