@@ -5951,3 +5951,46 @@ textarea {
   color: #24271f;
   font-size: 18px;
 }
+
+/* Super Admin user management */
+.user-table {
+  min-width: 760px;
+}
+.user-table td:first-child strong,
+.user-table td:first-child small {
+  display: block;
+}
+.user-table td:first-child small {
+  margin-top: 3px;
+  color: #7d8577;
+  font-size: 11px;
+}
+.user-table code {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #f1f3ed;
+  font-size: 13px;
+}
+.user-table tr.user-inactive {
+  opacity: 0.55;
+}
+.user-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.user-editor-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 7px;
+  background: #f6f7f2;
+}
+.user-editor-intro p {
+  margin: 0;
+  color: #6d7567;
+  font-size: 13px;
+  line-height: 1.5;
+}

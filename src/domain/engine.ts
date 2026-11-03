@@ -48,6 +48,8 @@ import {
   SALES_OFF_CODE,
   SALES_PH_CODE,
   type ResourceFeeMode,
+  type Role,
+  type Team,
   type ServiceItem,
   type WorkOrder,
   type LineAmount,
@@ -56,6 +58,7 @@ import {
   type InstallmentPlanRow,
   type InvoicePaymentStatus,
   INVOICE_CATEGORY_NAMES,
+  ROLE_NAMES,
   SALES_WORK_SHIFT_NAMES,
   DEFAULT_SERVICE_CATEGORIES,
   composeCustomerAddress,
@@ -894,7 +897,8 @@ export class Engine {
     const actual = this.state.actors.find(
       (candidate) => candidate.id === actor.id,
     );
-    if (!actual) fail("帳戶不存在或已停用。");
+    if (!actual || actual.active === false)
+      fail("帳戶不存在或已停用。");
     return actual;
   }
   private has(actor: Actor, grant: string): boolean {
@@ -1396,6 +1400,146 @@ export class Engine {
 
   listActors(): Actor[] {
     return deepCopy(this.state.actors);
+  }
+  listUsers(actorInput: Actor): Actor[] {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "admin")
+      fail("只有Super Admin可管理用戶。");
+    return deepCopy(this.state.actors);
+  }
+  private defaultGrants(role: Role): string[] {
+    if (role === "sales") return ["quote.write"];
+    if (role === "supervisor" || role === "head") return ["quote.read"];
+    if (role === "finance")
+      return ["finance.read", "finance.validate", "handoff.read"];
+    if (role === "clerk")
+      return ["invoice.write", "handoff.read", "finance.read"];
+    if (role === "cs")
+      return ["handoff.read", "order.read", "assignment.write"];
+    if (role === "cs_supervisor")
+      return [
+        "handoff.read",
+        "handoff.write",
+        "order.read",
+        "assignment.write",
+      ];
+    return ["admin.all", "finance.read", "invoice.write"];
+  }
+  saveUser(
+    actorInput: Actor,
+    input: {
+      id?: string;
+      name: string;
+      code: string;
+      role: Role;
+      team?: Team;
+    },
+  ): Actor {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "admin")
+      fail("只有Super Admin可管理用戶。");
+    if (!input.name.trim()) fail("請填寫用戶姓名。");
+    if (!Object.hasOwn(ROLE_NAMES, input.role)) fail("用戶角色無效。");
+    if (!input.team && ["sales", "supervisor", "head"].includes(input.role))
+      fail("Sales角色必須選擇Team。");
+    if (input.team && !["A", "B"].includes(input.team))
+      fail("Team無效。");
+    let output!: Actor;
+    this.mutate((state) => {
+      const existing = input.id
+        ? state.actors.find((item) => item.id === input.id)
+        : undefined;
+      if (input.id && !existing) fail("找不到用戶。");
+      const code = input.code.trim().toUpperCase();
+      if (!/^[A-Z0-9]{2,6}$/.test(code))
+        fail("員工Code必須為2–6位英文字母或數字。");
+      if (
+        state.actors.some(
+          (item) =>
+            item.id !== existing?.id &&
+            item.code.toUpperCase() === code,
+        )
+      )
+        fail("員工Code已存在。");
+      if (existing) {
+        if (existing.code.toUpperCase() !== code)
+          fail("員工Code建立後不可更改。");
+        if (
+          existing.role === "admin" &&
+          input.role !== "admin" &&
+          state.actors.filter(
+            (item) =>
+              item.id !== existing.id &&
+              item.role === "admin" &&
+              item.active !== false,
+          ).length === 0
+        )
+          fail("不可移除最後一位Super Admin。");
+        if (actor.id === existing.id && input.role !== "admin")
+          fail("不可更改自己的Super Admin角色。");
+        existing.name = input.name.trim();
+        existing.role = input.role;
+        existing.team = input.team;
+        existing.grants = this.defaultGrants(input.role);
+        output = deepCopy(existing);
+      } else {
+        const user: Actor = {
+          id: uid("actor"),
+          name: input.name.trim(),
+          code,
+          role: input.role,
+          team: input.team,
+          grants: this.defaultGrants(input.role),
+          active: true,
+        };
+        state.actors.push(user);
+        output = deepCopy(user);
+      }
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: existing ? "user_updated" : "user_created",
+        detail: `${existing ? "修改" : "新增"}用戶 ${output.name}（${output.code}）`,
+      });
+    });
+    return output;
+  }
+  setUserActive(
+    actorInput: Actor,
+    userId: string,
+    active: boolean,
+  ): Actor {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "admin")
+      fail("只有Super Admin可管理用戶。");
+    if (actor.id === userId && !active)
+      fail("不可停用自己。");
+    let output!: Actor;
+    this.mutate((state) => {
+      const user =
+        state.actors.find((item) => item.id === userId) ??
+        fail("找不到用戶。");
+      if (
+        !active &&
+        user.role === "admin" &&
+        state.actors.filter(
+          (item) =>
+            item.id !== user.id &&
+            item.role === "admin" &&
+            item.active !== false,
+        ).length === 0
+      )
+        fail("不可停用最後一位Super Admin。");
+      user.active = active;
+      output = deepCopy(user);
+      this.audit(state, {
+        quoteId: "",
+        actorId: actor.id,
+        action: active ? "user_activated" : "user_deactivated",
+        detail: `${active ? "啟用" : "停用"}用戶 ${user.name}（${user.code}）`,
+      });
+    });
+    return output;
   }
   listCustomers(actorInput: Actor): CustomerProfile[] {
     const actor = this.actor(actorInput);

@@ -202,6 +202,47 @@ it("空的Team即使有已刪成員的殘留monthlyTeam/shift仍可刪除", () =
   ).toBe(false);
 });
 
+it("Super Admin可新增、修改、停用及啟用所有用戶", () => {
+  const e = new Engine(undefined, createSeedState());
+  const admin = actor(e, "admin");
+  const sales = actor(e, "sales-mm");
+  expect(() => e.listUsers(sales)).toThrow("Super Admin");
+  const user = e.saveUser(admin, {
+    name: "測試銷售",
+    code: "ET",
+    role: "sales",
+    team: "A",
+  });
+  expect(user.active).toBe(true);
+  expect(e.listUsers(admin).some((item) => item.id === user.id)).toBe(true);
+  expect(() =>
+    e.saveUser(admin, {
+      name: "重複Code",
+      code: "ET",
+      role: "sales",
+      team: "B",
+    }),
+  ).toThrow("Code已存在");
+  const updated = e.saveUser(admin, {
+    id: user.id,
+    name: "測試主管",
+    code: "ET",
+    role: "supervisor",
+    team: "A",
+  });
+  expect(updated.code).toBe("ET");
+  expect(updated.role).toBe("supervisor");
+  e.setUserActive(admin, user.id, false);
+  expect(
+    e.listUsers(admin).find((item) => item.id === user.id)?.active,
+  ).toBe(false);
+  e.setUserActive(admin, user.id, true);
+  expect(
+    e.listUsers(admin).find((item) => item.id === user.id)?.active,
+  ).toBe(true);
+  expect(() => e.setUserActive(admin, "admin", false)).toThrow("自己");
+});
+
 it("多項訂單分類按自費 > 8萬資助 > 團購決定收款分類", () => {
   const e = new Engine(undefined, createSeedState());
   const sales = actor(e, "sales-mm");

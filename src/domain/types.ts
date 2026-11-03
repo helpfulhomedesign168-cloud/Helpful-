@@ -15,6 +15,8 @@ export interface Actor {
   role: Role;
   team?: Team;
   grants: string[];
+  /** 停用後不可登入／不可再被指派，但保留歷史單據引用。 */
+  active?: boolean;
 }
 export interface Attachment {
   id: string;
