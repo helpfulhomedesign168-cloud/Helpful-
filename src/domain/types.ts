@@ -646,6 +646,21 @@ export interface Performance {
   nextBonus?: number;
   entries: PerformanceEntry[];
 }
+export interface TeamMemberPerformance {
+  actorId: string;
+  name: string;
+  code: string;
+  team: "A" | "B";
+  quoteCount: number;
+  sales: number;
+  commission: number;
+}
+export interface TeamPerformance {
+  scopeLabel: string;
+  members: TeamMemberPerformance[];
+  sales: number;
+  commission: number;
+}
 export type SalesAssignment = string;
 export const SALES_OFF_CODE = "OFF";
 export const SALES_PH_CODE = "PH";

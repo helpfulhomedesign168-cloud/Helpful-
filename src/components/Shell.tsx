@@ -56,7 +56,11 @@ export function Shell() {
           actor.role === "sales" ? "我的排班" : "Sales排班",
           CalendarDays,
         ],
-        ["/performance", "我的業績", ChartNoAxesCombined],
+        [
+          "/performance",
+          actor.role === "sales" ? "我的業績" : "團隊業績",
+          ChartNoAxesCombined,
+        ],
       ]
     : actor.role === "cs" || actor.role === "cs_supervisor"
       ? [

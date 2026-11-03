@@ -866,11 +866,16 @@ export function Performance() {
   const pager = usePagination(entries, month);
   const nav = useNavigate();
   const management = actor.role === "head" || actor.role === "supervisor";
+  const team = management ? engine.teamPerformance(actor, month) : undefined;
   return (
     <>
       <PageHead
-        eyebrow="只看本人收益"
-        title="我的業績"
+        eyebrow={
+          management
+            ? `${team?.scopeLabel ?? "Team"} · 管理視圖`
+            : "只看本人收益"
+        }
+        title={management ? "團隊業績" : "我的業績"}
         actions={
           <Field label="業績月份">
             <input
@@ -882,24 +887,87 @@ export function Performance() {
         }
       />
       <div className="performance-stats">
-        <div>
-          <span>{management ? "管理Bonus合資格業績" : "本月合資格業績"}</span>
-          <strong>{money(p.sales)}</strong>
-        </div>
-        <div>
-          <span>基本佣金</span>
-          <strong>{money(p.commission)}</strong>
-        </div>
-        <div>
-          <span>本月Bonus</span>
-          <strong>{money(p.bonus)}</strong>
-        </div>
+        {management && team ? (
+          <>
+            <div>
+              <span>{team.scopeLabel} 合資格業績</span>
+              <strong>{money(team.sales)}</strong>
+            </div>
+            <div>
+              <span>{team.scopeLabel} 基本佣金</span>
+              <strong>{money(team.commission)}</strong>
+            </div>
+            <div>
+              <span>本人管理Bonus</span>
+              <strong>{money(p.bonus)}</strong>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <span>本月合資格業績</span>
+              <strong>{money(p.sales)}</strong>
+            </div>
+            <div>
+              <span>基本佣金</span>
+              <strong>{money(p.commission)}</strong>
+            </div>
+            <div>
+              <span>本月Bonus</span>
+              <strong>{money(p.bonus)}</strong>
+            </div>
+          </>
+        )}
       </div>
+      {management && team && (
+        <Section
+          title={`${team.scopeLabel} 成員表現`}
+          className="team-performance"
+          action={<Badge strong>{team.members.length} 位 Sales</Badge>}
+        >
+          {team.members.length === 0 ? (
+            <Empty
+              title="團隊暫無 Sales 成員"
+              description="成員加入後會顯示個人合資格業績。"
+            />
+          ) : (
+            <div className="table-scroll">
+              <table className="team-performance-table">
+                <thead>
+                  <tr>
+                    <th>Sales</th>
+                    <th>Team</th>
+                    <th className="numeric">合資格來源</th>
+                    <th className="numeric">合資格業績</th>
+                    <th className="numeric">基本佣金</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {team.members.map((member) => (
+                    <tr key={member.actorId}>
+                      <td>
+                        <strong>{member.name}</strong>
+                        <small>{member.code}</small>
+                      </td>
+                      <td>Team {member.team}</td>
+                      <td className="numeric">{member.quoteCount}</td>
+                      <td className="numeric money">{money(member.sales)}</td>
+                      <td className="numeric money">
+                        {money(member.commission)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Section>
+      )}
       <Section
         title="Bonus進度"
         action={
           <Button variant="ghost" onClick={() => setInfo(true)}>
-            查看本人規則
+            {management ? "查看管理規則" : "查看本人規則"}
           </Button>
         }
       >
@@ -927,7 +995,9 @@ export function Performance() {
           </div>
         )}
       </Section>
-      <Section title="本月合資格來源">
+      <Section
+        title={management ? "本人管理Bonus來源" : "本月合資格來源"}
+      >
         {pager.total === 0 ? (
           <Empty
             title="本月暫無合資格來源"
@@ -980,7 +1050,10 @@ export function Performance() {
       </Section>
       <p className="muted">合資格金額不等已發放薪金；月結及發放由會計處理。</p>
       {info && (
-        <Dialog title="本人的佣金與Bonus" onClose={() => setInfo(false)}>
+        <Dialog
+          title={management ? "管理佣金與Bonus" : "本人的佣金與Bonus"}
+          onClose={() => setInfo(false)}
+        >
           {actor.role === "sales" ? (
             <>
               <p>本人來源一般佣金8%；折扣低於95折時為6%。</p>

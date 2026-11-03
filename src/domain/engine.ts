@@ -33,6 +33,7 @@ import {
   type ProductStyleSeries,
   type ProductStyleImage,
   type ProductStyleSupplier,
+  type TeamPerformance,
   type MunicipalOrder,
   type MunicipalOrderLine,
   type SalesShift,
@@ -2517,6 +2518,44 @@ export class Engine {
       }
     });
     return { sales, commission, bonus, nextTarget, nextBonus, entries };
+  }
+
+  teamPerformance(actorInput: Actor, month: string): TeamPerformance {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "head" && actor.role !== "supervisor")
+      fail("只有Sales主管或阿頭可查看團隊業績。");
+    const members = this.state.actors
+      .filter(
+        (member) =>
+          member.role === "sales" &&
+          (actor.role === "head" || member.team === actor.team),
+      )
+      .map((member) => {
+        const performance = this.performance(member, month);
+        return {
+          actorId: member.id,
+          name: member.name,
+          code: member.code,
+          team: member.team ?? "B",
+          quoteCount: performance.entries.length,
+          sales: performance.sales,
+          commission: performance.commission,
+        };
+      })
+      .sort((a, b) => b.sales - a.sales || a.name.localeCompare(b.name));
+    return {
+      scopeLabel: actor.role === "head" ? "全部 Team" : `Team ${actor.team}`,
+      members,
+      sales: moneyValue(
+        members.reduce((sum, member) => D(sum).plus(member.sales), D(0)),
+      ),
+      commission: moneyValue(
+        members.reduce(
+          (sum, member) => D(sum).plus(member.commission),
+          D(0),
+        ),
+      ),
+    };
   }
   private scheduleTeams(state: AppState, month: string): SalesScheduleTeam[] {
     const base: SalesScheduleTeam[] = [
