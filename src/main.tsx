@@ -23,7 +23,7 @@ import {
   MunicipalOrders,
 } from "./pages/MunicipalOrders";
 import { Documents } from "./pages/Documents";
-import { Users } from "./pages/Users";
+import { UserProfile, Users } from "./pages/Users";
 import { Button, Empty } from "./components/ui";
 import "./styles.css";
 function Home() {
@@ -218,6 +218,22 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={["admin"]}>
                   <Users />
+                </Guard>
+              }
+            />
+            <Route
+              path="/users/new"
+              element={
+                <Guard roles={["admin"]}>
+                  <UserProfile />
+                </Guard>
+              }
+            />
+            <Route
+              path="/users/:id"
+              element={
+                <Guard roles={["admin"]}>
+                  <UserProfile />
                 </Guard>
               }
             />

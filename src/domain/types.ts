@@ -17,6 +17,16 @@ export interface Actor {
   grants: string[];
   /** 停用後不可登入／不可再被指派，但保留歷史單據引用。 */
   active?: boolean;
+  surname?: string;
+  salutation?: string;
+  phone?: string;
+  companyPhone?: string;
+  email?: string;
+  address?: string;
+  emergencyName?: string;
+  emergencyPhone?: string;
+  bio?: string;
+  avatar?: Attachment;
 }
 export interface Attachment {
   id: string;

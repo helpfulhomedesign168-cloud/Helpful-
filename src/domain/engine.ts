@@ -1433,6 +1433,16 @@ export class Engine {
       code: string;
       role: Role;
       team?: Team;
+      surname?: string;
+      salutation?: string;
+      phone?: string;
+      companyPhone?: string;
+      email?: string;
+      address?: string;
+      emergencyName?: string;
+      emergencyPhone?: string;
+      bio?: string;
+      avatar?: Attachment;
     },
   ): Actor {
     const actor = this.actor(actorInput);
@@ -1440,8 +1450,13 @@ export class Engine {
       fail("只有Super Admin可管理用戶。");
     if (!input.name.trim()) fail("請填寫用戶姓名。");
     if (!Object.hasOwn(ROLE_NAMES, input.role)) fail("用戶角色無效。");
-    if (!input.team && ["sales", "supervisor", "head"].includes(input.role))
-      fail("Sales角色必須選擇Team。");
+    const salesDepartment = ["sales", "supervisor", "head"].includes(
+      input.role,
+    );
+    if (salesDepartment && !input.team)
+      fail("Sales部門必須選擇Team。");
+    if (!salesDepartment && input.team)
+      fail("只有Sales部門可設定Team。");
     if (input.team && !["A", "B"].includes(input.team))
       fail("Team無效。");
     let output!: Actor;
@@ -1481,6 +1496,16 @@ export class Engine {
         existing.role = input.role;
         existing.team = input.team;
         existing.grants = this.defaultGrants(input.role);
+        existing.surname = input.surname?.trim() || undefined;
+        existing.salutation = input.salutation?.trim() || undefined;
+        existing.phone = input.phone?.trim() || undefined;
+        existing.companyPhone = input.companyPhone?.trim() || undefined;
+        existing.email = input.email?.trim() || undefined;
+        existing.address = input.address?.trim() || undefined;
+        existing.emergencyName = input.emergencyName?.trim() || undefined;
+        existing.emergencyPhone = input.emergencyPhone?.trim() || undefined;
+        existing.bio = input.bio?.trim() || undefined;
+        existing.avatar = input.avatar;
         output = deepCopy(existing);
       } else {
         const user: Actor = {
@@ -1491,6 +1516,16 @@ export class Engine {
           team: input.team,
           grants: this.defaultGrants(input.role),
           active: true,
+          surname: input.surname?.trim() || undefined,
+          salutation: input.salutation?.trim() || undefined,
+          phone: input.phone?.trim() || undefined,
+          companyPhone: input.companyPhone?.trim() || undefined,
+          email: input.email?.trim() || undefined,
+          address: input.address?.trim() || undefined,
+          emergencyName: input.emergencyName?.trim() || undefined,
+          emergencyPhone: input.emergencyPhone?.trim() || undefined,
+          bio: input.bio?.trim() || undefined,
+          avatar: input.avatar,
         };
         state.actors.push(user);
         output = deepCopy(user);
