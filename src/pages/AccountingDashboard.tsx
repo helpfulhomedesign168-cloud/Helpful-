@@ -63,9 +63,9 @@ export function AccountingDashboard() {
           <small>營業額 − 工程支出</small>
         </div>
         <div className="accounting-kpi">
-          <span>Sales佣金</span>
+          <span>應計Sales佣金</span>
           <strong>{money(dashboard.commissions)}</strong>
-          <small>本月佣金支出</small>
+          <small>按已開單營業額計算</small>
         </div>
         <div className="accounting-kpi net">
           <span>扣除佣金後淨利</span>
@@ -216,8 +216,10 @@ export function AccountingDashboard() {
       <section className="list-panel accounting-sales">
         <div className="accounting-section-head">
           <div>
-            <h2>每個 Sales 佣金</h2>
-            <p>佣金按已核實付款及現有佣金規則計算。</p>
+            <h2>每個 Sales 應計佣金</h2>
+            <p>
+              按已開單營業額及現有佣金率（8%／6%，管理佣金按Team規則）計算；實際支付佣金仍按有效付款確認。
+            </p>
           </div>
         </div>
         {dashboard.sales.length === 0 ? (

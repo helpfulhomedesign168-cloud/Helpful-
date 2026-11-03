@@ -3568,6 +3568,64 @@ export class Engine {
     const turnover = sum(jobs.map((job) => job.revenue));
     const collected = sum(jobs.map((job) => job.collected));
     const expenses = sum(jobs.map((job) => job.expenses));
+    // Dashboard commission is accrued on issued Invoice revenue, using the
+    // same 8%/6% owner and management rates. Actual commission paid remains
+    // the cash-basis figure shown on the Sales performance page.
+    const commissionByActor = new Map<
+      string,
+      { revenue: number; jobCount: number; commission: number }
+    >();
+    const addCommission = (
+      actorId: string,
+      revenue: number,
+      jobCount: number,
+      commission: number,
+    ) => {
+      const row = commissionByActor.get(actorId) ?? {
+        revenue: 0,
+        jobCount: 0,
+        commission: 0,
+      };
+      row.revenue = moneyValue(D(row.revenue).plus(revenue));
+      row.jobCount += jobCount;
+      row.commission = moneyValue(D(row.commission).plus(commission));
+      commissionByActor.set(actorId, row);
+    };
+    invoices.forEach((invoice) => {
+      const quote = this.state.quotes.find(
+        (item) => item.id === invoice.quoteId,
+      );
+      const version = quote?.versions.find(
+        (item) => item.id === invoice.versionId,
+      );
+      if (!quote || !version) return;
+      const low = factor(version.discount).lt(0.95);
+      addCommission(
+        quote.ownerId,
+        invoice.netTotal,
+        1,
+        invoice.netTotal * (low ? 0.06 : 0.08),
+      );
+      const supervisorId = version.signature?.supervisorId;
+      if (supervisorId) {
+        const managementRate =
+          quote.team === "A"
+            ? low
+              ? 0.03
+              : 0.04
+            : low
+              ? 0.02
+              : 0.03;
+        addCommission(
+          supervisorId,
+          0,
+          0,
+          invoice.netTotal * managementRate,
+        );
+      }
+      if (quote.team === "B")
+        addCommission("head-don", 0, 0, invoice.netTotal * 0.01);
+    });
     const sales = this.state.actors
       .filter(
         (item) =>
@@ -3575,23 +3633,14 @@ export class Engine {
           item.active !== false,
       )
       .map((salesActor) => {
-        const actorJobs = jobs.filter((job) => {
-          const invoice = invoices.find(
-            (item) => item.id === job.invoiceId,
-          );
-          const quote = this.state.quotes.find(
-            (item) => item.id === invoice?.quoteId,
-          );
-          return quote?.ownerId === salesActor.id;
-        });
-        const performance = this.performance(salesActor, month);
+        const row = commissionByActor.get(salesActor.id);
         return {
           actorId: salesActor.id,
           name: salesActor.name,
           role: ROLE_NAMES[salesActor.role],
-          jobCount: actorJobs.length,
-          revenue: sum(actorJobs.map((job) => job.revenue)),
-          commission: performance.commission,
+          jobCount: row?.jobCount ?? 0,
+          revenue: row?.revenue ?? 0,
+          commission: row?.commission ?? 0,
         };
       })
       .filter((row) => row.jobCount > 0 || row.commission > 0);
@@ -5027,7 +5076,7 @@ function appendDemoEngineeringOrders(seed: AppState): void {
       versionId,
       customer: deepCopy(demoCustomer),
       lines: deepCopy(lines),
-      discount: 0,
+      discount: 1,
       discountMode: "none",
       discountValue: 0,
       netTotal: total,

@@ -293,6 +293,11 @@ it("會計主管可讀營運Dashboard，普通開單員不可", () => {
         .toFixed(2),
     ),
   );
+  const mm = dashboard.sales.find((row) => row.name.includes("文文"));
+  expect(mm?.commission).toBeGreaterThan(100000);
+  expect(dashboard.commissions).toBeGreaterThanOrEqual(
+    mm?.commission ?? 0,
+  );
   expect(() =>
     e.accountingDashboard(actor(e, "clerk"), "2026-10"),
   ).toThrow("會計主管");
