@@ -125,6 +125,46 @@ it("CS可讀取工程單所屬報價版本的line金額，供6成師傅費計算
   expect(Object.values(amounts).every((amount) => amount > 0)).toBe(true);
 });
 
+it("Sales及阿頭的Bonus業績等於該月合資格來源成交額總和", () => {
+  const state = createSeedState();
+  state.quotes.find((quote) => quote.id === "quote-issued")!.team = "A";
+  state.payments = state.payments.filter(
+    (payment) => payment.invoiceId !== "invoice-issued",
+  );
+  const e = new Engine(undefined, state);
+  const sales = actor(e, "sales-mm");
+  const head = actor(e, "head-don");
+  const salesPerformance = e.performance(sales, "2026-10");
+  expect(salesPerformance.sales).toBe(
+    Number(
+      (salesPerformance.bonusEntries ?? []).reduce(
+        (sum, entry) => sum + entry.total,
+        0,
+      ).toFixed(2),
+    ),
+  );
+  expect(
+    salesPerformance.bonusEntries?.some(
+      (entry) => entry.quoteId === "quote-issued",
+    ),
+  ).toBe(true);
+  const headPerformance = e.performance(head, "2026-10");
+  expect(headPerformance.sales).toBeGreaterThan(0);
+  expect(
+    headPerformance.bonusEntries?.some(
+      (entry) => entry.quoteId === "quote-issued",
+    ),
+  ).toBe(true);
+  expect(headPerformance.sales).toBe(
+    Number(
+      (headPerformance.bonusEntries ?? []).reduce(
+        (sum, entry) => sum + entry.total,
+        0,
+      ).toFixed(2),
+    ),
+  );
+});
+
 it("空的Team即使有已刪成員的殘留monthlyTeam/shift仍可刪除", () => {
   const state = createSeedState();
   state.salesRosterTeams.push({

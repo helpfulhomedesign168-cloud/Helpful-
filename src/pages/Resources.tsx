@@ -862,7 +862,9 @@ export function Performance() {
   const [month, setMonth] = useState("2026-10");
   const [info, setInfo] = useState(false);
   const p = engine.performance(actor, month);
-  const entries = [...p.entries].sort((a, b) => b.date.localeCompare(a.date));
+  const entries = [...(p.bonusEntries ?? p.entries)].sort((a, b) =>
+    b.date.localeCompare(a.date),
+  );
   const pager = usePagination(entries, month);
   const nav = useNavigate();
   const management = actor.role === "head" || actor.role === "supervisor";
@@ -1009,7 +1011,7 @@ export function Performance() {
               <thead>
                 <tr>
                   <th>來源／客戶</th>
-                  <th>首期達標日</th>
+                  <th>開單日期</th>
                   <th className="numeric">成交額</th>
                   <th className="numeric">本人比例</th>
                   <th className="numeric">基本佣金</th>

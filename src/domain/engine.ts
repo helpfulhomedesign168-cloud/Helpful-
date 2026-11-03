@@ -2471,18 +2471,58 @@ export class Engine {
         date: qualificationDate,
       });
     });
-    const managementEntries =
-      actor.role === "head"
-        ? entries.filter((entry) => this.findQuote(entry.quoteId).team === "A")
-        : actor.role === "supervisor"
-          ? entries.filter(
-              (entry) =>
-                currentVersion(this.findQuote(entry.quoteId)).signature
-                  ?.supervisorId === actor.id,
-            )
-          : entries;
+    // Bonus is counted when the clerk issues the Invoice: the Invoice month
+    // is the qualification month, independent of the first payment date.
+    const bonusEntries: PerformanceEntry[] = this.state.invoices
+      .filter((invoice) => invoice.createdAt.startsWith(month))
+      .flatMap((invoice) => {
+        const quote = this.state.quotes.find(
+          (item) => item.id === invoice.quoteId,
+        );
+        if (!quote) return [];
+        const version = quote.versions.find(
+          (item) => item.id === invoice.versionId,
+        );
+        if (!version) return [];
+        const owner = this.state.actors.find((a) => a.id === quote.ownerId);
+        const supervisor = this.state.actors.find(
+          (a) => a.id === version.signature?.supervisorId,
+        );
+        if (!owner || !supervisor) return [];
+        if (actor.role === "head" && quote.team !== "A") return [];
+        if (
+          actor.role === "supervisor" &&
+          version.signature?.supervisorId !== actor.id
+        )
+          return [];
+        if (actor.role === "sales" && quote.ownerId !== actor.id) return [];
+        const low = factor(invoice.discount).lt(0.95);
+        const rate =
+          actor.role === "head"
+            ? low
+              ? 0.03
+              : 0.04
+            : actor.role === "supervisor"
+              ? low
+                ? 0.02
+                : 0.03
+              : low
+                ? 0.06
+                : 0.08;
+        return [
+          {
+            quoteId: quote.id,
+            number: invoice.number,
+            customerName: invoice.customer.name,
+            total: invoice.netTotal,
+            rate,
+            commission: moneyValue(D(invoice.netTotal).mul(rate)),
+            date: invoice.createdAt.slice(0, 10),
+          },
+        ];
+      });
     const sales = moneyValue(
-      managementEntries.reduce((sum, entry) => D(sum).plus(entry.total), D(0)),
+      bonusEntries.reduce((sum, entry) => D(sum).plus(entry.total), D(0)),
     );
     const commission = moneyValue(
       entries.reduce((sum, entry) => D(sum).plus(entry.commission), D(0)),
@@ -2517,7 +2557,15 @@ export class Engine {
         nextBonus = reward;
       }
     });
-    return { sales, commission, bonus, nextTarget, nextBonus, entries };
+    return {
+      sales,
+      commission,
+      bonus,
+      nextTarget,
+      nextBonus,
+      entries,
+      bonusEntries,
+    };
   }
 
   teamPerformance(actorInput: Actor, month: string): TeamPerformance {
