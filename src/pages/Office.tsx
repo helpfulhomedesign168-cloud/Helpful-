@@ -994,18 +994,7 @@ export function Invoices() {
                             quote.isAdditionalOrder ? "additional" : ""
                           }`}
                         >
-                          <div className="invoice-number-row">
-                            <strong>{invoice.number}</strong>
-                            <Button
-                              variant="ghost"
-                              aria-label={`查看／修改 ${invoice.number}`}
-                              onClick={() =>
-                                nav("/invoices/" + invoice.id)
-                              }
-                            >
-                              <PenLine size={18} />
-                            </Button>
-                          </div>
+                          <strong>{invoice.number}</strong>
                           {quote.isAdditionalOrder && (
                             <small>
                               {engine.quoteParentSummary(actor, quote.id)

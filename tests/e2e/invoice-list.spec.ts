@@ -27,8 +27,8 @@ test("單據管理顯示收款status bar並可按Invoice／Sales／工程狀態�
     page.locator(".invoice-legend .additional-dot"),
   ).toHaveText("加單");
   await expect(
-    page.getByRole("button", { name: /查看／修改 SHMM/ }).first(),
-  ).toBeVisible();
+    page.getByRole("button", { name: /查看／修改 SHMM/ }),
+  ).toHaveCount(0);
   const progress = page.locator(".payment-progress-track").first();
   await expect(progress).toBeVisible();
   await expect(progress).toHaveAttribute("aria-valuenow", /^[0-9.]+$/);

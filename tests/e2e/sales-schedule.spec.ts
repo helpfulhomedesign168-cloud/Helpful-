@@ -86,7 +86,7 @@ test("Sales阿頭用編輯popup管理Team/Sale，自動排班及每格可改", a
   await cellDialog.getByLabel("更份").selectOption("ph");
   await cellDialog.getByRole("button", { name: "儲存", exact: true }).click();
   await expect(firstCell).toHaveAttribute("data-assignment", "PH");
-  await expect(firstCell).toHaveText("D");
+  await expect(firstCell).toHaveText("補");
 
   await page.reload();
   await expect(
