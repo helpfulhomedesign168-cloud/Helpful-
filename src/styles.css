@@ -5571,3 +5571,193 @@ textarea {
 .sales-location-span.location-gap {
   background: #fff;
 }
+
+/* Submission queue matching office reference */
+.submission-toolbar {
+  flex-wrap: nowrap;
+}
+.submission-toolbar .search {
+  flex: 1 1 320px;
+}
+.submission-filters {
+  gap: 8px;
+}
+.submission-filters select {
+  min-width: 132px;
+}
+@media (max-width: 900px) {
+  .submission-toolbar {
+    flex-wrap: wrap;
+  }
+}
+.submission-legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 25px 15px;
+  color: #3f443b;
+  font-size: 14px;
+}
+.submission-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.submission-legend span::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #24271f;
+}
+.submission-legend .additional-dot::before {
+  background: #b8bcb3;
+}
+.submission-quote-cell strong {
+  display: block;
+}
+.submission-quote-cell.additional strong {
+  color: #959b91;
+}
+.submission-quote-cell > small {
+  display: block;
+  margin-top: 3px;
+  color: #959b91;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+.submission-table {
+  min-width: 1220px;
+}
+.submission-table th:nth-child(1),
+.submission-table td:nth-child(1) {
+  width: 10%;
+}
+.submission-table th:nth-child(2),
+.submission-table td:nth-child(2) {
+  width: 18%;
+}
+.submission-table th:nth-child(3),
+.submission-table td:nth-child(3) {
+  width: 17%;
+}
+.submission-table th:nth-child(4),
+.submission-table td:nth-child(4) {
+  width: 12%;
+}
+.submission-table th:nth-child(5),
+.submission-table td:nth-child(5) {
+  width: 13%;
+}
+.submission-table th:nth-child(6),
+.submission-table td:nth-child(6) {
+  width: 20%;
+}
+.submission-table th:nth-child(7),
+.submission-table td:nth-child(7) {
+  width: 10%;
+}
+.submission-table th:nth-child(8),
+.submission-table td:nth-child(8),
+.submission-table th:nth-child(9),
+.submission-table td:nth-child(9) {
+  width: auto;
+}
+
+/* Invoice list matching status reference */
+.invoice-list-table {
+  min-width: 1180px;
+  table-layout: fixed;
+}
+.invoice-list-table th:nth-child(1),
+.invoice-list-table td:nth-child(1) {
+  width: 10%;
+}
+.invoice-list-table th:nth-child(2),
+.invoice-list-table td:nth-child(2) {
+  width: 18%;
+}
+.invoice-list-table th:nth-child(3),
+.invoice-list-table td:nth-child(3) {
+  width: 17%;
+}
+.invoice-list-table th:nth-child(4),
+.invoice-list-table td:nth-child(4) {
+  width: 12%;
+}
+.invoice-list-table th:nth-child(5),
+.invoice-list-table td:nth-child(5) {
+  width: 20%;
+}
+.invoice-list-table th:nth-child(6),
+.invoice-list-table td:nth-child(6) {
+  width: 11%;
+}
+.invoice-list-table th:nth-child(7),
+.invoice-list-table td:nth-child(7) {
+  width: 12%;
+}
+.invoice-list-table td:last-child .btn {
+  width: 100%;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* Final column balance for office lists */
+.submission-table th:nth-child(1),
+.submission-table td:nth-child(1) {
+  width: 9%;
+}
+.submission-table th:nth-child(2),
+.submission-table td:nth-child(2) {
+  width: 16%;
+}
+.submission-table th:nth-child(3),
+.submission-table td:nth-child(3) {
+  width: 15%;
+}
+.submission-table th:nth-child(4),
+.submission-table td:nth-child(4) {
+  width: 11%;
+}
+.submission-table th:nth-child(5),
+.submission-table td:nth-child(5) {
+  width: 12%;
+}
+.submission-table th:nth-child(6),
+.submission-table td:nth-child(6) {
+  width: 21%;
+}
+.submission-table th:nth-child(7),
+.submission-table td:nth-child(7) {
+  width: 16%;
+}
+.invoice-list-table th:nth-child(1),
+.invoice-list-table td:nth-child(1) {
+  width: 12%;
+  white-space: nowrap;
+}
+.invoice-list-table th:nth-child(2),
+.invoice-list-table td:nth-child(2) {
+  width: 17%;
+}
+.invoice-list-table th:nth-child(3),
+.invoice-list-table td:nth-child(3) {
+  width: 16%;
+}
+.invoice-list-table th:nth-child(4),
+.invoice-list-table td:nth-child(4) {
+  width: 11%;
+}
+.invoice-list-table th:nth-child(5),
+.invoice-list-table td:nth-child(5) {
+  width: 20%;
+}
+.invoice-list-table th:nth-child(6),
+.invoice-list-table td:nth-child(6) {
+  width: 10%;
+}
+.invoice-list-table th:nth-child(7),
+.invoice-list-table td:nth-child(7) {
+  width: 14%;
+}

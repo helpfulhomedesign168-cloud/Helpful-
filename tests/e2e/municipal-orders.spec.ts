@@ -44,6 +44,18 @@ test("8萬資助開Invoice會建立正單A及可修改市政單B", async ({ page
   await expect(page.getByLabel("第1項名稱")).toHaveValue("市政測試項目");
   await expect(page.getByLabel("第1項金額")).toHaveValue("1234");
 
+  await page.getByRole("button", { name: "預覽", exact: true }).click();
+  await expect(page).toHaveURL(/\/documents\/municipal\//);
+  await expect(
+    page.getByRole("heading", { name: "市政單", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "列印／另存PDF", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".document-sheet")).toContainText(
+    municipalNumber,
+  );
+
   await page.goto("/handoff");
   await expect(
     page.locator("tbody tr").filter({ hasText: "市政測試項目" }),

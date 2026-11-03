@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Eye,
+  Plus,
+  Printer,
+  Trash2,
+} from "lucide-react";
 import { useApp } from "../context";
 import {
   Button,
@@ -149,6 +156,34 @@ export function MunicipalOrderDetail() {
           <>
             <Button onClick={() => nav("/municipal-orders")}>
               <ArrowLeft size={18} /> 返回市政單
+            </Button>
+            <Button
+              onClick={() => {
+                let saved = false;
+                run(() => {
+                  engine.updateMunicipalOrder(actor, order.id, lines);
+                  saved = true;
+                  return true;
+                }, "市政單已保存。");
+                if (saved)
+                  nav("/documents/municipal/" + order.id);
+              }}
+            >
+              <Eye size={18} /> 預覽
+            </Button>
+            <Button
+              onClick={() => {
+                let saved = false;
+                run(() => {
+                  engine.updateMunicipalOrder(actor, order.id, lines);
+                  saved = true;
+                  return true;
+                }, "市政單已保存。");
+                if (saved)
+                  nav("/documents/municipal/" + order.id);
+              }}
+            >
+              <Printer size={18} /> 列印
             </Button>
             <Button
               variant="primary"

@@ -9,6 +9,8 @@ export function Documents() {
   const { engine, actor } = useApp();
   const nav = useNavigate();
   try {
+    const municipal =
+      kind === "municipal" ? engine.getMunicipalOrder(actor, id) : undefined;
     const receipt =
       kind === "receipt" ? engine.getReceipt(actor, id) : undefined;
     const inv =
@@ -20,19 +22,22 @@ export function Documents() {
     const quote = kind === "quote" ? engine.getQuote(actor, id) : undefined;
     const v = quote ? currentVersion(quote) : undefined;
     const lines = inv?.lines || v?.lines || [];
-    const customer = inv?.customer || v?.customer;
+    const customer = municipal?.customer || inv?.customer || v?.customer;
     if (!customer) throw new Error("沒有可預覽來源");
-    const totals = inv
-      ? engine.invoicePricing(actor, inv.id)
-      : engine.pricing(actor, quote!.id);
+    const totals = municipal
+      ? undefined
+      : inv
+        ? engine.invoicePricing(actor, inv.id)
+        : engine.pricing(actor, quote!.id);
     if (quote && !v?.printPreparation)
       throw new Error("請先在報價詳情確認當日主管並準備列印正式報價單。");
     const number =
+      municipal?.number ||
       receipt?.number ||
       inv?.number ||
       v?.printPreparation?.quoteNumber ||
       quote!.number;
-    const d = inv?.discount ?? v!.discount;
+    const d = inv?.discount ?? v?.discount ?? 1;
     return (
       <div className="document-page">
         <div className="document-toolbar">
@@ -41,7 +46,13 @@ export function Documents() {
             返回
           </Button>
           <span>
-            {receipt ? "正式收據" : inv ? "Invoice預覽" : "報價單預覽"}
+            {municipal
+              ? "市政單預覽"
+              : receipt
+                ? "正式收據"
+                : inv
+                  ? "Invoice預覽"
+                  : "報價單預覽"}
           </span>
           <Button variant="primary" onClick={() => window.print()}>
             <Printer size={20} />
@@ -53,20 +64,36 @@ export function Documents() {
             <img src="/company-logo.png" alt="好幫手家居裝修設計有限公司" />
             <div>
               <h1>
-                {receipt ? "正式收據" : inv ? "工程Invoice" : "工程報價單"}
+                {municipal
+                  ? "市政單"
+                  : receipt
+                    ? "正式收據"
+                    : inv
+                      ? "工程Invoice"
+                      : "工程報價單"}
               </h1>
               <strong className="document-number">{number}</strong>
               <p>
-                版本 {v?.index || "快照"} ·{" "}
-                {inv?.createdAt.slice(0, 10) ||
-                  v?.printPreparation?.date ||
-                  v?.createdAt.slice(0, 10)}
+                {municipal
+                  ? `正單 ${municipal.principalOrderNumber} · 政府8萬資助申請`
+                  : `版本 ${v?.index || "快照"} · ${
+                      inv?.createdAt.slice(0, 10) ||
+                      v?.printPreparation?.date ||
+                      v?.createdAt.slice(0, 10)
+                    }`}
               </p>
             </div>
           </header>
           <div className="document-company-bar">
             <span>
-              住宅裝修工程 {receipt ? "收據" : inv ? "Invoice" : "報價"}
+              住宅裝修工程{" "}
+              {municipal
+                ? "市政單"
+                : receipt
+                  ? "收據"
+                  : inv
+                    ? "Invoice"
+                    : "報價"}
             </span>
             <span>聯絡、條款及收款資料將由公司設定代入</span>
           </div>
@@ -86,7 +113,60 @@ export function Documents() {
               <strong>{customer.address || "待填地址"}</strong>
             </div>
           </div>
-          {receipt ? (
+          {municipal ? (
+            <>
+              <table className="document-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>工程項目</th>
+                    <th>說明</th>
+                    <th className="numeric">數量</th>
+                    <th className="numeric">單價</th>
+                    <th className="numeric">金額</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {municipal.lines.map((line, index) => (
+                    <tr key={line.id}>
+                      <td>{index + 1}</td>
+                      <td>
+                        <strong>{line.name}</strong>
+                      </td>
+                      <td>{line.description || "—"}</td>
+                      <td className="numeric">
+                        {line.quantity} {line.unit}
+                      </td>
+                      <td className="numeric">{money(line.unitPrice)}</td>
+                      <td className="numeric">{money(line.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="document-totals">
+                <div className="total">
+                  <span>市政單總額（不作正式會計）</span>
+                  <strong>
+                    {money(
+                      municipal.lines.reduce(
+                        (sum, line) => sum + line.amount,
+                        0,
+                      ),
+                    )}
+                  </strong>
+                </div>
+              </div>
+              <div className="document-terms">
+                <h3>市政單用途</h3>
+                <p>
+                  此市政單由正單 {municipal.principalOrderNumber} 分拆，只作政府8萬資助申請用途，不是客戶真實成交單，亦不計入公司會計。
+                </p>
+                <p>
+                  市政單項目及金額可按政府申請要求調整；正單、Invoice及收款紀錄不受影響。
+                </p>
+              </div>
+            </>
+          ) : receipt ? (
             <div className="document-totals">
               <div>
                 <span>對應Invoice</span>
@@ -120,7 +200,7 @@ export function Documents() {
               </thead>
               <tbody>
                 {lines.map((l, i) => {
-                  const a = totals.lineAmounts.find((a) => a.id === l.id);
+                  const a = totals!.lineAmounts.find((a) => a.id === l.id);
                   return (
                     <tr key={l.id}>
                       <td>{i + 1}</td>
@@ -159,11 +239,11 @@ export function Documents() {
               </tbody>
             </table>
           )}
-          {!receipt && (
+          {!receipt && !municipal && (
             <div className="document-totals">
               <div>
                 <span>工程小計</span>
-                <strong>{money(totals.subtotal)}</strong>
+                <strong>{money(totals!.subtotal)}</strong>
               </div>
               <div>
                 <span>
@@ -172,11 +252,11 @@ export function Documents() {
                     ? discountLabel(d, inv.discountMode, inv.discountValue)
                     : discountLabel(d, v?.discountMode, v?.discountValue)}
                 </span>
-                <strong>−{money(totals.subtotal - totals.total)}</strong>
+                <strong>−{money(totals!.subtotal - totals!.total)}</strong>
               </div>
               <div className="total">
                 <span>成交總額</span>
-                <strong>{money(inv?.netTotal ?? totals.total)}</strong>
+                <strong>{money(inv?.netTotal ?? totals!.total)}</strong>
               </div>
               {inv?.paymentPlan?.map((stage) => (
                 <div key={stage.installment}>
@@ -188,7 +268,7 @@ export function Documents() {
               ))}
             </div>
           )}
-          {!receipt && (
+          {!receipt && !municipal && (
             <div className="document-terms">
               <h3>確認及付款</h3>
               <p>
@@ -199,7 +279,7 @@ export function Documents() {
               </p>
             </div>
           )}
-          {!inv && (
+          {!inv && !municipal && (
             <div className="document-sign">
               <div>客戶簽署：________________________</div>
               <div>日期：________________________</div>

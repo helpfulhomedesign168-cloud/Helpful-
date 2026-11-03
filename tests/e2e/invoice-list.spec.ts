@@ -17,14 +17,14 @@ test("單據管理顯示收款status bar並可按Invoice／Sales／工程狀態�
 
   const invoiceSort = page.getByRole("button", { name: /Invoice單/ });
   const salesSort = page.getByRole("button", { name: /^Sales/ });
-  const statusSort = page.getByRole("button", { name: /工程狀態/ });
+  const statusSort = page.getByRole("button", { name: /^狀態/ });
   await invoiceSort.click();
   await expect(invoiceSort).toHaveClass(/active/);
   await salesSort.click();
   await expect(salesSort).toHaveClass(/active/);
   await statusSort.click();
   await expect(statusSort).toHaveClass(/active/);
-  await expect(page.getByText("工程完成", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("已完成工程", { exact: true })).toHaveCount(0);
 });
 
 test("CS可標記工程完成，Invoice列表顯示工程完成並通知開單員收尾數", async ({ page }) => {
@@ -42,7 +42,7 @@ test("CS可標記工程完成，Invoice列表顯示工程完成並通知開單�
   const invoiceRow = page
     .locator("tbody tr")
     .filter({ hasText: "SHMM26100001" });
-  await expect(invoiceRow).toContainText("工程完成");
+  await expect(invoiceRow).toContainText("已完成工程");
 
   await page.getByRole("button", { name: "通知" }).click();
   const notice = page
