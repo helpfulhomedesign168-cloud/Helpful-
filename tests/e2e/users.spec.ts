@@ -31,6 +31,8 @@ test("Super Admin可用部門tabs及profile管理用戶", async ({ page }) => {
   await page.getByLabel("用戶聯絡電話").fill("91234567");
   await page.getByLabel("用戶Email").fill("e2e@example.com");
   await page.getByLabel("員工Code").fill("ET");
+  await page.getByLabel("登入用戶名").fill("e2e.sales");
+  await page.getByLabel("登入密碼").fill("demo1234");
   await page.getByLabel("用戶角色").selectOption("sales");
   await page.getByLabel("用戶Team").selectOption("A");
   await page.getByRole("button", { name: "建立用戶", exact: true }).click();

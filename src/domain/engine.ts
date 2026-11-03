@@ -1443,6 +1443,8 @@ export class Engine {
       emergencyPhone?: string;
       bio?: string;
       avatar?: Attachment;
+      username?: string;
+      password?: string;
     },
   ): Actor {
     const actor = this.actor(actorInput);
@@ -1476,6 +1478,27 @@ export class Engine {
         )
       )
         fail("員工Code已存在。");
+      const username = input.username?.trim() ?? "";
+      if (username) {
+        if (!/^[A-Za-z0-9._-]{3,32}$/.test(username))
+          fail("登入用戶名必須為3–32位英文字母、數字、點、底線或橫線。");
+        if (
+          state.actors.some(
+            (item) =>
+              item.id !== existing?.id &&
+              item.username?.toLowerCase() === username.toLowerCase(),
+          )
+        )
+          fail("登入用戶名已存在。");
+      } else if (!existing) {
+        fail("請填寫登入用戶名。");
+      }
+      if (input.password !== undefined && input.password !== "") {
+        if (input.password.length < 6)
+          fail("登入密碼最少6位。");
+      } else if (!existing) {
+        fail("請填寫登入密碼。");
+      }
       if (existing) {
         if (existing.code.toUpperCase() !== code)
           fail("員工Code建立後不可更改。");
@@ -1506,6 +1529,8 @@ export class Engine {
         existing.emergencyPhone = input.emergencyPhone?.trim() || undefined;
         existing.bio = input.bio?.trim() || undefined;
         existing.avatar = input.avatar;
+        if (username) existing.username = username;
+        if (input.password) existing.password = input.password;
         output = deepCopy(existing);
       } else {
         const user: Actor = {
@@ -1526,6 +1551,8 @@ export class Engine {
           emergencyPhone: input.emergencyPhone?.trim() || undefined,
           bio: input.bio?.trim() || undefined,
           avatar: input.avatar,
+          username: username || undefined,
+          password: input.password || undefined,
         };
         state.actors.push(user);
         output = deepCopy(user);

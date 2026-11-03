@@ -212,9 +212,22 @@ it("Super Admin可新增、修改、停用及啟用所有用戶", () => {
     code: "ET",
     role: "sales",
     team: "A",
+    username: "et.sales",
+    password: "demo1234",
   });
   expect(user.active).toBe(true);
+  expect(user.username).toBe("et.sales");
   expect(e.listUsers(admin).some((item) => item.id === user.id)).toBe(true);
+  expect(() =>
+    e.saveUser(admin, {
+      name: "重複登入名",
+      code: "EU",
+      role: "sales",
+      team: "B",
+      username: "ET.SALES",
+      password: "demo1234",
+    }),
+  ).toThrow("登入用戶名已存在");
   expect(() =>
     e.saveUser(admin, {
       name: "重複Code",
@@ -229,8 +242,12 @@ it("Super Admin可新增、修改、停用及啟用所有用戶", () => {
     code: "ET",
     role: "supervisor",
     team: "A",
+    username: "et.supervisor",
+    password: "",
   });
   expect(updated.code).toBe("ET");
+  expect(updated.username).toBe("et.supervisor");
+  expect(updated.password).toBe("demo1234");
   expect(updated.role).toBe("supervisor");
   e.setUserActive(admin, user.id, false);
   expect(

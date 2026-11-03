@@ -265,6 +265,8 @@ type UserDraft = {
   emergencyPhone?: string;
   bio?: string;
   avatar?: Attachment;
+  username?: string;
+  password?: string;
 };
 
 const EMPTY_USER: UserDraft = {
@@ -272,6 +274,8 @@ const EMPTY_USER: UserDraft = {
   code: "",
   role: "sales",
   team: "B",
+  username: "",
+  password: "",
 };
 
 export function UserProfile() {
@@ -300,6 +304,8 @@ export function UserProfile() {
           emergencyPhone: existing.emergencyPhone,
           bio: existing.bio,
           avatar: existing.avatar,
+          username: existing.username,
+          password: "",
         }
       : isNew
         ? { ...EMPTY_USER }
@@ -463,6 +469,35 @@ export function UserProfile() {
                   placeholder="例如：MM"
                 />
               </Field>
+              <Field label="登入用戶名" required={isNew}>
+                <input
+                  aria-label="登入用戶名"
+                  autoComplete="off"
+                  value={draft.username ?? ""}
+                  onChange={(event) =>
+                    update({ username: event.target.value })
+                  }
+                  placeholder="例如：mm.chan"
+                />
+              </Field>
+              <Field label={isNew ? "登入密碼" : "重設登入密碼"} required={isNew}>
+                <input
+                  type="password"
+                  aria-label="登入密碼"
+                  autoComplete="new-password"
+                  value={draft.password ?? ""}
+                  onChange={(event) =>
+                    update({ password: event.target.value })
+                  }
+                  placeholder={
+                    isNew
+                      ? "最少6位"
+                      : existing?.password
+                        ? "已設定；留空保留現有密碼"
+                        : "尚未設定密碼"
+                  }
+                />
+              </Field>
               <Field label="部門">
                 <input value={department.label} disabled />
               </Field>
@@ -502,6 +537,9 @@ export function UserProfile() {
                 </Field>
               )}
             </div>
+            <p className="user-code-note">
+              登入用戶名及密碼由Super Admin設定。密碼只保存在此瀏覽器原型，不會顯示原有密碼。
+            </p>
             {!isNew && (
               <p className="user-code-note">
                 員工Code建立後不可更改，會用於報價、Invoice及業績編號。

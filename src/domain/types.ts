@@ -27,6 +27,8 @@ export interface Actor {
   emergencyPhone?: string;
   bio?: string;
   avatar?: Attachment;
+  username?: string;
+  password?: string;
 }
 export interface Attachment {
   id: string;
