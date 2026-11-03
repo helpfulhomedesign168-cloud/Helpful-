@@ -90,7 +90,8 @@ export function Contractors() {
   const [editing, setEditing] = useState<Resource | null>(null);
   const [deleting, setDeleting] = useState<Resource | null>(null);
   const canEdit =
-    actor.role === "cs_supervisor" || actor.role === "admin";
+    actor.role === "cs_supervisor" ||
+    ["admin", "admin_staff"].includes(actor.role);
   const allResources = engine
     .listResources(actor)
     .filter((resource) => resource.active && resource.kind)

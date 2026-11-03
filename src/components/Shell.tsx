@@ -28,11 +28,11 @@ import { Button, Dialog, Notice } from "./ui";
 export const roleHome = (role: string) =>
   role === "finance"
     ? "/finance"
-    : role === "clerk"
+    : role === "clerk" || role === "finance_supervisor"
       ? "/submissions"
       : role === "cs" || role === "cs_supervisor"
         ? "/handoff"
-        : role === "admin"
+        : role === "admin" || role === "admin_staff"
           ? "/services"
           : "/quotes";
 export function Shell() {
@@ -43,9 +43,15 @@ export function Shell() {
   const [mobile, setMobile] = useState(false);
   const [tools, setTools] = useState(false);
   const selling = ["sales", "supervisor", "head"].includes(actor.role);
-  const office = ["cs", "cs_supervisor", "clerk", "finance", "admin"].includes(
-    actor.role,
-  );
+  const office = [
+    "cs",
+    "cs_supervisor",
+    "clerk",
+    "finance",
+    "finance_supervisor",
+    "admin",
+    "admin_staff",
+  ].includes(actor.role);
   const items = selling
     ? [
         ["/quotes", "報價管理", Files],
@@ -77,7 +83,7 @@ export function Shell() {
             ["/finance", "收款核對", Receipt],
             ["/invoices", "已開單據", Files],
           ]
-        : actor.role === "clerk"
+        : actor.role === "clerk" || actor.role === "finance_supervisor"
           ? [
               ["/submissions", "提交報價", ArrowRightLeft],
               ["/invoices", "單據管理", Files],
@@ -85,7 +91,9 @@ export function Shell() {
               ["/customers", "客戶", Users],
             ]
           : [
-              ["/users", "用戶管理", UserCog],
+              ...(actor.role === "admin"
+                ? [["/users", "用戶管理", UserCog]]
+                : []),
               ["/handoff", "工程單", ArrowRightLeft],
               ["/orders", "工程管理", Hammer],
               ["/contractors", "工程師傅", HardHat],
@@ -236,7 +244,8 @@ export function Shell() {
                         ? "/handoff"
                         : actor.role === "finance"
                           ? "/finance"
-                          : actor.role === "clerk"
+                          : actor.role === "clerk" ||
+                              actor.role === "finance_supervisor"
                             ? n.invoiceId
                               ? "/invoices/" + n.invoiceId
                               : "/submissions"

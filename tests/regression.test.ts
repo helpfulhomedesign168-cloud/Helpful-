@@ -260,6 +260,24 @@ it("Super Admin可新增、修改、停用及啟用所有用戶", () => {
   expect(() => e.setUserActive(admin, "admin", false)).toThrow("自己");
 });
 
+it("會計主管Vinson有開單員功能；Admin不可管理用戶", () => {
+  const e = new Engine(undefined, createSeedState());
+  const vinson = actor(e, "finance-vinson");
+  expect(vinson.role).toBe("finance_supervisor");
+  expect(e.listInvoices(vinson).length).toBeGreaterThan(0);
+  const admin = actor(e, "admin");
+  const adminStaff = e.saveUser(admin, {
+    name: "Admin同事",
+    code: "AD",
+    role: "admin_staff",
+    username: "admin.staff",
+    password: "demo1234",
+  });
+  expect(adminStaff.role).toBe("admin_staff");
+  expect(e.listInvoices(adminStaff).length).toBeGreaterThan(0);
+  expect(() => e.listUsers(adminStaff)).toThrow("Super Admin");
+});
+
 it("多項訂單分類按自費 > 8萬資助 > 團購決定收款分類", () => {
   const e = new Engine(undefined, createSeedState());
   const sales = actor(e, "sales-mm");

@@ -347,7 +347,7 @@ function AdminProductStyles() {
 
 export function ProductStyles() {
   const { actor } = useApp();
-  return actor.role === "admin" ? (
+  return ["admin", "admin_staff"].includes(actor.role) ? (
     <AdminProductStyles />
   ) : (
     <SalesProductStyles />

@@ -18,7 +18,7 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   const assignDialog = page.getByRole("dialog", { name: "安排CS跟進" });
   await assignDialog
     .getByRole("combobox")
-    .selectOption({ label: "Joe（工程CS）" });
+    .selectOption({ label: "Joe（CS）" });
   await assignDialog.getByRole("button", { name: "儲存安排", exact: true }).click();
 
   await page.getByRole("link", { name: "工程管理", exact: true }).click();

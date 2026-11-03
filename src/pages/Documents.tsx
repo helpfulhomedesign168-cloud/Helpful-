@@ -31,7 +31,8 @@ export function Documents() {
         : engine.pricing(actor, quote!.id);
     const canPrintClerkCorrection =
       Boolean(quote?.clerkCorrectionCount) &&
-      (actor.role === "clerk" || actor.role === "admin");
+      (["clerk", "finance_supervisor"].includes(actor.role) ||
+        ["admin", "admin_staff"].includes(actor.role));
     if (quote && !v?.printPreparation && !canPrintClerkCorrection)
       throw new Error("請先在報價詳情確認當日主管並準備列印正式報價單。");
     const number =

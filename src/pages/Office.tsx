@@ -1444,7 +1444,8 @@ export function Handoff() {
     csTeam = engine.listCsTeam(actor);
   } catch {}
   const canAssign =
-    actor.role === "cs_supervisor" || actor.role === "admin";
+    actor.role === "cs_supervisor" ||
+    ["admin", "admin_staff"].includes(actor.role);
   const shown = [...rows]
     .sort((a, b) => b.releasedAt.localeCompare(a.releasedAt))
     .filter((row) => {
@@ -1640,7 +1641,8 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
   const [month, setMonth] = useState(DEMO_TODAY.slice(0, 7));
   const [csFilter, setCsFilter] = useState("all");
   const manager =
-    actor.role === "cs_supervisor" || actor.role === "admin";
+    actor.role === "cs_supervisor" ||
+    ["admin", "admin_staff"].includes(actor.role);
   let team = [] as ReturnType<typeof engine.listCsTeam>;
   try {
     if (manager) team = engine.listCsTeam(actor);

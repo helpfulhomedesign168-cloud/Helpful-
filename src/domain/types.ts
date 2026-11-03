@@ -6,7 +6,9 @@ export type Role =
   | "clerk"
   | "cs"
   | "cs_supervisor"
-  | "admin";
+  | "finance_supervisor"
+  | "admin"
+  | "admin_staff";
 export type Team = "A" | "B";
 export interface Actor {
   id: string;
@@ -819,10 +821,12 @@ export const ROLE_NAMES: Record<Role, string> = {
   supervisor: "Sales主管",
   head: "Sales阿頭",
   finance: "會計",
+  finance_supervisor: "會計主管",
   clerk: "開單員",
-  cs: "工程CS",
+  cs: "CS",
   cs_supervisor: "CS主管",
   admin: "Super Admin",
+  admin_staff: "Admin",
 };
 export const METHOD_NAMES: Record<Payment["method"], string> = {
   cash: "現金",

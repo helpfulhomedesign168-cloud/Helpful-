@@ -80,7 +80,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/quotes"
               element={
-                <Guard roles={[...sales, "admin", "finance"]}>
+                <Guard roles={[...sales, "admin", "admin_staff", "finance"]}>
                   <Quotes />
                 </Guard>
               }
@@ -96,7 +96,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/quotes/:id/edit"
               element={
-                <Guard roles={[...sales, "clerk", "admin"]}>
+                <Guard roles={[...sales, "clerk", "finance_supervisor", "admin", "admin_staff"]}>
                   <QuoteEditor />
                 </Guard>
               }
@@ -104,7 +104,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/quotes/:id"
               element={
-                <Guard roles={[...sales, "admin", "finance"]}>
+                <Guard roles={[...sales, "admin", "admin_staff", "finance"]}>
                   <QuoteDetail />
                 </Guard>
               }
@@ -120,7 +120,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/submissions"
               element={
-                <Guard roles={["clerk", "admin"]}>
+                <Guard roles={["clerk", "finance_supervisor", "admin", "admin_staff"]}>
                   <Submissions />
                 </Guard>
               }
@@ -128,7 +128,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/invoices"
               element={
-                <Guard roles={["clerk", "finance", "admin"]}>
+                <Guard roles={["clerk", "finance", "finance_supervisor", "admin", "admin_staff"]}>
                   <Invoices />
                 </Guard>
               }
@@ -136,7 +136,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/invoices/:id"
               element={
-                <Guard roles={["clerk", "finance", "admin"]}>
+                <Guard roles={["clerk", "finance", "finance_supervisor", "admin", "admin_staff"]}>
                   <InvoiceDetail />
                 </Guard>
               }
@@ -144,7 +144,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/handoff"
               element={
-                <Guard roles={["cs", "cs_supervisor", "admin"]}>
+                <Guard roles={["cs", "cs_supervisor", "admin", "admin_staff"]}>
                   <Handoff />
                 </Guard>
               }
@@ -152,7 +152,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/orders"
               element={
-                <Guard roles={["cs", "cs_supervisor", "admin", "finance"]}>
+                <Guard roles={["cs", "cs_supervisor", "admin", "admin_staff", "finance"]}>
                   <Orders />
                 </Guard>
               }
@@ -160,7 +160,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/orders/:id"
               element={
-                <Guard roles={["cs", "cs_supervisor", "admin", "finance"]}>
+                <Guard roles={["cs", "cs_supervisor", "admin", "admin_staff", "finance"]}>
                   <OrderDetail />
                 </Guard>
               }
@@ -168,7 +168,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/contractors"
               element={
-                <Guard roles={["cs", "cs_supervisor", "admin"]}>
+                <Guard roles={["cs", "cs_supervisor", "admin", "admin_staff"]}>
                   <Contractors />
                 </Guard>
               }
@@ -176,7 +176,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/suppliers"
               element={
-                <Guard roles={["cs", "cs_supervisor", "admin"]}>
+                <Guard roles={["cs", "cs_supervisor", "admin", "admin_staff"]}>
                   <Suppliers />
                 </Guard>
               }
@@ -184,7 +184,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/product-styles"
               element={
-                <Guard roles={[...sales, "admin"]}>
+                <Guard roles={[...sales, "admin", "admin_staff"]}>
                   <ProductStyles />
                 </Guard>
               }
@@ -192,7 +192,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/municipal-orders"
               element={
-                <Guard roles={["clerk", "admin"]}>
+                <Guard roles={["clerk", "finance_supervisor", "admin", "admin_staff"]}>
                   <MunicipalOrders />
                 </Guard>
               }
@@ -200,7 +200,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/municipal-orders/:id"
               element={
-                <Guard roles={["clerk", "admin"]}>
+                <Guard roles={["clerk", "finance_supervisor", "admin", "admin_staff"]}>
                   <MunicipalOrderDetail />
                 </Guard>
               }

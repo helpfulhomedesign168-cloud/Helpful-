@@ -36,9 +36,13 @@ const DEPARTMENT_TABS: Array<{
   roles: Role[];
 }> = [
   { key: "sales", label: "Sales", roles: SALES_ROLES },
-  { key: "cs", label: "工程CS", roles: ["cs", "cs_supervisor"] },
-  { key: "finance", label: "會計", roles: ["finance"] },
-  { key: "admin", label: "Admin", roles: ["admin", "clerk"] },
+  { key: "cs", label: "工程部", roles: ["cs", "cs_supervisor"] },
+  {
+    key: "finance",
+    label: "會計",
+    roles: ["finance", "finance_supervisor", "clerk"],
+  },
+  { key: "admin", label: "Admin", roles: ["admin", "admin_staff"] },
 ];
 
 function departmentForRole(role: Role) {

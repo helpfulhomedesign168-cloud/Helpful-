@@ -125,7 +125,8 @@ export function Suppliers() {
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [deleting, setDeleting] = useState<Supplier | null>(null);
   const canEdit =
-    actor.role === "cs_supervisor" || actor.role === "admin";
+    actor.role === "cs_supervisor" ||
+    ["admin", "admin_staff"].includes(actor.role);
   const all = engine.listSuppliers(actor);
   const filtered = all.filter(
     (supplier) => tab === "all" || supplier.categories.includes(tab),

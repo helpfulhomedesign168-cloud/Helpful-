@@ -112,7 +112,8 @@ function QuoteStyleThumb({ snapshot }: { snapshot: ProductStyleSnapshot }) {
 const salesRoles = ["sales", "supervisor", "head"];
 export function quoteListPath(role: string) {
   if (role === "finance") return "/finance";
-  if (role === "clerk") return "/submissions";
+  if (role === "clerk" || role === "finance_supervisor")
+    return "/submissions";
   if (role === "cs") return "/handoff";
   return "/quotes";
 }
@@ -540,11 +541,12 @@ export function QuoteEditor() {
   try {
     pricing = engine.preview(actor, lines, discount);
   } catch {}
-  const clerkEditor = actor.role === "clerk";
+  const clerkEditor = ["clerk", "finance_supervisor"].includes(actor.role);
   const own =
     salesRoles.includes(actor.role) &&
     (!existing || existing.ownerId === actor.id);
-  const canEdit = own || clerkEditor || actor.role === "admin";
+  const canEdit =
+    own || clerkEditor || ["admin", "admin_staff"].includes(actor.role);
   if (!canEdit || (id && !existing)) {
     return (
       <Empty

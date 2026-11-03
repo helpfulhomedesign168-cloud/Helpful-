@@ -35,7 +35,7 @@ test("CS主管可安排及更改跟進同事，普通CS只讀", async ({ page })
   const dialog = page.getByRole("dialog", { name: "安排CS跟進" });
   const select = dialog.getByRole("combobox");
   await expect(select.locator("option")).toHaveCount(6);
-  await select.selectOption({ label: "Joe（工程CS）" });
+  await select.selectOption({ label: "Joe（CS）" });
   await dialog.getByRole("button", { name: "儲存安排", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(row).toContainText("Joe");
@@ -67,7 +67,7 @@ test("CS主管可安排及更改跟進同事，普通CS只讀", async ({ page })
   const changeDialog = page.getByRole("dialog", { name: "安排CS跟進" });
   await changeDialog
     .getByRole("combobox")
-    .selectOption({ label: "Nicole（工程CS）" });
+    .selectOption({ label: "Nicole（CS）" });
   await changeDialog
     .getByRole("button", { name: "儲存安排", exact: true })
     .click();

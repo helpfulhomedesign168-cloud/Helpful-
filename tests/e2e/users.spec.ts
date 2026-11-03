@@ -16,6 +16,15 @@ test("Super Admin可用部門tabs及profile管理用戶", async ({ page }) => {
     page.getByRole("heading", { name: "用戶管理", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("tab")).toHaveCount(4);
+  await expect(page.getByRole("tab", { name: /^Sales/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^工程部/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^會計/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^Admin/ })).toBeVisible();
+  await page.getByRole("tab", { name: /^會計/ }).click();
+  await expect(
+    page.locator(".user-list-table tbody tr").filter({ hasText: "Vinson" }),
+  ).toContainText("會計主管");
+  await page.getByRole("tab", { name: /^Sales/ }).click();
   const headers = await page.locator(".user-list-table thead th").allTextContents();
   expect(headers.slice(0, 4)).toEqual(["姓名", "部門", "聯絡電話", "Email"]);
   expect(headers).not.toContain("Code");
@@ -87,5 +96,54 @@ test("Super Admin可用部門tabs及profile管理用戶", async ({ page }) => {
   await expect(page).toHaveURL(/\/users$/);
   await expect(
     page.locator(".user-list-table tbody tr").filter({ hasText: "E2E 測試主管" }),
+  ).toBeVisible();
+});
+
+
+test("Admin角色沒有用戶管理功能", async ({ page }) => {
+  await page.goto("/");
+  await switchRole(page, "SuperAdmin");
+  await page
+    .locator("nav")
+    .getByRole("link", { name: "用戶管理", exact: true })
+    .click();
+  await page.getByRole("link", { name: "新增用戶", exact: true }).click();
+  await page.getByLabel("用戶姓名").fill("E2E Admin");
+  await page.getByLabel("員工Code").fill("EA");
+  await page.getByLabel("登入用戶名").fill("e2e.admin");
+  await page.getByLabel("登入密碼").fill("demo1234");
+  await page.getByLabel("用戶角色").selectOption("admin_staff");
+  await page.getByRole("button", { name: "建立用戶", exact: true }).click();
+  await expect(page).toHaveURL(/\/users\/actor-/);
+
+  await switchRole(page, "E2E Admin");
+  await expect(
+    page.locator("nav").getByRole("link", { name: "用戶管理", exact: true }),
+  ).toHaveCount(0);
+  await page.goto("/users");
+  await expect(page).toHaveURL(/\/services$/);
+  await expect(
+    page.getByRole("heading", { name: "工程價目", exact: true }),
+  ).toBeVisible();
+});
+
+test("會計主管Vinson有開單員工作台及市政單", async ({ page }) => {
+  await page.goto("/");
+  await switchRole(page, "Vinson");
+  await expect(
+    page.locator("nav").getByRole("link", { name: "提交報價", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator("nav").getByRole("link", { name: "單據管理", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator("nav").getByRole("link", { name: "市政單", exact: true }),
+  ).toBeVisible();
+  await page
+    .locator("nav")
+    .getByRole("link", { name: "提交報價", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "提交報價", exact: true }),
   ).toBeVisible();
 });

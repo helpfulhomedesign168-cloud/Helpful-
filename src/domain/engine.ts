@@ -506,7 +506,7 @@ function publicPricing(raw: RawPricing, actor: Actor): Pricing {
     blocked: raw.blocked,
     costIncomplete: raw.costIncomplete,
   };
-  if (actor.role === "admin") {
+  if (isAdminActor(actor)) {
     result.cost = raw.cost;
     result.coverage = raw.coverage;
     result.commission = raw.commission;
@@ -561,6 +561,12 @@ function validEngineering(
 const isCsActor = (actor: Actor): boolean =>
   actor.role === "cs" || actor.role === "cs_supervisor";
 
+const isClerkActor = (actor: Actor): boolean =>
+  actor.role === "clerk" || actor.role === "finance_supervisor";
+
+const isAdminActor = (actor: Actor): boolean =>
+  actor.role === "admin" || actor.role === "admin_staff";
+
 const DEMO_CS_ACTORS: Actor[] = [
   {
     id: "cs-lead-ahfa",
@@ -593,6 +599,22 @@ const DEMO_CS_ACTORS: Actor[] = [
 ];
 function ensureDemoCsActors(state: AppState): void {
   DEMO_CS_ACTORS.forEach((actor) => {
+    if (!state.actors.some((candidate) => candidate.id === actor.id))
+      state.actors.push(deepCopy(actor));
+  });
+}
+const DEMO_ACCOUNTING_ACTORS: Actor[] = [
+  {
+    id: "finance-vinson",
+    name: "Vinson",
+    salutation: "Vinson",
+    code: "VN",
+    role: "finance_supervisor",
+    grants: ["invoice.write", "handoff.read", "finance.read"],
+  },
+];
+function ensureDemoAccountingActors(state: AppState): void {
+  DEMO_ACCOUNTING_ACTORS.forEach((actor) => {
     if (!state.actors.some((candidate) => candidate.id === actor.id))
       state.actors.push(deepCopy(actor));
   });
@@ -768,6 +790,7 @@ export class Engine {
           existing.feeAmount = resource.feeAmount;
       });
       ensureDemoCsActors(migrated);
+      ensureDemoAccountingActors(migrated);
       const migrateCustomer = (customer: Customer) => {
         customer.street ??= "";
         customer.address = composeAddress(customer);
@@ -901,8 +924,14 @@ export class Engine {
       fail("帳戶不存在或已停用。");
     return actual;
   }
+  private isAdmin(actor: Actor): boolean {
+    return isAdminActor(actor);
+  }
+  private isClerk(actor: Actor): boolean {
+    return isClerkActor(actor);
+  }
   private has(actor: Actor, grant: string): boolean {
-    return actor.role === "admin" || actor.grants.includes(grant);
+    return this.isAdmin(actor) || actor.grants.includes(grant);
   }
   private findQuote(id: string, state = this.state): Quote {
     return (
@@ -913,21 +942,21 @@ export class Engine {
     return actor.id === quote.ownerId;
   }
   private quoteReadable(actor: Actor, quote: Quote): boolean {
-    if (actor.role === "admin") return true;
+    if (this.isAdmin(actor)) return true;
     if (actor.role === "sales") return this.isOwner(actor, quote);
     if (actor.role === "head") return true;
     if (actor.role === "supervisor") return quote.team === "B";
-    if (actor.role === "finance" || actor.role === "clerk")
+    if (actor.role === "finance" || this.isClerk(actor))
       return Boolean(
         quote.submission || quoteVersionIsSigned(currentVersion(quote)),
       );
     return false;
   }
   private customerReadable(actor: Actor, profile: CustomerProfile): boolean {
-    if (actor.role === "admin" || actor.role === "head") return true;
+    if (this.isAdmin(actor) || actor.role === "head") return true;
     if (actor.role === "supervisor") return profile.team === "B";
     if (actor.role === "sales") return profile.ownerId === actor.id;
-    if (actor.role === "clerk") return true;
+    if (this.isClerk(actor)) return true;
     return false;
   }
   private canWriteQuote(actor: Actor, quote?: Quote): boolean {
@@ -941,28 +970,28 @@ export class Engine {
   private canFinance(actor: Actor): boolean {
     return (
       actor.role === "finance" ||
-      actor.role === "clerk" ||
+      this.isClerk(actor) ||
       actor.grants.includes("finance.validate")
     );
   }
   private canInvoice(actor: Actor): boolean {
-    return actor.role === "clerk" || actor.grants.includes("invoice.write");
+    return this.isClerk(actor) || actor.grants.includes("invoice.write");
   }
   /** CS普通同事只可讀自己的工程；CS主管／Admin可讀全部已釋放工程。 */
   private orderReadable(actor: Actor, order: WorkOrder): boolean {
-    if (actor.role === "admin") return true;
+    if (this.isAdmin(actor)) return true;
     if (isCsActor(actor)) {
       if (!order.csReleasedAt) return false;
       return actor.role === "cs_supervisor" || order.csOwnerId === actor.id;
     }
     return (
-      actor.role === "clerk" ||
+      this.isClerk(actor) ||
       this.has(actor, "order.read") ||
       this.findQuote(order.quoteId).ownerId === actor.id
     );
   }
   private csInvoiceReadable(actor: Actor, invoice: Invoice): boolean {
-    if (actor.role === "admin") return true;
+    if (this.isAdmin(actor)) return true;
     const order = this.state.orders.find(
       (item) => item.invoiceId === invoice.id,
     );
@@ -994,7 +1023,7 @@ export class Engine {
       fail("此電話已屬於另一位客戶主檔，請先由 Admin 核對。");
     const existing = selected ?? phoneMatch;
     if (existing) {
-      if (existing.ownerId !== ownerId && actor.role !== "admin")
+      if (existing.ownerId !== ownerId && !this.isAdmin(actor))
         fail("此電話已由其他 Sales 建立，請 Admin 核對客戶資料。");
       const filled = Object.fromEntries(
         Object.entries(normalised).filter(
@@ -1423,6 +1452,10 @@ export class Engine {
         "order.read",
         "assignment.write",
       ];
+    if (role === "finance_supervisor")
+      return ["invoice.write", "handoff.read", "finance.read"];
+    if (role === "admin_staff")
+      return ["admin.all", "finance.read", "invoice.write"];
     return ["admin.all", "finance.read", "invoice.write"];
   }
   saveUser(
@@ -1610,7 +1643,7 @@ export class Engine {
       .map((profile) => ({
         ...deepCopy(profile),
         customer:
-          actor.role === "admin" || profile.ownerId === actor.id
+          this.isAdmin(actor) || profile.ownerId === actor.id
             ? deepCopy(profile.customer)
             : sanitiseCustomer(profile.customer),
       }));
@@ -1622,13 +1655,13 @@ export class Engine {
       fail("找不到客戶主檔。");
     if (!this.customerReadable(actor, profile))
       fail("你沒有查看此客戶的權限。");
-    return actor.role === "admin" || profile.ownerId === actor.id
+    return this.isAdmin(actor) || profile.ownerId === actor.id
       ? deepCopy(profile.customer)
       : sanitiseCustomer(profile.customer);
   }
   createCustomer(actorInput: Actor, input: Customer): CustomerProfile {
     const actor = this.actor(actorInput);
-    if (!this.canWriteQuote(actor) && actor.role !== "admin")
+    if (!this.canWriteQuote(actor) && !this.isAdmin(actor))
       fail("你沒有建立客戶主檔的權限。");
     const customer = normaliseCustomer(input);
     const missing = validCustomer(customer);
@@ -1657,7 +1690,7 @@ export class Engine {
       });
       output = deepCopy(profile);
     });
-    return actor.role === "admin"
+    return this.isAdmin(actor)
       ? output
       : { ...output, customer: sanitiseCustomer(output.customer) };
   }
@@ -1667,7 +1700,7 @@ export class Engine {
   }
   addServiceCategory(actorInput: Actor, name: string): void {
     const actor = this.actor(actorInput);
-    if (actor.role !== "admin") fail("只有 Super Admin 可維護工程分類。");
+    if (!this.isAdmin(actor)) fail("只有 Super Admin 可維護工程分類。");
     const value = name.trim();
     if (!value) fail("請輸入工程分類名稱。");
     if (this.state.serviceCategories.includes(value))
@@ -1683,7 +1716,7 @@ export class Engine {
   }
   deleteServiceCategories(actorInput: Actor, names: string[]): void {
     const actor = this.actor(actorInput);
-    if (actor.role !== "admin") fail("只有 Super Admin 可刪除工程分類。");
+    if (!this.isAdmin(actor)) fail("只有 Super Admin 可刪除工程分類。");
     const selected = [...new Set(names.map((name) => name.trim()).filter(Boolean))];
     if (!selected.length) fail("請選擇要刪除的工程分類。");
     this.mutate((state) => {
@@ -1707,17 +1740,17 @@ export class Engine {
     return this.state.services
       .filter(
         (item) =>
-          actor.role === "admin" ||
+          this.isAdmin(actor) ||
           (item.published && !item.archived),
       )
       .map((item) =>
-        actor.role === "admin" ? deepCopy(item) : removeCost(item),
+        this.isAdmin(actor) ? deepCopy(item) : removeCost(item),
       );
   }
   listProductStyleSuppliers(actorInput: Actor): ProductStyleSupplier[] {
     const actor = this.actor(actorInput);
     const selling = ["sales", "supervisor", "head"].includes(actor.role);
-    if (actor.role !== "admin" && !selling)
+    if (!this.isAdmin(actor) && !selling)
       fail("你沒有查看產品款式的權限。");
     return this.state.suppliers
       .filter(
@@ -1738,7 +1771,7 @@ export class Engine {
   ): ProductStyleSeries[] {
     const actor = this.actor(actorInput);
     const selling = ["sales", "supervisor", "head"].includes(actor.role);
-    if (actor.role !== "admin" && !selling)
+    if (!this.isAdmin(actor) && !selling)
       fail("你沒有查看產品款式的權限。");
     const supplier =
       this.state.suppliers.find((item) => item.id === supplierId) ??
@@ -1756,7 +1789,7 @@ export class Engine {
     name: string,
   ): ProductStyleSeries {
     const actor = this.actor(actorInput);
-    if (actor.role !== "admin")
+    if (!this.isAdmin(actor))
       fail("只有Super Admin可維護產品款式。");
     if (!name.trim()) fail("請輸入產品款式名稱。");
     let output!: ProductStyleSeries;
@@ -1789,7 +1822,7 @@ export class Engine {
     productCode: string,
   ): ProductStyleImage {
     const actor = this.actor(actorInput);
-    if (actor.role !== "admin")
+    if (!this.isAdmin(actor))
       fail("只有Super Admin可維護產品款式。");
     if (!attachment?.id) fail("請先上載產品圖片。");
     if (!productCode.trim()) fail("請輸入產品編號。");
@@ -1816,7 +1849,7 @@ export class Engine {
   }
   listSuppliers(actorInput: Actor): Supplier[] {
     const actor = this.actor(actorInput);
-    if (!(isCsActor(actor) || actor.role === "admin"))
+    if (!(isCsActor(actor) || this.isAdmin(actor)))
       fail("你沒有查看供應商的權限。");
     return deepCopy(
       this.state.suppliers
@@ -1826,7 +1859,7 @@ export class Engine {
   }
   saveSupplier(actorInput: Actor, supplier: Supplier): Supplier {
     const actor = this.actor(actorInput);
-    if (!(actor.role === "cs_supervisor" || actor.role === "admin"))
+    if (!(actor.role === "cs_supervisor" || this.isAdmin(actor)))
       fail("只有CS主管或Super Admin可維護供應商。");
     if (!supplier.id || !supplier.name?.trim() || !supplier.phone?.trim() || !supplier.contact?.trim())
       fail("請填寫供應商名稱、聯絡人及聯絡電話。");
@@ -1869,7 +1902,7 @@ export class Engine {
   }
   deleteSupplier(actorInput: Actor, id: string): void {
     const actor = this.actor(actorInput);
-    if (!(actor.role === "cs_supervisor" || actor.role === "admin"))
+    if (!(actor.role === "cs_supervisor" || this.isAdmin(actor)))
       fail("只有CS主管或Super Admin可刪除供應商。");
     this.mutate((state) => {
       const supplier =
@@ -1885,7 +1918,7 @@ export class Engine {
   }
   saveContractor(actorInput: Actor, resource: Resource): Resource {
     const actor = this.actor(actorInput);
-    if (!(actor.role === "cs_supervisor" || actor.role === "admin"))
+    if (!(actor.role === "cs_supervisor" || this.isAdmin(actor)))
       fail("只有CS主管或Super Admin可維護工程師傅。");
     if (
       !resource.id ||
@@ -1940,7 +1973,7 @@ export class Engine {
   }
   deleteContractor(actorInput: Actor, id: string): void {
     const actor = this.actor(actorInput);
-    if (!(actor.role === "cs_supervisor" || actor.role === "admin"))
+    if (!(actor.role === "cs_supervisor" || this.isAdmin(actor)))
       fail("只有CS主管或Super Admin可刪除工程師傅。");
     this.mutate((state) => {
       const resource =
@@ -1959,7 +1992,7 @@ export class Engine {
     if (
       !(
         isCsActor(actor) ||
-        actor.role === "admin" ||
+        this.isAdmin(actor) ||
         this.has(actor, "assignment.write")
       )
     )
@@ -1971,7 +2004,7 @@ export class Engine {
     if (isCsActor(actor)) return [];
     return this.state.quotes
       .filter((quote) => this.quoteReadable(actor, quote))
-      .map((quote) => sanitiseQuote(quote, actor.role === "admin"));
+      .map((quote) => sanitiseQuote(quote, this.isAdmin(actor)));
   }
   quoteParentSummary(
     actorInput: Actor,
@@ -1982,7 +2015,7 @@ export class Engine {
     if (
       !this.quoteReadable(actor, quote) &&
       !this.canWriteQuote(actor, quote) &&
-      actor.role !== "admin"
+      !this.isAdmin(actor)
     )
       fail("你沒有查看此報價的權限。");
     if (!quote.parentQuoteId) return undefined;
@@ -2007,7 +2040,7 @@ export class Engine {
     const actor = this.actor(actorInput);
     this.mutate((state) => {
       const quote = this.findQuote(quoteId, state);
-      if (!this.canWriteQuote(actor, quote) && actor.role !== "admin")
+      if (!this.canWriteQuote(actor, quote) && !this.isAdmin(actor))
         fail("你沒有修改此報價訂單資料的權限。");
       if (quote.archived) fail("已封存報價不可修改訂單資料。");
       if (quote.invoiceId) fail("已轉 Invoice 的來源不可修改訂單資料。");
@@ -2053,7 +2086,7 @@ export class Engine {
     category: InvoiceCategory,
   ): void {
     const actor = this.actor(actorInput);
-    if (!(actor.role === "clerk" || actor.role === "admin"))
+    if (!(this.isClerk(actor) || this.isAdmin(actor)))
       fail("只有開單員或Super Admin可以為提交報價分類。 ");
     if (!Object.hasOwn(INVOICE_CATEGORY_NAMES, category))
       fail("請選擇有效的報價分類。 ");
@@ -2079,7 +2112,7 @@ export class Engine {
     const quote = this.findQuote(id);
     if (isCsActor(actor)) fail("工程CS不可讀取原報價。");
     if (!this.quoteReadable(actor, quote)) fail("你沒有查看此報價的權限。");
-    return sanitiseQuote(quote, actor.role === "admin");
+    return sanitiseQuote(quote, this.isAdmin(actor));
   }
   preview(actorInput: Actor, lines: QuoteLine[], discount: number): Pricing {
     const actor = this.actor(actorInput);
@@ -2103,7 +2136,7 @@ export class Engine {
       fail("找不到Invoice。");
     const calc = invoice.calculation;
     if (calc)
-      return actor.role === "admin" ? deepCopy(calc) : safeCalculation(calc)!;
+      return this.isAdmin(actor) ? deepCopy(calc) : safeCalculation(calc)!;
     return publicPricing(
       calculatePricing(invoice.lines, invoice.discount, [], true),
       actor,
@@ -2143,7 +2176,7 @@ export class Engine {
     if (!raw.costIncomplete && raw.blocked)
       missing.push("成交額不足以覆蓋成本及基本佣金");
     const ownerCanSubmit =
-      this.canWriteQuote(actor, quote) || actor.role === "admin";
+      this.canWriteQuote(actor, quote) || this.isAdmin(actor);
     const canSubmit =
       ownerCanSubmit &&
       !quote.archived &&
@@ -2234,7 +2267,7 @@ export class Engine {
     if (
       !(
         isCsActor(actor) ||
-        actor.role === "admin" ||
+        this.isAdmin(actor) ||
         this.has(actor, "handoff.read")
       )
     )
@@ -2300,7 +2333,7 @@ export class Engine {
   }
   listCsTeam(actorInput: Actor): Actor[] {
     const actor = this.actor(actorInput);
-    if (!(isCsActor(actor) || actor.role === "admin"))
+    if (!(isCsActor(actor) || this.isAdmin(actor)))
       fail("你沒有查看工程部CS團隊的權限。");
     return this.state.actors
       .filter((candidate) => isCsActor(candidate))
@@ -2312,7 +2345,7 @@ export class Engine {
     csOwnerId: string,
   ): WorkOrder {
     const actor = this.actor(actorInput);
-    if (actor.role !== "cs_supervisor" && actor.role !== "admin")
+    if (actor.role !== "cs_supervisor" && !this.isAdmin(actor))
       fail("只有CS主管或Super Admin可以安排跟進同事。");
     let output!: WorkOrder;
     this.mutate((state) => {
@@ -2336,15 +2369,15 @@ export class Engine {
       });
       output = deepCopy(order);
     });
-    return sanitiseOrder(output, actor.role === "admin");
+    return sanitiseOrder(output, this.isAdmin(actor));
   }
   listPayments(actorInput: Actor): Payment[] {
     const actor = this.actor(actorInput);
-    const clerk = actor.role === "clerk";
+    const clerk = this.isClerk(actor);
     const finance =
       actor.role === "finance" ||
-      actor.role === "clerk" ||
-      actor.role === "admin" ||
+      this.isClerk(actor) ||
+      this.isAdmin(actor) ||
       actor.grants.includes("finance.read") ||
       actor.grants.includes("finance.validate");
     if (
@@ -2365,30 +2398,37 @@ export class Engine {
   listInvoices(actorInput: Actor): Invoice[] {
     const actor = this.actor(actorInput);
     const readable = (invoice: Invoice) =>
-      actor.role === "admin" ||
+      this.isAdmin(actor) ||
       (isCsActor(actor) && this.csInvoiceReadable(actor, invoice)) ||
-      actor.role === "clerk" ||
+      this.isClerk(actor) ||
       actor.role === "finance" ||
       this.has(actor, "invoice.read") ||
       this.findQuote(invoice.quoteId).ownerId === actor.id;
     return this.state.invoices
       .filter(readable)
-      .map((invoice) => sanitiseInvoice(invoice, actor.role === "admin"));
+      .map((invoice) => sanitiseInvoice(invoice, this.isAdmin(actor)));
   }
   listReceipts(actorInput: Actor): Receipt[] {
     const actor = this.actor(actorInput);
     if (
-      !["admin", "finance", "clerk", "sales", "head", "supervisor"].includes(
-        actor.role,
-      )
+      ![
+        "admin",
+        "admin_staff",
+        "finance",
+        "finance_supervisor",
+        "clerk",
+        "sales",
+        "head",
+        "supervisor",
+      ].includes(actor.role)
     )
       fail("你沒有查看收據的權限。");
     return this.state.receipts
       .filter((receipt) => {
         if (
-          actor.role === "admin" ||
+          this.isAdmin(actor) ||
           actor.role === "finance" ||
-          actor.role === "clerk"
+          this.isClerk(actor)
         )
           return true;
         return this.findQuote(receipt.quoteId).ownerId === actor.id;
@@ -2401,13 +2441,22 @@ export class Engine {
       this.state.receipts.find((item) => item.id === id) ??
       fail("找不到收據。");
     if (
-      !["admin", "finance", "clerk", "sales", "head", "supervisor"].includes(
-        actor.role,
-      )
+      ![
+        "admin",
+        "admin_staff",
+        "finance",
+        "finance_supervisor",
+        "clerk",
+        "sales",
+        "head",
+        "supervisor",
+      ].includes(actor.role)
     )
       fail("你沒有查看收據的權限。");
     if (
-      !["admin", "finance", "clerk"].includes(actor.role) &&
+      !["admin", "admin_staff", "finance", "finance_supervisor", "clerk"].includes(
+        actor.role,
+      ) &&
       this.findQuote(receipt.quoteId).ownerId !== actor.id
     )
       fail("你沒有查看此收據的權限。");
@@ -2420,16 +2469,16 @@ export class Engine {
       fail("找不到 Invoice。");
     if (
       !(
-        actor.role === "admin" ||
+        this.isAdmin(actor) ||
         (isCsActor(actor) && this.csInvoiceReadable(actor, invoice)) ||
-        actor.role === "clerk" ||
+        this.isClerk(actor) ||
         actor.role === "finance" ||
         this.has(actor, "invoice.read") ||
         this.findQuote(invoice.quoteId).ownerId === actor.id
       )
     )
       fail("你沒有查看此 Invoice 的權限。");
-    return sanitiseInvoice(invoice, actor.role === "admin");
+    return sanitiseInvoice(invoice, this.isAdmin(actor));
   }
   invoicePaymentStatus(
     actorInput: Actor,
@@ -2441,16 +2490,16 @@ export class Engine {
       this.state.invoices.find((item) => item.id === invoiceId) ??
       fail("找不到Invoice。");
     const readable =
-      actor.role === "admin" ||
+      this.isAdmin(actor) ||
       actor.role === "finance" ||
-      actor.role === "clerk" ||
+      this.isClerk(actor) ||
       this.findQuote(invoice.quoteId).ownerId === actor.id;
     if (!readable) fail("你沒有查看此Invoice付款詳情的權限。 ");
     return deepCopy(this.paymentStatusRaw(invoice));
   }
   listMunicipalOrders(actorInput: Actor): MunicipalOrder[] {
     const actor = this.actor(actorInput);
-    if (!(actor.role === "clerk" || actor.role === "admin"))
+    if (!(this.isClerk(actor) || this.isAdmin(actor)))
       fail("只有開單員或Super Admin可查看市政單。");
     return deepCopy(
       this.state.municipalOrders.sort((a, b) =>
@@ -2460,7 +2509,7 @@ export class Engine {
   }
   getMunicipalOrder(actorInput: Actor, id: string): MunicipalOrder {
     const actor = this.actor(actorInput);
-    if (!(actor.role === "clerk" || actor.role === "admin"))
+    if (!(this.isClerk(actor) || this.isAdmin(actor)))
       fail("只有開單員或Super Admin可查看市政單。");
     const order =
       this.state.municipalOrders.find((item) => item.id === id) ??
@@ -2473,7 +2522,7 @@ export class Engine {
     lines: MunicipalOrderLine[],
   ): MunicipalOrder {
     const actor = this.actor(actorInput);
-    if (!(actor.role === "clerk" || actor.role === "admin"))
+    if (!(this.isClerk(actor) || this.isAdmin(actor)))
       fail("只有開單員或Super Admin可修改市政單。");
     if (!lines.length) fail("市政單最少要有一個項目。");
     const clean = lines.map((line, index) => {
@@ -2527,7 +2576,7 @@ export class Engine {
     const actor = this.actor(actorInput);
     return this.state.orders
       .filter((order) => this.orderReadable(actor, order))
-      .map((order) => sanitiseOrder(order, actor.role === "admin"));
+      .map((order) => sanitiseOrder(order, this.isAdmin(actor)));
   }
   getOrder(actorInput: Actor, id: string): WorkOrder {
     const actor = this.actor(actorInput);
@@ -2536,7 +2585,7 @@ export class Engine {
       fail("找不到工程單。");
     if (!this.orderReadable(actor, order))
       fail("你沒有查看此工程單的權限。");
-    return sanitiseOrder(order, actor.role === "admin");
+    return sanitiseOrder(order, this.isAdmin(actor));
   }
   /** Quote-version line amounts for a released engineering order, without
    * exposing quote pricing to CS. */
@@ -2598,7 +2647,7 @@ export class Engine {
       !(
         isCsActor(actor) ||
         this.quoteReadable(actor, quote) ||
-        actor.role === "admin"
+        this.isAdmin(actor)
       )
     )
       fail("你沒有查看此歷史的權限。");
@@ -3444,12 +3493,12 @@ export class Engine {
     this.mutate((state) => {
       const quote = quoteId ? this.findQuote(quoteId, state) : undefined;
       const clerkCorrection =
-        actor.role === "clerk" &&
+        this.isClerk(actor) &&
         Boolean(quote?.submission) &&
         !quote?.invoiceId;
       if (
         !this.canWriteQuote(actor, quote) &&
-        actor.role !== "admin" &&
+        !this.isAdmin(actor) &&
         !clerkCorrection
       )
         fail("你沒有儲存此報價草稿的權限。");
@@ -3486,7 +3535,7 @@ export class Engine {
         const foreign = matches.find(
           ({ candidate }) => candidate.ownerId !== (quote?.ownerId ?? actor.id),
         );
-        if (foreign && actor.role !== "admin")
+        if (foreign && !this.isAdmin(actor))
           fail("此電話已由其他 Sales 建立，請 Admin 核對客戶資料。");
         const own = matches.find(
           ({ candidate }) => candidate.ownerId === (quote?.ownerId ?? actor.id),
@@ -3615,7 +3664,7 @@ export class Engine {
       });
       output = deepCopy(quote);
     });
-    return actor.role === "admin" ? output : sanitiseQuote(output, false);
+    return this.isAdmin(actor) ? output : sanitiseQuote(output, false);
   }
   prepareQuoteForPrint(
     actorInput: Actor,
@@ -3694,7 +3743,7 @@ export class Engine {
       });
       output = deepCopy(quote);
     });
-    return actor.role === "admin" ? output : sanitiseQuote(output, false);
+    return this.isAdmin(actor) ? output : sanitiseQuote(output, false);
   }
   uploadDocument(
     actorInput: Actor,
@@ -3729,7 +3778,7 @@ export class Engine {
     const actor = this.actor(actorInput);
     this.mutate((state) => {
       const quote = this.findQuote(quoteId, state);
-      if (!this.canWriteQuote(actor, quote) && actor.role !== "admin")
+      if (!this.canWriteQuote(actor, quote) && !this.isAdmin(actor))
         fail("你沒有刪除已簽文件的權限。");
       if (quote.archived) fail("已封存報價不可刪除文件。");
       if (quote.invoiceId) fail("已轉 Invoice 的來源不可刪除文件。");
@@ -3874,7 +3923,7 @@ export class Engine {
     const actor = this.actor(actorInput);
     this.mutate((state) => {
       const quote = this.findQuote(quoteId, state);
-      if (!this.canWriteQuote(actor, quote) && actor.role !== "admin")
+      if (!this.canWriteQuote(actor, quote) && !this.isAdmin(actor))
         fail("你沒有提交此 Office 交接的權限。");
       if (quote.archived || quote.invoiceId)
         fail("此來源目前不可提交 Office。");
@@ -3909,7 +3958,12 @@ export class Engine {
         detail: "提交 Office 跟進",
       });
       state.actors
-        .filter((item) => item.role === "finance" || item.role === "clerk")
+        .filter(
+          (item) =>
+            item.role === "finance" ||
+            item.role === "finance_supervisor" ||
+            item.role === "clerk",
+        )
         .forEach((recipient) =>
           this.notify(
             state,
@@ -4073,7 +4127,7 @@ export class Engine {
     input: InstallmentPaymentInput,
   ): Payment {
     const actor = this.actor(actorInput);
-    if (!(actor.role === "clerk" || actor.role === "admin"))
+    if (!(this.isClerk(actor) || this.isAdmin(actor)))
       fail("只有開單員或Super Admin可以登記後續期款。");
     let output!: Payment;
     this.mutate((state) => {
@@ -4126,7 +4180,7 @@ export class Engine {
   }
   issueReceipt(actorInput: Actor, paymentId: string): Receipt {
     const actor = this.actor(actorInput);
-    if (!(actor.role === "clerk" || actor.role === "admin"))
+    if (!(this.isClerk(actor) || this.isAdmin(actor)))
       fail("只有開單員或Super Admin可以發出收據。");
     let output!: Receipt;
     this.mutate((state) => {
@@ -4181,7 +4235,7 @@ export class Engine {
   }
   completeWorkOrder(actorInput: Actor, workOrderId: string): WorkOrder {
     const actor = this.actor(actorInput);
-    if (!(isCsActor(actor) || actor.role === "admin"))
+    if (!(isCsActor(actor) || this.isAdmin(actor)))
       fail("只有CS或Super Admin可完成工程。");
     let output!: WorkOrder;
     this.mutate((state) => {
@@ -4210,7 +4264,11 @@ export class Engine {
           );
           if (remaining > 0) {
             state.actors
-              .filter((recipient) => recipient.role === "clerk")
+              .filter(
+                (recipient) =>
+                  recipient.role === "clerk" ||
+                  recipient.role === "finance_supervisor",
+              )
               .forEach((recipient) =>
                 this.notify(
                   state,
@@ -4236,7 +4294,7 @@ export class Engine {
     if (
       !(
         isCsActor(actor) ||
-        actor.role === "admin" ||
+        this.isAdmin(actor) ||
         actor.grants.includes("assignment.write")
       )
     )
@@ -4308,7 +4366,7 @@ export class Engine {
     input: Omit<AssignmentInput, "lineIds">,
   ): Assignment {
     const actor = this.actor(actorInput);
-    if (!(isCsActor(actor) || actor.role === "admin"))
+    if (!(isCsActor(actor) || this.isAdmin(actor)))
       fail("你沒有修改工程安排的權限。");
     let output!: Assignment;
     this.mutate((state) => {
@@ -4353,7 +4411,7 @@ export class Engine {
     attachments: Attachment[],
   ): WorkOrder {
     const actor = this.actor(actorInput);
-    if (!(isCsActor(actor) || actor.role === "admin"))
+    if (!(isCsActor(actor) || this.isAdmin(actor)))
       fail("你沒有上載現場環境圖片的權限。");
     if (!attachments.length) fail("請選擇現場環境圖片。");
     let output!: WorkOrder;
@@ -4389,7 +4447,7 @@ export class Engine {
       });
       output = deepCopy(order);
     });
-    return sanitiseOrder(output, actor.role === "admin");
+    return sanitiseOrder(output, this.isAdmin(actor));
   }
   scheduleExtraWork(
     actorInput: Actor,
@@ -4397,7 +4455,7 @@ export class Engine {
     input: ExtraWorkInput,
   ): ExtraWork {
     const actor = this.actor(actorInput);
-    if (!(isCsActor(actor) || actor.role === "admin"))
+    if (!(isCsActor(actor) || this.isAdmin(actor)))
       fail("你沒有安排額外工程的權限。");
     let output!: ExtraWork;
     this.mutate((state) => {
@@ -4495,7 +4553,7 @@ export class Engine {
       if (input.reason === "other" && !input.note?.trim())
         fail("選擇其他原因時請填寫補充說明。");
       const quote = this.findQuote(id, state);
-      if (!this.canWriteQuote(actor, quote) && actor.role !== "admin")
+      if (!this.canWriteQuote(actor, quote) && !this.isAdmin(actor))
         fail("你沒有封存此報價的權限。");
       if (quote.archived) return;
       if (
@@ -4524,7 +4582,7 @@ export class Engine {
   }
   deleteService(actorInput: Actor, id: string): void {
     const actor = this.actor(actorInput);
-    if (actor.role !== "admin") fail("只有 Super Admin 可刪除工程項目。");
+    if (!this.isAdmin(actor)) fail("只有 Super Admin 可刪除工程項目。");
     this.mutate((state) => {
       const service =
         state.services.find((item) => item.id === id) ??
@@ -4540,7 +4598,7 @@ export class Engine {
   }
   saveService(actorInput: Actor, item: ServiceItem): void {
     const actor = this.actor(actorInput);
-    if (actor.role !== "admin") fail("只有 Super Admin 可維護工程目錄。");
+    if (!this.isAdmin(actor)) fail("只有 Super Admin 可維護工程目錄。");
     if (!serviceComplete(item))
       fail("工程目錄資料未完整或不屬目前支援的計價規則。");
     const previous = this.state.services.find(
@@ -4572,7 +4630,7 @@ export class Engine {
     if (
       !(
         isCsActor(actor) ||
-        actor.role === "admin" ||
+        this.isAdmin(actor) ||
         actor.grants.includes("assignment.write")
       )
     )
@@ -5367,6 +5425,7 @@ export function createSeedState(): AppState {
       grants: ["handoff.read", "order.read", "assignment.write"],
     },
     ...DEMO_CS_ACTORS,
+    ...DEMO_ACCOUNTING_ACTORS,
     {
       id: "admin",
       name: "SuperAdmin",

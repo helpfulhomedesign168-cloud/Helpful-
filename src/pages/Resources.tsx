@@ -41,7 +41,7 @@ export function Services() {
   const [tagDraft, setTagDraft] = useState("");
   const [tagsToDelete, setTagsToDelete] = useState<string[]>([]);
   const [confirmTagDelete, setConfirmTagDelete] = useState(false);
-  const admin = actor.role === "admin";
+  const admin = ["admin", "admin_staff"].includes(actor.role);
   const categories = engine.listServiceCategories(actor);
   const allItems = engine.listServices(actor);
   const items = allItems.filter((item) => item.published && !item.archived);
@@ -588,14 +588,18 @@ export function Customers() {
   const [creating, setCreating] = useState<Customer | null>(null);
   const nav = useNavigate();
   const csRole = ["cs", "cs_supervisor"].includes(actor.role);
-  const canCreate = ["sales", "head", "supervisor", "admin"].includes(
-    actor.role,
-  );
+  const canCreate = [
+    "sales",
+    "head",
+    "supervisor",
+    "admin",
+    "admin_staff",
+  ].includes(actor.role);
   let qs = [] as ReturnType<typeof engine.listQuotes>;
   try {
     if (!csRole) qs = engine.listQuotes(actor);
   } catch {}
-  const isClerk = actor.role === "clerk";
+  const isClerk = ["clerk", "finance_supervisor"].includes(actor.role);
   let profiles: ReturnType<typeof engine.listCustomers> = [];
   try {
     if (!csRole) profiles = engine.listCustomers(actor);
