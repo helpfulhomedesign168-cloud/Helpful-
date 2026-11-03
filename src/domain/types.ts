@@ -664,6 +664,51 @@ export interface Performance {
   /** 管理Bonus／個人Bonus所用的同一場合資格來源。 */
   bonusEntries?: PerformanceEntry[];
 }
+export interface AccountingDashboardJob {
+  invoiceId: string;
+  invoiceNumber: string;
+  orderNumber?: string;
+  customerName: string;
+  salesName: string;
+  category: string;
+  revenue: number;
+  collected: number;
+  outstanding: number;
+  expenses: number;
+  grossProfit: number;
+  margin: number;
+  completed: boolean;
+}
+export interface AccountingDashboardSales {
+  actorId: string;
+  name: string;
+  role: string;
+  jobCount: number;
+  revenue: number;
+  commission: number;
+}
+export interface AccountingDashboardMonth {
+  month: string;
+  turnover: number;
+  expenses: number;
+  grossProfit: number;
+}
+export interface AccountingDashboard {
+  month: string;
+  turnover: number;
+  collected: number;
+  outstanding: number;
+  expenses: number;
+  grossProfit: number;
+  commissions: number;
+  netProfit: number;
+  jobCount: number;
+  completedJobs: number;
+  jobs: AccountingDashboardJob[];
+  sales: AccountingDashboardSales[];
+  months: AccountingDashboardMonth[];
+  myobNote: string;
+}
 export interface TeamMemberPerformance {
   actorId: string;
   name: string;

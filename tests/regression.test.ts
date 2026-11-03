@@ -278,6 +278,26 @@ it("會計主管Vinson有開單員功能；Admin不可管理用戶", () => {
   expect(() => e.listUsers(adminStaff)).toThrow("Super Admin");
 });
 
+it("會計主管可讀營運Dashboard，普通開單員不可", () => {
+  const e = new Engine(undefined, createSeedState());
+  const vinson = actor(e, "finance-vinson");
+  const dashboard = e.accountingDashboard(vinson, "2026-10");
+  expect(dashboard.jobs.length).toBeGreaterThan(0);
+  expect(dashboard.turnover).toBeGreaterThan(0);
+  expect(dashboard.months).toHaveLength(6);
+  expect(dashboard.myobNote).toContain("MYOB");
+  expect(dashboard.turnover).toBe(
+    Number(
+      dashboard.jobs
+        .reduce((sum, job) => sum + job.revenue, 0)
+        .toFixed(2),
+    ),
+  );
+  expect(() =>
+    e.accountingDashboard(actor(e, "clerk"), "2026-10"),
+  ).toThrow("會計主管");
+});
+
 it("多項訂單分類按自費 > 8萬資助 > 團購決定收款分類", () => {
   const e = new Engine(undefined, createSeedState());
   const sales = actor(e, "sales-mm");

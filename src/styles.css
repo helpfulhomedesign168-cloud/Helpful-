@@ -6226,3 +6226,189 @@ textarea {
     justify-content: flex-start;
   }
 }
+
+/* Accounting supervisor dashboard */
+.month-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #70786a;
+  font-size: 13px;
+}
+.month-picker input {
+  width: 155px;
+  min-height: 40px;
+}
+.accounting-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.accounting-kpi {
+  min-height: 116px;
+  padding: 17px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+.accounting-kpi span,
+.accounting-kpi small {
+  display: block;
+  color: #7c8476;
+  font-size: 12px;
+}
+.accounting-kpi strong {
+  display: block;
+  margin: 9px 0 7px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.accounting-kpi small {
+  color: #9aa193;
+  font-size: 11px;
+}
+.accounting-kpi.primary,
+.accounting-kpi.net {
+  background: #20231e;
+  border-color: #20231e;
+}
+.accounting-kpi.primary span,
+.accounting-kpi.primary small,
+.accounting-kpi.net span,
+.accounting-kpi.net small {
+  color: #b9c0b2;
+}
+.accounting-kpi.primary strong,
+.accounting-kpi.net strong {
+  color: #fff;
+}
+.accounting-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.accounting-trend,
+.accounting-myob,
+.accounting-jobs,
+.accounting-sales {
+  padding: 18px 20px;
+}
+.accounting-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 15px;
+}
+.accounting-section-head h2 {
+  margin: 0;
+  font-size: 19px;
+}
+.accounting-section-head p {
+  margin: 4px 0 0;
+  color: #7d8577;
+  font-size: 12px;
+}
+.accounting-section-head > span {
+  color: #7d8577;
+  font-size: 12px;
+}
+.accounting-bars {
+  display: grid;
+  gap: 12px;
+}
+.accounting-bar-row {
+  display: grid;
+  grid-template-columns: 65px minmax(0, 1fr) 105px;
+  align-items: center;
+  gap: 12px;
+  color: #737b6d;
+  font-size: 12px;
+}
+.accounting-bar-row strong {
+  color: #30352d;
+  font-size: 12px;
+  text-align: right;
+}
+.accounting-bar-track {
+  height: 13px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: #eef0e9;
+}
+.accounting-bar-fill {
+  height: 100%;
+  border-radius: 7px;
+  background: #3d4938;
+}
+.accounting-trend-total {
+  margin-top: 17px;
+  padding-top: 12px;
+  border-top: 1px solid #edf0e7;
+  color: #7b8375;
+  font-size: 12px;
+}
+.accounting-trend-total strong {
+  color: #2e332b;
+}
+.accounting-myob > p {
+  margin: 0 0 14px;
+  color: #747c6e;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.myob-mapping {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 7px;
+  background: #f6f7f2;
+  color: #697162;
+  font-size: 12px;
+}
+.myob-mapping > span {
+  font-weight: 600;
+}
+.myob-mapping ul {
+  margin: 7px 0 0;
+  padding-left: 17px;
+  line-height: 1.7;
+}
+.accounting-job-table,
+.accounting-sales-table {
+  min-width: 960px;
+}
+.accounting-job-table td small {
+  display: block;
+  margin-top: 3px;
+  color: #8d9585;
+  font-size: 11px;
+}
+.accounting-job-table tfoot td,
+.accounting-sales-table tfoot td {
+  border-top: 1px solid #dfe3d9;
+  background: #fafbf8;
+  color: #4e5748;
+  font-weight: 600;
+}
+.accounting-sales-table {
+  min-width: 600px;
+}
+@media (max-width: 1100px) {
+  .accounting-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .accounting-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.accounting-job-table {
+  min-width: 1180px;
+}
+.accounting-job-table td:first-child,
+.accounting-job-table td:nth-child(2),
+.accounting-job-table td:nth-child(3) {
+  white-space: nowrap;
+}
