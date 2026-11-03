@@ -29,7 +29,10 @@ export function Documents() {
       : inv
         ? engine.invoicePricing(actor, inv.id)
         : engine.pricing(actor, quote!.id);
-    if (quote && !v?.printPreparation)
+    const canPrintClerkCorrection =
+      Boolean(quote?.clerkCorrectionCount) &&
+      (actor.role === "clerk" || actor.role === "admin");
+    if (quote && !v?.printPreparation && !canPrintClerkCorrection)
       throw new Error("請先在報價詳情確認當日主管並準備列印正式報價單。");
     const number =
       municipal?.number ||
@@ -37,6 +40,9 @@ export function Documents() {
       inv?.number ||
       v?.printPreparation?.quoteNumber ||
       quote!.number;
+    const displayNumber = quote?.clerkCorrectionCount
+      ? `${number}（V${quote.clerkCorrectionCount}）`
+      : number;
     const d = inv?.discount ?? v?.discount ?? 1;
     return (
       <div className="document-page">
@@ -72,15 +78,17 @@ export function Documents() {
                       ? "工程Invoice"
                       : "工程報價單"}
               </h1>
-              <strong className="document-number">{number}</strong>
+              <strong className="document-number">{displayNumber}</strong>
               <p>
                 {municipal
                   ? `正單 ${municipal.principalOrderNumber} · 政府8萬資助申請`
-                  : `版本 ${v?.index || "快照"} · ${
-                      inv?.createdAt.slice(0, 10) ||
-                      v?.printPreparation?.date ||
-                      v?.createdAt.slice(0, 10)
-                    }`}
+                  : quote?.clerkCorrectionCount && !v?.printPreparation
+                    ? `開單員更正 V${quote.clerkCorrectionCount} · ${v?.createdAt.slice(0, 10)}`
+                    : `版本 ${v?.index || "快照"} · ${
+                        inv?.createdAt.slice(0, 10) ||
+                        v?.printPreparation?.date ||
+                        v?.createdAt.slice(0, 10)
+                      }`}
               </p>
             </div>
           </header>

@@ -3260,6 +3260,7 @@ export class Engine {
           reason: input.reason.trim(),
         };
         quote.versions.push(nextVersion);
+        quote.clerkCorrectionCount = (quote.clerkCorrectionCount ?? 0) + 1;
         // Actual payments remain with the source; the corrected version keeps
         // them so accounting does not lose money already received.
         state.payments

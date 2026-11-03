@@ -218,6 +218,8 @@ export function MunicipalOrderDetail() {
           <strong>政府8萬資助申請，不作會計</strong>
         </div>
       </div>
+      <div className="municipal-editor-layout">
+        <div className="municipal-editor-main">
       {principal && (
         <section className="municipal-principal">
           <div className="municipal-principal-head">
@@ -387,6 +389,61 @@ export function MunicipalOrderDetail() {
           <span>市政單總額（不用作正式會計）</span>
           <strong>{money(total)}</strong>
         </div>
+      </div>
+        </div>
+        <aside className="municipal-summary">
+          <h2>市政單摘要</h2>
+          <div className="municipal-summary-row">
+            <span>項目數量</span>
+            <strong>{lines.length} 項</strong>
+          </div>
+          <div className="municipal-summary-total">
+            <span>市政單總額</span>
+            <strong>{money(total)}</strong>
+          </div>
+          <p>市政單只作政府8萬資助申請，不是客戶真實成交單，亦不計入會計。</p>
+          <Button
+            className="full-width"
+            variant="primary"
+            onClick={() => {
+              const saved = run(
+                () => engine.updateMunicipalOrder(actor, order.id, lines),
+                "市政單已保存。",
+              );
+              if (saved) setLines(structuredClone(saved.lines));
+            }}
+          >
+            <Check size={18} /> 儲存市政單
+          </Button>
+          <Button
+            className="full-width"
+            onClick={() => {
+              let saved = false;
+              run(() => {
+                engine.updateMunicipalOrder(actor, order.id, lines);
+                saved = true;
+                return true;
+              }, "市政單已保存。");
+              if (saved) nav("/documents/municipal/" + order.id);
+            }}
+          >
+            <Eye size={18} /> 預覽
+          </Button>
+          <Button
+            className="full-width"
+            onClick={() => {
+              let saved = false;
+              run(() => {
+                engine.updateMunicipalOrder(actor, order.id, lines);
+                saved = true;
+                return true;
+              }, "市政單已保存。");
+              if (saved) nav("/documents/municipal/" + order.id);
+            }}
+          >
+            <Printer size={18} /> 列印
+          </Button>
+        </aside>
       </div>
     </>
   );

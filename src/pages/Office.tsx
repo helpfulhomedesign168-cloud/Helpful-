@@ -694,7 +694,23 @@ export function Submissions() {
                                 <PenLine size={16} />
                               </Button>
                             )}
+                            {Boolean(quote.clerkCorrectionCount) && (
+                              <Button
+                                variant="ghost"
+                                aria-label={`列印${quote.number}報價單`}
+                                onClick={() =>
+                                  nav("/documents/quote/" + quote.id)
+                                }
+                              >
+                                <Printer size={16} />
+                              </Button>
+                            )}
                           </div>
+                          {Boolean(quote.clerkCorrectionCount) && (
+                            <small className="quote-version-marker">
+                              (V{quote.clerkCorrectionCount})
+                            </small>
+                          )}
                           {quote.isAdditionalOrder && (
                             <small>
                               {parentSummaryOf(quote)?.number ?? "原單未能讀取"}
