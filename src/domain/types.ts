@@ -284,6 +284,10 @@ export interface Invoice {
   /** 分類當刻的期數與金額快照，不會因日後付款政策改寫。 */
   paymentPlan?: InvoiceInstallment[];
   calculation?: FrozenCalculation;
+  /** 已退單的 Invoice 保留歷史，但不計入Dashboard營業額。 */
+  voided?: boolean;
+  voidedAt?: string;
+  voidReason?: string;
 }
 export interface Receipt {
   id: string;
@@ -670,7 +674,9 @@ export interface AccountingDashboardJob {
   orderNumber?: string;
   customerName: string;
   salesName: string;
+  salesId: string;
   category: string;
+  createdAt: string;
   revenue: number;
   collected: number;
   outstanding: number;
@@ -678,6 +684,14 @@ export interface AccountingDashboardJob {
   grossProfit: number;
   margin: number;
   completed: boolean;
+  voided: boolean;
+}
+export type AccountingTrendPeriod = "year" | "month" | "week";
+export interface AccountingTrendPoint {
+  label: string;
+  revenue: number;
+  expenses: number;
+  grossProfit: number;
 }
 export interface AccountingDashboardSales {
   actorId: string;

@@ -6412,3 +6412,223 @@ textarea {
 .accounting-job-table td:nth-child(3) {
   white-space: nowrap;
 }
+
+/* Accounting trend chart */
+.accounting-period-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid #dfe3d9;
+  border-radius: 6px;
+  background: #f8f9f4;
+}
+.accounting-period-tabs button {
+  min-width: 42px;
+  min-height: 29px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #737b6d;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.accounting-period-tabs button.active {
+  background: #30352d;
+  color: #fff;
+}
+.accounting-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin: 0 0 7px 45px;
+  color: #7c8476;
+  font-size: 11px;
+}
+.accounting-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.accounting-chart-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.accounting-chart-legend i.revenue {
+  background: #3d4938;
+}
+.accounting-chart-legend i.expenses {
+  height: 2px;
+  border-radius: 0;
+  background: #c28a4d;
+}
+.accounting-chart-legend i.profit {
+  height: 2px;
+  border-radius: 0;
+  background: #668fa7;
+}
+.accounting-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.chart-grid {
+  stroke: #e8ebe2;
+  stroke-width: 1;
+}
+.chart-axis {
+  fill: #969d8f;
+  font-size: 9px;
+}
+.chart-revenue {
+  fill: #566451;
+}
+.chart-expenses {
+  fill: none;
+  stroke: #c28a4d;
+  stroke-width: 2;
+}
+.chart-profit {
+  fill: none;
+  stroke: #668fa7;
+  stroke-width: 2;
+}
+
+/* Accounting business order list */
+.business-order-panel {
+  overflow: hidden;
+}
+.business-order-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 15px 18px;
+  border-bottom: 1px solid #eef0e9;
+}
+.business-order-toolbar > div:first-child {
+  flex: 1;
+  min-width: 230px;
+}
+.business-order-field {
+  display: grid;
+  gap: 4px;
+  color: #7b8375;
+  font-size: 11px;
+}
+.business-order-field select {
+  min-width: 104px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid #dfe3d9;
+  border-radius: 6px;
+  background: #fff;
+  color: #30352d;
+  font: inherit;
+  font-size: 13px;
+}
+.business-order-status-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 18px;
+  border-bottom: 1px solid #eef0e9;
+}
+.business-order-status-tabs button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #737b6d;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.business-order-status-tabs button.active {
+  background: #e9ede2;
+  color: #30352d;
+  font-weight: 600;
+}
+.business-order-count {
+  margin-left: auto;
+  color: #8d9585;
+  font-size: 12px;
+}
+.business-order-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid #eef0e9;
+  background: #fafbf8;
+}
+.business-order-summary > div {
+  padding: 13px 18px;
+  border-right: 1px solid #eef0e9;
+}
+.business-order-summary > div:last-child {
+  border-right: 0;
+}
+.business-order-summary span {
+  display: block;
+  margin-bottom: 4px;
+  color: #7c8476;
+  font-size: 11px;
+}
+.business-order-summary strong {
+  font-size: 16px;
+}
+.business-order-table {
+  min-width: 1220px;
+}
+.business-order-table td:first-child a {
+  color: inherit;
+  text-decoration: none;
+}
+.business-order-table td:first-child a:hover {
+  text-decoration: underline;
+}
+@media (max-width: 900px) {
+  .business-order-toolbar {
+    flex-wrap: wrap;
+  }
+  .business-order-toolbar > div:first-child {
+    flex-basis: 100%;
+  }
+  .business-order-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.business-order-table {
+  min-width: 1180px;
+}
+.business-order-table th:nth-child(1),
+.business-order-table td:nth-child(1) {
+  min-width: 170px;
+}
+.business-order-table th:nth-child(2),
+.business-order-table td:nth-child(2) {
+  min-width: 100px;
+  white-space: nowrap;
+}
+.business-order-table th:nth-child(3),
+.business-order-table td:nth-child(3) {
+  min-width: 95px;
+  white-space: nowrap;
+}
+.business-order-table th:nth-child(4),
+.business-order-table td:nth-child(4) {
+  min-width: 110px;
+  white-space: nowrap;
+}
+.business-order-table th:nth-child(5),
+.business-order-table td:nth-child(5) {
+  min-width: 65px;
+  white-space: nowrap;
+}
+.business-order-table th:nth-child(n + 6),
+.business-order-table td:nth-child(n + 6) {
+  white-space: nowrap;
+}

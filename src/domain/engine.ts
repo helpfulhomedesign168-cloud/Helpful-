@@ -4,6 +4,8 @@ import {
   type AccountingDashboard,
   type AccountingDashboardJob,
   type AccountingDashboardMonth,
+  type AccountingTrendPeriod,
+  type AccountingTrendPoint,
   type AppState,
   type Assignment,
   type AssignmentInput,
@@ -3520,6 +3522,42 @@ export class Engine {
       .reduce((sum, extra) => sum + (extra.price ?? 0), 0);
     return moneyValue(assignmentsCost + extraCost);
   }
+  private accountingJob(invoice: Invoice): AccountingDashboardJob {
+    const quote = this.state.quotes.find(
+      (item) => item.id === invoice.quoteId,
+    );
+    const order = this.state.orders.find(
+      (item) => item.invoiceId === invoice.id,
+    );
+    const owner = this.state.actors.find(
+      (item) => item.id === quote?.ownerId,
+    );
+    const status = this.paymentStatusRaw(invoice);
+    const revenue = invoice.netTotal;
+    const expenses = order ? this.orderExpense(order) : 0;
+    return {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      orderNumber: order?.number,
+      customerName: invoice.customer.name,
+      salesName: owner?.name ?? "—",
+      salesId: quote?.ownerId ?? "",
+      category:
+        INVOICE_CATEGORY_NAMES[invoice.category ?? "self-pay"],
+      createdAt: invoice.createdAt,
+      revenue,
+      collected: status.validPaid,
+      outstanding: moneyValue(D(revenue).minus(status.validPaid)),
+      expenses,
+      grossProfit: moneyValue(D(revenue).minus(expenses)),
+      margin:
+        revenue > 0
+          ? Number(((revenue - expenses) / revenue * 100).toFixed(1))
+          : 0,
+      completed: status.completed,
+      voided: Boolean(invoice.voided),
+    };
+  }
   accountingDashboard(actorInput: Actor, month: string): AccountingDashboard {
     const actor = this.actor(actorInput);
     if (
@@ -3527,42 +3565,13 @@ export class Engine {
       actor.role !== "admin"
     )
       fail("只有會計主管或Super Admin可查看營運Dashboard。");
-    const invoices = this.state.invoices.filter((invoice) =>
-      invoice.createdAt.startsWith(month),
+    const invoices = this.state.invoices.filter(
+      (invoice) =>
+        invoice.createdAt.startsWith(month) && !invoice.voided,
     );
-    const jobs: AccountingDashboardJob[] = invoices.map((invoice) => {
-      const quote = this.state.quotes.find(
-        (item) => item.id === invoice.quoteId,
-      );
-      const order = this.state.orders.find(
-        (item) => item.invoiceId === invoice.id,
-      );
-      const owner = this.state.actors.find(
-        (item) => item.id === quote?.ownerId,
-      );
-      const status = this.paymentStatusRaw(invoice);
-      const revenue = invoice.netTotal;
-      const expenses = order ? this.orderExpense(order) : 0;
-      return {
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.number,
-        orderNumber: order?.number,
-        customerName: invoice.customer.name,
-        salesName: owner?.name ?? "—",
-        category:
-          INVOICE_CATEGORY_NAMES[invoice.category ?? "self-pay"],
-        revenue,
-        collected: status.validPaid,
-        outstanding: moneyValue(D(revenue).minus(status.validPaid)),
-        expenses,
-        grossProfit: moneyValue(D(revenue).minus(expenses)),
-        margin:
-          revenue > 0
-            ? Number(((revenue - expenses) / revenue * 100).toFixed(1))
-            : 0,
-        completed: status.completed,
-      };
-    });
+    const jobs: AccountingDashboardJob[] = invoices.map((invoice) =>
+      this.accountingJob(invoice),
+    );
     const sum = (values: number[]) =>
       moneyValue(values.reduce((total, value) => D(total).plus(value), D(0)));
     const turnover = sum(jobs.map((job) => job.revenue));
@@ -3697,6 +3706,102 @@ export class Engine {
       myobNote:
         "MYOB／ABSS 尚未連接。Dashboard 先用原型資料，收入、支出、佣金及月份欄位已預留作日後 MYOB 對接。",
     };
+  }
+  businessOrders(
+    actorInput: Actor,
+    month: string,
+  ): AccountingDashboardJob[] {
+    const actor = this.actor(actorInput);
+    if (
+      actor.role !== "finance_supervisor" &&
+      actor.role !== "admin"
+    )
+      fail("只有會計主管或Super Admin可查看營業單。");
+    return this.state.invoices
+      .filter((invoice) => invoice.createdAt.startsWith(month))
+      .map((invoice) => this.accountingJob(invoice))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+  accountingTrend(
+    actorInput: Actor,
+    month: string,
+    period: AccountingTrendPeriod,
+  ): AccountingTrendPoint[] {
+    const actor = this.actor(actorInput);
+    if (
+      actor.role !== "finance_supervisor" &&
+      actor.role !== "admin"
+    )
+      fail("只有會計主管或Super Admin可查看營運趨勢。");
+    const sum = (values: number[]) =>
+      moneyValue(
+        values.reduce((total, value) => D(total).plus(value), D(0)),
+      );
+    const pointFor = (
+      label: string,
+      invoices: Invoice[],
+    ): AccountingTrendPoint => {
+      const revenue = sum(invoices.map((invoice) => invoice.netTotal));
+      const expenses = sum(
+        invoices.map((invoice) => {
+          const order = this.state.orders.find(
+            (item) => item.invoiceId === invoice.id,
+          );
+          return order ? this.orderExpense(order) : 0;
+        }),
+      );
+      return {
+        label,
+        revenue,
+        expenses,
+        grossProfit: moneyValue(D(revenue).minus(expenses)),
+      };
+    };
+    const valid = this.state.invoices.filter((invoice) => !invoice.voided);
+    if (period === "year") {
+      const year = month.slice(0, 4);
+      return Array.from({ length: 12 }, (_, index) => {
+        const key = `${year}-${String(index + 1).padStart(2, "0")}`;
+        return pointFor(
+          `${index + 1}月`,
+          valid.filter((invoice) => invoice.createdAt.startsWith(key)),
+        );
+      });
+    }
+    if (period === "month") {
+      const days = new Date(
+        Number(month.slice(0, 4)),
+        Number(month.slice(5, 7)),
+        0,
+      ).getDate();
+      return Array.from({ length: days }, (_, index) => {
+        const day = String(index + 1).padStart(2, "0");
+        return pointFor(
+          `${index + 1}`,
+          valid.filter((invoice) =>
+            invoice.createdAt.startsWith(`${month}-${day}`),
+          ),
+        );
+      });
+    }
+    const days = new Date(
+      Number(month.slice(0, 4)),
+      Number(month.slice(5, 7)),
+      0,
+    ).getDate();
+    const weeks = Math.ceil(days / 7);
+    return Array.from({ length: weeks }, (_, index) => {
+      const start = index * 7 + 1;
+      const end = Math.min(days, start + 6);
+      return pointFor(
+        `第${index + 1}週`,
+        valid.filter((invoice) => {
+          if (!invoice.createdAt.startsWith(month)) return false;
+          const day = Number(invoice.createdAt.slice(8, 10));
+          return day >= start && day <= end;
+        }),
+      );
+    });
   }
   notifications(actorInput: Actor): Notification[] {
     const actor = this.actor(actorInput);

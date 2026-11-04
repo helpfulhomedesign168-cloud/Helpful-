@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Badge,
   Button,
@@ -8,22 +9,49 @@ import {
   usePagination,
 } from "../components/ui";
 import { useApp } from "../context";
-import { DEMO_TODAY, money } from "../domain/types";
+import {
+  AccountingTrendPeriod,
+  DEMO_TODAY,
+  money,
+} from "../domain/types";
 
 export function AccountingDashboard() {
   const { actor, engine } = useApp();
   const [month, setMonth] = useState(DEMO_TODAY.slice(0, 7));
+  const [period, setPeriod] = useState<AccountingTrendPeriod>("month");
   const dashboard = engine.accountingDashboard(actor, month);
+  const trend = engine.accountingTrend(actor, month, period);
   const pager = usePagination(dashboard.jobs, month);
-  const maxMonthTurnover = Math.max(
+  const chartWidth = 820;
+  const chartHeight = 230;
+  const chartPadX = 46;
+  const chartPadY = 24;
+  const chartBottom = 30;
+  const plotWidth = chartWidth - chartPadX * 2;
+  const plotHeight = chartHeight - chartPadY - chartBottom;
+  const maxValue = Math.max(
     1,
-    ...dashboard.months.map((item) => item.turnover),
+    ...trend.flatMap((point) => [
+      point.revenue,
+      point.expenses,
+      point.grossProfit,
+    ]),
   );
+  const slot = plotWidth / Math.max(1, trend.length);
+  const barWidth = Math.max(3, slot * 0.44);
+  const xFor = (index: number) => chartPadX + slot * (index + 0.5);
+  const yFor = (value: number) =>
+    chartPadY + plotHeight - (Math.max(0, value) / maxValue) * plotHeight;
+  const lineFor = (key: "expenses" | "grossProfit") =>
+    trend
+      .map((point, index) => `${xFor(index)},${yFor(point[key])}`)
+      .join(" ");
+  const labelEvery = Math.max(1, Math.ceil(trend.length / 8));
   return (
     <>
       <PageHead
         eyebrow="會計主管 · 公司營運"
-        title="營運儀表板"
+        title="儀表板"
         actions={
           <label className="month-picker">
             <span>統計月份</span>
@@ -78,29 +106,86 @@ export function AccountingDashboard() {
         <section className="list-panel accounting-trend">
           <div className="accounting-section-head">
             <div>
-              <h2>每月 Turnover</h2>
-              <p>最近 6 個月已開 Invoice 營業額。</p>
+              <h2>營運趨勢</h2>
+              <p>營業額、工程支出及毛利</p>
+            </div>
+            <div className="accounting-period-tabs" role="tablist">
+              {([
+                ["week", "星期"],
+                ["month", "月"],
+                ["year", "年"],
+              ] as Array<[AccountingTrendPeriod, string]>).map(
+                ([value, label]) => (
+                  <button
+                    key={value}
+                    role="tab"
+                    aria-selected={period === value}
+                    className={period === value ? "active" : ""}
+                    onClick={() => setPeriod(value)}
+                  >
+                    {label}
+                  </button>
+                ),
+              )}
             </div>
           </div>
-          <div className="accounting-bars">
-            {dashboard.months.map((item) => (
-              <div className="accounting-bar-row" key={item.month}>
-                <span>{item.month}</span>
-                <div className="accounting-bar-track">
-                  <div
-                    className="accounting-bar-fill"
-                    style={{
-                      width: `${Math.max(
-                        2,
-                        (item.turnover / maxMonthTurnover) * 100,
-                      )}%`,
-                    }}
-                  />
-                </div>
-                <strong>{money(item.turnover)}</strong>
-              </div>
-            ))}
+          <div className="accounting-chart-legend">
+            <span><i className="revenue" />營業額</span>
+            <span><i className="expenses" />工程支出</span>
+            <span><i className="profit" />毛利</span>
           </div>
+          <svg
+            className="accounting-chart"
+            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+            role="img"
+            aria-label="營業額、工程支出及毛利趨勢圖"
+          >
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+              const y = chartPadY + plotHeight * ratio;
+              return (
+                <g key={ratio}>
+                  <line
+                    x1={chartPadX}
+                    x2={chartWidth - chartPadX}
+                    y1={y}
+                    y2={y}
+                    className="chart-grid"
+                  />
+                  <text x={4} y={y + 4} className="chart-axis">
+                    {ratio === 0
+                      ? "0"
+                      : `${Math.round(maxValue * (1 - ratio) / 1000)}k`}
+                  </text>
+                </g>
+              );
+            })}
+            {trend.map((point, index) => (
+              <rect
+                key={`bar-${point.label}`}
+                x={xFor(index) - barWidth / 2}
+                y={yFor(point.revenue)}
+                width={barWidth}
+                height={chartPadY + plotHeight - yFor(point.revenue)}
+                rx={2}
+                className="chart-revenue"
+              />
+            ))}
+            <polyline points={lineFor("expenses")} className="chart-expenses" />
+            <polyline points={lineFor("grossProfit")} className="chart-profit" />
+            {trend.map((point, index) =>
+              index % labelEvery === 0 ? (
+                <text
+                  key={`label-${point.label}`}
+                  x={xFor(index)}
+                  y={chartHeight - 8}
+                  textAnchor="middle"
+                  className="chart-axis"
+                >
+                  {point.label}
+                </text>
+              ) : null,
+            )}
+          </svg>
           <div className="accounting-trend-total">
             毛利率：
             <strong>
@@ -142,10 +227,12 @@ export function AccountingDashboard() {
       <section className="list-panel accounting-jobs">
         <div className="accounting-section-head">
           <div>
-            <h2>每單工程收入及支出</h2>
+            <h2>營業單</h2>
             <p>只計已安排師傅及額外工程的實際支出；未安排工程支出暫為 HK$0。</p>
           </div>
-          <span>{dashboard.jobs.length} 張單</span>
+          <Link className="btn" to={`/business-orders?month=${month}`}>
+            查看全部營業單
+          </Link>
         </div>
         {dashboard.jobs.length === 0 ? (
           <Empty title="本月未有 Invoice" />

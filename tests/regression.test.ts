@@ -303,6 +303,20 @@ it("會計主管可讀營運Dashboard，普通開單員不可", () => {
   ).toThrow("會計主管");
 });
 
+it("營業單及年／月／星期趨勢可讀取", () => {
+  const e = new Engine(undefined, createSeedState());
+  const vinson = actor(e, "finance-vinson");
+  const orders = e.businessOrders(vinson, "2026-10");
+  expect(orders.length).toBeGreaterThan(0);
+  const monthTrend = e.accountingTrend(vinson, "2026-10", "month");
+  expect(monthTrend).toHaveLength(31);
+  expect(e.accountingTrend(vinson, "2026-10", "week")).toHaveLength(5);
+  expect(e.accountingTrend(vinson, "2026-10", "year")).toHaveLength(12);
+  expect(monthTrend.reduce((sum, point) => sum + point.revenue, 0)).toBe(
+    Number(orders.reduce((sum, order) => sum + order.revenue, 0).toFixed(2)),
+  );
+});
+
 it("多項訂單分類按自費 > 8萬資助 > 團購決定收款分類", () => {
   const e = new Engine(undefined, createSeedState());
   const sales = actor(e, "sales-mm");

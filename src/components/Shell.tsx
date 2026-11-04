@@ -91,9 +91,10 @@ export function Shell() {
                 ? [
                     [
                       "/accounting-dashboard",
-                      "營運儀表板",
+                      "儀表板",
                       ChartNoAxesCombined,
                     ],
+                    ["/business-orders", "營業單", Files],
                   ]
                 : []),
               ["/submissions", "提交報價", ArrowRightLeft],
@@ -110,6 +111,7 @@ export function Shell() {
               ["/contractors", "工程師傅", HardHat],
               ["/suppliers", "供應商", Truck],
               ["/municipal-orders", "市政單", FileText],
+              ["/business-orders", "營業單", Files],
               ["/customers", "客戶", Users],
               ["/product-styles", "產品款式", Palette],
               ["/services", "工程價目", Tags],
