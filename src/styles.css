@@ -6632,3 +6632,7 @@ textarea {
 .business-order-table td:nth-child(n + 6) {
   white-space: nowrap;
 }
+
+.business-order-field {
+  display: block;
+}

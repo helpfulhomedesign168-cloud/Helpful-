@@ -72,7 +72,6 @@ export function BusinessOrders() {
             placeholder="搜尋Invoice、工程單或客戶"
           />
           <label className="business-order-field">
-            <span>年份</span>
             <select
               aria-label="營業單年份"
               value={year}
@@ -86,7 +85,6 @@ export function BusinessOrders() {
             </select>
           </label>
           <label className="business-order-field">
-            <span>月份</span>
             <select
               aria-label="營業單月份"
               value={month}
@@ -103,7 +101,6 @@ export function BusinessOrders() {
             </select>
           </label>
           <label className="business-order-field">
-            <span>Sales</span>
             <select
               aria-label="營業單Sales"
               value={sales}
@@ -118,7 +115,6 @@ export function BusinessOrders() {
             </select>
           </label>
           <label className="business-order-field">
-            <span>分類</span>
             <select
               aria-label="營業單分類"
               value={category}
