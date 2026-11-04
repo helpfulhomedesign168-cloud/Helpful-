@@ -24,6 +24,8 @@ import {
 } from "./pages/MunicipalOrders";
 import { Documents } from "./pages/Documents";
 import { UserProfile, Users } from "./pages/Users";
+import { AccountingDashboard } from "./pages/AccountingDashboard";
+import { BusinessOrders } from "./pages/BusinessOrders";
 import { Button, Empty } from "./components/ui";
 import "./styles.css";
 function Home() {
@@ -114,6 +116,22 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={["finance"]}>
                   <Finance />
+                </Guard>
+              }
+            />
+            <Route
+              path="/accounting-dashboard"
+              element={
+                <Guard roles={["finance_supervisor", "admin"]}>
+                  <AccountingDashboard />
+                </Guard>
+              }
+            />
+            <Route
+              path="/business-orders"
+              element={
+                <Guard roles={["finance_supervisor", "admin"]}>
+                  <BusinessOrders />
                 </Guard>
               }
             />

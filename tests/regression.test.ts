@@ -278,6 +278,45 @@ it("會計主管Vinson有開單員功能；Admin不可管理用戶", () => {
   expect(() => e.listUsers(adminStaff)).toThrow("Super Admin");
 });
 
+it("會計主管可讀營運Dashboard，普通開單員不可", () => {
+  const e = new Engine(undefined, createSeedState());
+  const vinson = actor(e, "finance-vinson");
+  const dashboard = e.accountingDashboard(vinson, "2026-10");
+  expect(dashboard.jobs.length).toBeGreaterThan(0);
+  expect(dashboard.turnover).toBeGreaterThan(0);
+  expect(dashboard.months).toHaveLength(6);
+  expect(dashboard.myobNote).toContain("MYOB");
+  expect(dashboard.turnover).toBe(
+    Number(
+      dashboard.jobs
+        .reduce((sum, job) => sum + job.revenue, 0)
+        .toFixed(2),
+    ),
+  );
+  const mm = dashboard.sales.find((row) => row.name.includes("文文"));
+  expect(mm?.commission).toBeGreaterThan(100000);
+  expect(dashboard.commissions).toBeGreaterThanOrEqual(
+    mm?.commission ?? 0,
+  );
+  expect(() =>
+    e.accountingDashboard(actor(e, "clerk"), "2026-10"),
+  ).toThrow("會計主管");
+});
+
+it("營業單及年／月／星期趨勢可讀取", () => {
+  const e = new Engine(undefined, createSeedState());
+  const vinson = actor(e, "finance-vinson");
+  const orders = e.businessOrders(vinson, "2026-10");
+  expect(orders.length).toBeGreaterThan(0);
+  const monthTrend = e.accountingTrend(vinson, "2026-10", "month");
+  expect(monthTrend).toHaveLength(31);
+  expect(e.accountingTrend(vinson, "2026-10", "week")).toHaveLength(5);
+  expect(e.accountingTrend(vinson, "2026-10", "year")).toHaveLength(12);
+  expect(monthTrend.reduce((sum, point) => sum + point.revenue, 0)).toBe(
+    Number(orders.reduce((sum, order) => sum + order.revenue, 0).toFixed(2)),
+  );
+});
+
 it("多項訂單分類按自費 > 8萬資助 > 團購決定收款分類", () => {
   const e = new Engine(undefined, createSeedState());
   const sales = actor(e, "sales-mm");

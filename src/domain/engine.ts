@@ -1,6 +1,11 @@
 import Decimal from "decimal.js";
 import {
   type Actor,
+  type AccountingDashboard,
+  type AccountingDashboardJob,
+  type AccountingDashboardMonth,
+  type AccountingTrendPeriod,
+  type AccountingTrendPoint,
   type AppState,
   type Assignment,
   type AssignmentInput,
@@ -3466,6 +3471,338 @@ export class Engine {
       });
     });
   }
+  private orderExpense(order: WorkOrder): number {
+    const quote = this.state.quotes.find((item) => item.id === order.quoteId);
+    if (!quote) return 0;
+    const version =
+      quote.versions.find((item) => item.id === order.versionId) ??
+      currentVersion(quote);
+    const raw = calculatePricing(
+      version.lines,
+      version.discount,
+      this.state.services,
+      true,
+    );
+    const lineAmounts = new Map(
+      raw.lineAmounts.map((amount) => [amount.id, amount.amount]),
+    );
+    const resources = new Map(
+      this.state.resources.map((resource) => [resource.id, resource]),
+    );
+    const assignments = this.state.assignments.filter(
+      (assignment) => assignment.workOrderId === order.id,
+    );
+    const assignmentsCost = assignments.reduce((sum, assignment) => {
+      const resource = resources.get(assignment.resourceId);
+      if (!resource?.feeMode) return sum;
+      if (resource.feeMode === "daily") {
+        const days = Math.max(
+          1,
+          Math.round(
+            (Date.parse(assignment.endDate || assignment.date) -
+              Date.parse(assignment.date)) /
+              86400000,
+          ) + 1,
+        );
+        return sum + (resource.feeAmount ?? 0) * days;
+      }
+      if (resource.feeMode === "fixed")
+        return sum + (resource.feeAmount ?? 0);
+      return (
+        sum +
+        assignment.lineIds.reduce(
+          (lineSum, lineId) => lineSum + (lineAmounts.get(lineId) ?? 0),
+          0,
+        ) *
+          0.6
+      );
+    }, 0);
+    const extraCost = this.state.extraWorks
+      .filter((extra) => extra.workOrderId === order.id)
+      .reduce((sum, extra) => sum + (extra.price ?? 0), 0);
+    return moneyValue(assignmentsCost + extraCost);
+  }
+  private accountingJob(invoice: Invoice): AccountingDashboardJob {
+    const quote = this.state.quotes.find(
+      (item) => item.id === invoice.quoteId,
+    );
+    const order = this.state.orders.find(
+      (item) => item.invoiceId === invoice.id,
+    );
+    const owner = this.state.actors.find(
+      (item) => item.id === quote?.ownerId,
+    );
+    const status = this.paymentStatusRaw(invoice);
+    const revenue = invoice.netTotal;
+    const expenses = order ? this.orderExpense(order) : 0;
+    return {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      orderNumber: order?.number,
+      customerName: invoice.customer.name,
+      salesName: owner?.name ?? "—",
+      salesId: quote?.ownerId ?? "",
+      category:
+        INVOICE_CATEGORY_NAMES[invoice.category ?? "self-pay"],
+      createdAt: invoice.createdAt,
+      revenue,
+      collected: status.validPaid,
+      outstanding: moneyValue(D(revenue).minus(status.validPaid)),
+      expenses,
+      grossProfit: moneyValue(D(revenue).minus(expenses)),
+      margin:
+        revenue > 0
+          ? Number(((revenue - expenses) / revenue * 100).toFixed(1))
+          : 0,
+      completed: status.completed,
+      voided: Boolean(invoice.voided),
+    };
+  }
+  accountingDashboard(actorInput: Actor, month: string): AccountingDashboard {
+    const actor = this.actor(actorInput);
+    if (
+      actor.role !== "finance_supervisor" &&
+      actor.role !== "admin"
+    )
+      fail("只有會計主管或Super Admin可查看營運Dashboard。");
+    const invoices = this.state.invoices.filter(
+      (invoice) =>
+        invoice.createdAt.startsWith(month) && !invoice.voided,
+    );
+    const jobs: AccountingDashboardJob[] = invoices.map((invoice) =>
+      this.accountingJob(invoice),
+    );
+    const sum = (values: number[]) =>
+      moneyValue(values.reduce((total, value) => D(total).plus(value), D(0)));
+    const turnover = sum(jobs.map((job) => job.revenue));
+    const collected = sum(jobs.map((job) => job.collected));
+    const expenses = sum(jobs.map((job) => job.expenses));
+    // Dashboard commission is accrued on issued Invoice revenue, using the
+    // same 8%/6% owner and management rates. Actual commission paid remains
+    // the cash-basis figure shown on the Sales performance page.
+    const commissionByActor = new Map<
+      string,
+      { revenue: number; jobCount: number; commission: number }
+    >();
+    const addCommission = (
+      actorId: string,
+      revenue: number,
+      jobCount: number,
+      commission: number,
+    ) => {
+      const row = commissionByActor.get(actorId) ?? {
+        revenue: 0,
+        jobCount: 0,
+        commission: 0,
+      };
+      row.revenue = moneyValue(D(row.revenue).plus(revenue));
+      row.jobCount += jobCount;
+      row.commission = moneyValue(D(row.commission).plus(commission));
+      commissionByActor.set(actorId, row);
+    };
+    invoices.forEach((invoice) => {
+      const quote = this.state.quotes.find(
+        (item) => item.id === invoice.quoteId,
+      );
+      const version = quote?.versions.find(
+        (item) => item.id === invoice.versionId,
+      );
+      if (!quote || !version) return;
+      const low = factor(version.discount).lt(0.95);
+      addCommission(
+        quote.ownerId,
+        invoice.netTotal,
+        1,
+        invoice.netTotal * (low ? 0.06 : 0.08),
+      );
+      const supervisorId = version.signature?.supervisorId;
+      if (supervisorId) {
+        const managementRate =
+          quote.team === "A"
+            ? low
+              ? 0.03
+              : 0.04
+            : low
+              ? 0.02
+              : 0.03;
+        addCommission(
+          supervisorId,
+          0,
+          0,
+          invoice.netTotal * managementRate,
+        );
+      }
+      if (quote.team === "B")
+        addCommission("head-don", 0, 0, invoice.netTotal * 0.01);
+    });
+    const sales = this.state.actors
+      .filter(
+        (item) =>
+          ["sales", "supervisor", "head"].includes(item.role) &&
+          item.active !== false,
+      )
+      .map((salesActor) => {
+        const row = commissionByActor.get(salesActor.id);
+        return {
+          actorId: salesActor.id,
+          name: salesActor.name,
+          role: ROLE_NAMES[salesActor.role],
+          jobCount: row?.jobCount ?? 0,
+          revenue: row?.revenue ?? 0,
+          commission: row?.commission ?? 0,
+        };
+      })
+      .filter((row) => row.jobCount > 0 || row.commission > 0);
+    const commissions = sum(sales.map((row) => row.commission));
+    const months: AccountingDashboardMonth[] = Array.from(
+      { length: 6 },
+      (_, index) => {
+        const date = new Date(
+          Date.UTC(
+            Number(month.slice(0, 4)),
+            Number(month.slice(5, 7)) - 1 - (5 - index),
+            1,
+          ),
+        );
+        const monthKey = `${date.getUTCFullYear()}-${String(
+          date.getUTCMonth() + 1,
+        ).padStart(2, "0")}`;
+        const monthInvoices = this.state.invoices.filter((invoice) =>
+          invoice.createdAt.startsWith(monthKey),
+        );
+        const monthJobs = monthInvoices.map((invoice) => {
+          const order = this.state.orders.find(
+            (item) => item.invoiceId === invoice.id,
+          );
+          return {
+            revenue: invoice.netTotal,
+            expenses: order ? this.orderExpense(order) : 0,
+          };
+        });
+        const monthTurnover = sum(monthJobs.map((job) => job.revenue));
+        const monthExpenses = sum(monthJobs.map((job) => job.expenses));
+        return {
+          month: monthKey,
+          turnover: monthTurnover,
+          expenses: monthExpenses,
+          grossProfit: moneyValue(D(monthTurnover).minus(monthExpenses)),
+        };
+      },
+    );
+    return {
+      month,
+      turnover,
+      collected,
+      outstanding: moneyValue(D(turnover).minus(collected)),
+      expenses,
+      grossProfit: moneyValue(D(turnover).minus(expenses)),
+      commissions,
+      netProfit: moneyValue(D(turnover).minus(expenses).minus(commissions)),
+      jobCount: jobs.length,
+      completedJobs: jobs.filter((job) => job.completed).length,
+      jobs,
+      sales,
+      months,
+      myobNote:
+        "MYOB／ABSS 尚未連接。Dashboard 先用原型資料，收入、支出、佣金及月份欄位已預留作日後 MYOB 對接。",
+    };
+  }
+  businessOrders(
+    actorInput: Actor,
+    month: string,
+  ): AccountingDashboardJob[] {
+    const actor = this.actor(actorInput);
+    if (
+      actor.role !== "finance_supervisor" &&
+      actor.role !== "admin"
+    )
+      fail("只有會計主管或Super Admin可查看營業單。");
+    return this.state.invoices
+      .filter((invoice) => invoice.createdAt.startsWith(month))
+      .map((invoice) => this.accountingJob(invoice))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+  accountingTrend(
+    actorInput: Actor,
+    month: string,
+    period: AccountingTrendPeriod,
+  ): AccountingTrendPoint[] {
+    const actor = this.actor(actorInput);
+    if (
+      actor.role !== "finance_supervisor" &&
+      actor.role !== "admin"
+    )
+      fail("只有會計主管或Super Admin可查看營運趨勢。");
+    const sum = (values: number[]) =>
+      moneyValue(
+        values.reduce((total, value) => D(total).plus(value), D(0)),
+      );
+    const pointFor = (
+      label: string,
+      invoices: Invoice[],
+    ): AccountingTrendPoint => {
+      const revenue = sum(invoices.map((invoice) => invoice.netTotal));
+      const expenses = sum(
+        invoices.map((invoice) => {
+          const order = this.state.orders.find(
+            (item) => item.invoiceId === invoice.id,
+          );
+          return order ? this.orderExpense(order) : 0;
+        }),
+      );
+      return {
+        label,
+        revenue,
+        expenses,
+        grossProfit: moneyValue(D(revenue).minus(expenses)),
+      };
+    };
+    const valid = this.state.invoices.filter((invoice) => !invoice.voided);
+    if (period === "year") {
+      const year = month.slice(0, 4);
+      return Array.from({ length: 12 }, (_, index) => {
+        const key = `${year}-${String(index + 1).padStart(2, "0")}`;
+        return pointFor(
+          `${index + 1}月`,
+          valid.filter((invoice) => invoice.createdAt.startsWith(key)),
+        );
+      });
+    }
+    if (period === "month") {
+      const days = new Date(
+        Number(month.slice(0, 4)),
+        Number(month.slice(5, 7)),
+        0,
+      ).getDate();
+      return Array.from({ length: days }, (_, index) => {
+        const day = String(index + 1).padStart(2, "0");
+        return pointFor(
+          `${index + 1}`,
+          valid.filter((invoice) =>
+            invoice.createdAt.startsWith(`${month}-${day}`),
+          ),
+        );
+      });
+    }
+    const days = new Date(
+      Number(month.slice(0, 4)),
+      Number(month.slice(5, 7)),
+      0,
+    ).getDate();
+    const weeks = Math.ceil(days / 7);
+    return Array.from({ length: weeks }, (_, index) => {
+      const start = index * 7 + 1;
+      const end = Math.min(days, start + 6);
+      return pointFor(
+        `第${index + 1}週`,
+        valid.filter((invoice) => {
+          if (!invoice.createdAt.startsWith(month)) return false;
+          const day = Number(invoice.createdAt.slice(8, 10));
+          return day >= start && day <= end;
+        }),
+      );
+    });
+  }
   notifications(actorInput: Actor): Notification[] {
     const actor = this.actor(actorInput);
     return deepCopy(
@@ -4844,7 +5181,7 @@ function appendDemoEngineeringOrders(seed: AppState): void {
       versionId,
       customer: deepCopy(demoCustomer),
       lines: deepCopy(lines),
-      discount: 0,
+      discount: 1,
       discountMode: "none",
       discountValue: 0,
       netTotal: total,

@@ -28,8 +28,10 @@ import { Button, Dialog, Notice } from "./ui";
 export const roleHome = (role: string) =>
   role === "finance"
     ? "/finance"
-    : role === "clerk" || role === "finance_supervisor"
-      ? "/submissions"
+    : role === "finance_supervisor"
+      ? "/accounting-dashboard"
+      : role === "clerk"
+        ? "/submissions"
       : role === "cs" || role === "cs_supervisor"
         ? "/handoff"
         : role === "admin" || role === "admin_staff"
@@ -85,6 +87,16 @@ export function Shell() {
           ]
         : actor.role === "clerk" || actor.role === "finance_supervisor"
           ? [
+              ...(actor.role === "finance_supervisor"
+                ? [
+                    [
+                      "/accounting-dashboard",
+                      "儀表板",
+                      ChartNoAxesCombined,
+                    ],
+                    ["/business-orders", "營業單", Files],
+                  ]
+                : []),
               ["/submissions", "提交報價", ArrowRightLeft],
               ["/invoices", "單據管理", Files],
               ["/municipal-orders", "市政單", FileText],
@@ -99,6 +111,7 @@ export function Shell() {
               ["/contractors", "工程師傅", HardHat],
               ["/suppliers", "供應商", Truck],
               ["/municipal-orders", "市政單", FileText],
+              ["/business-orders", "營業單", Files],
               ["/customers", "客戶", Users],
               ["/product-styles", "產品款式", Palette],
               ["/services", "工程價目", Tags],
