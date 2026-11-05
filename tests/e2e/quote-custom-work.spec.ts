@@ -24,8 +24,23 @@ test("Sales新增工程popup顯示自訂工程及發給工程部報價UI", async
   await expect(submit).toBeEnabled();
   await submit.click();
   await expect(
-    page.getByText("此功能將於下一步接駁工程部報價流程。", {
+    page.getByRole("dialog", { name: "新增工程項目" }),
+  ).toHaveCount(0);
+  const pendingLine = page.locator(".line-card.pending-price");
+  await expect(pendingLine).toBeVisible();
+  await expect(pendingLine).toContainText("訂造特色電視櫃");
+  await expect(pendingLine).toContainText("待報價");
+  await expect(
+    page.getByText("有 1 項自訂工程待工程部報價，未可提交或列印。", {
       exact: true,
     }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /前往預覽及成交/ }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "儲存草稿", exact: true }).click();
+  await expect(page).toHaveURL(/\/quotes\/.+\/edit$/);
+  await expect(page.locator(".line-card.pending-price")).toContainText(
+    "待報價",
+  );
 });

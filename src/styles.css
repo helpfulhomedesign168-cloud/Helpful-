@@ -6675,3 +6675,19 @@ textarea {
     width: 100%;
   }
 }
+
+.line-card.pending-price {
+  border-color: #d8c7a6;
+  background: #fffdf8;
+}
+.quote-pending {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 5px;
+  background: #f1e8d5;
+  color: #8a6227;
+  font-size: 13px;
+  font-weight: 600;
+}

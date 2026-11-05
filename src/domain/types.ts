@@ -160,6 +160,8 @@ export interface QuoteLine {
   attachment?: Attachment;
   /** 客人已選的產品款式snapshot；價錢不由此欄計算。 */
   productStyle?: ProductStyleSnapshot;
+  /** 自訂工程尚待工程部報價；未可計入正式成交或列印。 */
+  pricePending?: boolean;
 }
 export interface Signature {
   date: string;

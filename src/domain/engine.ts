@@ -3844,6 +3844,16 @@ export class Engine {
         fail("已轉 Invoice 的來源不可修改，請使用工程變更流程。");
       const services = new Map(state.services.map((item) => [item.id, item]));
       const rebuilt = input.lines.map((line, index) => {
+        if (line.pricePending) {
+          if (!line.itemSnapshot?.name?.trim())
+            fail(`第 ${index + 1} 項自訂工程內容無效。`);
+          return {
+            ...deepCopy(line),
+            id: line.id || uid("line"),
+            itemSnapshot: deepCopy(line.itemSnapshot),
+            pricePending: true,
+          };
+        }
         const service = services.get(line.itemId);
         if (!service || !service.published)
           fail(`第 ${index + 1} 項工程目錄無效或未發布。`);
@@ -4040,6 +4050,8 @@ export class Engine {
         ...validEngineering(version, state.services),
       ];
       if (required.length) fail(`請先補齊報價資料：${required.join("、")}`);
+      if (version.lines.some((line) => line.pricePending))
+        fail("有自訂工程待工程部報價，未可準備正式報價單。");
       const raw = calculatePricing(
         version.lines,
         version.discount,

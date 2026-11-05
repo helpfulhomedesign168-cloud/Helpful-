@@ -493,7 +493,6 @@ export function QuoteEditor() {
   const [customers, setCustomers] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
   const [customWork, setCustomWork] = useState("");
-  const [customWorkNotice, setCustomWorkNotice] = useState("");
   const [cat, setCat] = useState("全部");
   const [linkedPrompt, setLinkedPrompt] = useState<string | null>(null);
   const [styleLineIndex, setStyleLineIndex] = useState<number | null>(null);
@@ -557,6 +556,7 @@ export function QuoteEditor() {
       />
     );
   }
+  const pendingCount = lines.filter((line) => line.pricePending).length;
   function save(destination: "draft" | "deal") {
     const q = run(
       () =>
@@ -582,6 +582,49 @@ export function QuoteEditor() {
             ? "/quotes/" + q.id
             : "/quotes/" + q.id + "/edit",
       );
+  }
+  function addCustomWork() {
+    const name = customWork.trim();
+    if (!name) return;
+    const lineId = crypto.randomUUID();
+    const pendingService: ServiceItem = {
+      id: `custom-${lineId}`,
+      code: "CUSTOM",
+      name,
+      category: "自訂工程",
+      details: "等待工程部提供實質價錢",
+      unit: "項",
+      price: 0,
+      measure: "fixed",
+      minQty: 0,
+      minAmount: 0,
+      increment: 0,
+      minScope: "line",
+      execution: "contractor",
+      costMode: "ratio",
+      options: [],
+      allowPending: false,
+      notes: "本項目需要工程部提供實質價錢後，才可以再報給客人。",
+      published: true,
+    };
+    setLines([
+      ...lines,
+      {
+        id: lineId,
+        itemId: pendingService.id,
+        itemSnapshot: pendingService,
+        position: "",
+        length: 0,
+        width: 0,
+        dimensionUnit: "呎",
+        quantity: 1,
+        style: "",
+        notes: "等待工程部報價",
+        pricePending: true,
+      },
+    ]);
+    setCustomWork("");
+    setPicker(false);
   }
   function add(s: ServiceItem) {
     if (
@@ -722,7 +765,10 @@ export function QuoteEditor() {
                   const s = l.itemSnapshot,
                     a = pricing.lineAmounts.find((a) => a.id === l.id);
                   return (
-                    <article className="line-card" key={l.id}>
+                    <article
+                      className={`line-card ${l.pricePending ? "pending-price" : ""}`}
+                      key={l.id}
+                    >
                       <div className="line-head">
                         <span className="line-index">
                           {String(i + 1).padStart(2, "0")}
@@ -734,9 +780,13 @@ export function QuoteEditor() {
                               {s.details}
                             </small>
                           )}
-                          <span className="muted">
-                            {money(s.price)}／{s.unit}
-                          </span>
+                          {l.pricePending ? (
+                            <span className="quote-pending">待報價</span>
+                          ) : (
+                            <span className="muted">
+                              {money(s.price)}／{s.unit}
+                            </span>
+                          )}
                         </div>
                         <Button
                           variant="ghost"
@@ -900,7 +950,11 @@ export function QuoteEditor() {
                             ? `按最低 ${a.billedQty} ${s.unit}計費`
                             : s.details || "按現場實際範圍計價"}
                         </span>
-                        <strong>{money(a?.preDiscount || 0)}</strong>
+                        {l.pricePending ? (
+                          <strong className="quote-pending">待報價</strong>
+                        ) : (
+                          <strong>{money(a?.preDiscount || 0)}</strong>
+                        )}
                       </div>
                       {(s.linkedServiceIds ?? []).some(
                         (id) => !lines.some((line) => line.itemId === id),
@@ -1004,6 +1058,11 @@ export function QuoteEditor() {
               低於95折將降低佣金，請先與主管商量。
             </p>
           )}
+          {pendingCount > 0 && (
+            <p className="inline-warning">
+              有 {pendingCount} 項自訂工程待工程部報價，未可提交或列印。
+            </p>
+          )}
           <div className="summary-total">
             <span>成交金額</span>
             <strong>{money(pricing.total)}</strong>
@@ -1020,6 +1079,7 @@ export function QuoteEditor() {
             <Button
               className="full-width"
               variant="primary"
+              disabled={pendingCount > 0}
               onClick={() => save("deal")}
             >
               前往預覽及成交 <ArrowRight size={20} />
@@ -1174,7 +1234,6 @@ export function QuoteEditor() {
           onClose={() => {
             setPicker(false);
             setCustomWork("");
-            setCustomWorkNotice("");
           }}
         >
           {["sales", "supervisor", "head"].includes(actor.role) && (
@@ -1183,20 +1242,15 @@ export function QuoteEditor() {
                 <input
                   aria-label="自訂工程內容"
                   value={customWork}
-                  onChange={(event) => {
-                    setCustomWork(event.target.value);
-                    setCustomWorkNotice("");
-                  }}
+                  onChange={(event) =>
+                    setCustomWork(event.target.value)
+                  }
                   placeholder="輸入自訂工程內容"
                 />
                 <Button
                   variant="primary"
                   disabled={!customWork.trim()}
-                  onClick={() =>
-                    setCustomWorkNotice(
-                      "此功能將於下一步接駁工程部報價流程。",
-                    )
-                  }
+                  onClick={addCustomWork}
                 >
                   發給工程部報價
                 </Button>
@@ -1204,9 +1258,7 @@ export function QuoteEditor() {
               <p>
                 本項目需要工程部提供實質價錢後，才可以再報給客人
               </p>
-              {customWorkNotice && (
-                <p className="custom-work-notice">{customWorkNotice}</p>
-              )}
+
             </div>
           )}
           <Search
@@ -1443,6 +1495,9 @@ export function QuoteDetail() {
     setParentQuoteId(q.parentQuoteId ?? "");
   }, [q.id, q.isAdditionalOrder, q.parentQuoteId]);
   const preparation = v.printPreparation;
+  const detailPendingCount = v.lines.filter(
+    (line) => line.pricePending,
+  ).length;
   let payments = [] as ReturnType<typeof engine.listPayments>;
   try {
     payments = engine.listPayments(actor).filter((x) => x.quoteId === id);
@@ -1471,6 +1526,7 @@ export function QuoteDetail() {
               返回列表
             </Button>
             <Button
+              disabled={detailPendingCount > 0}
               onClick={() =>
                 own && !preparation
                   ? setPrepare(true)
@@ -1496,6 +1552,11 @@ export function QuoteDetail() {
         }
       />
       <Progress q={q} e={e} />
+      {detailPendingCount > 0 && (
+        <p className="inline-warning">
+          有 {detailPendingCount} 項自訂工程待工程部報價，未可準備列印或提交。
+        </p>
+      )}
       <div className="detail-layout">
         <div>
           <Section title="工程內容">
@@ -1562,7 +1623,11 @@ export function QuoteDetail() {
                           )}
                         </td>
                         <td className="numeric money">
-                          {money(a?.preDiscount || 0)}
+                          {l.pricePending ? (
+                            <span className="quote-pending">待報價</span>
+                          ) : (
+                            money(a?.preDiscount || 0)
+                          )}
                         </td>
                       </tr>
                     );
