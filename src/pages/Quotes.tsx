@@ -492,6 +492,8 @@ export function QuoteEditor() {
   const [picker, setPicker] = useState(false);
   const [customers, setCustomers] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
+  const [customWork, setCustomWork] = useState("");
+  const [customWorkNotice, setCustomWorkNotice] = useState("");
   const [cat, setCat] = useState("全部");
   const [linkedPrompt, setLinkedPrompt] = useState<string | null>(null);
   const [styleLineIndex, setStyleLineIndex] = useState<number | null>(null);
@@ -1166,7 +1168,47 @@ export function QuoteEditor() {
         </Dialog>
       )}
       {picker && (
-        <Dialog wide title="新增工程項目" onClose={() => setPicker(false)}>
+        <Dialog
+          wide
+          title="新增工程項目"
+          onClose={() => {
+            setPicker(false);
+            setCustomWork("");
+            setCustomWorkNotice("");
+          }}
+        >
+          {["sales", "supervisor", "head"].includes(actor.role) && (
+            <div className="custom-work-request">
+              <div className="custom-work-request-row">
+                <input
+                  aria-label="自訂工程內容"
+                  value={customWork}
+                  onChange={(event) => {
+                    setCustomWork(event.target.value);
+                    setCustomWorkNotice("");
+                  }}
+                  placeholder="輸入自訂工程內容"
+                />
+                <Button
+                  variant="primary"
+                  disabled={!customWork.trim()}
+                  onClick={() =>
+                    setCustomWorkNotice(
+                      "此功能將於下一步接駁工程部報價流程。",
+                    )
+                  }
+                >
+                  發給工程部報價
+                </Button>
+              </div>
+              <p>
+                本項目需要工程部提供實質價錢後，才可以再報給客人
+              </p>
+              {customWorkNotice && (
+                <p className="custom-work-notice">{customWorkNotice}</p>
+              )}
+            </div>
+          )}
           <Search
             value={itemSearch}
             onChange={setItemSearch}
