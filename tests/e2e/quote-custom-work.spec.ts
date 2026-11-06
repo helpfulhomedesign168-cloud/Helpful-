@@ -28,29 +28,21 @@ test("Sales新增工程popup顯示自訂工程及發給工程部報價UI", async
   await input.fill("訂造特色電視櫃");
   await expect(submit).toBeEnabled();
   await submit.click();
-  await expect(page).toHaveURL(/\/quotes\/quote-.+$/);
-  await expect(page).not.toHaveURL(/\/edit$/);
+  await expect(page).toHaveURL(/\/quotes\/quote-.+\/edit$/);
   await expect(
     page.getByRole("dialog", { name: "新增工程項目" }),
   ).toHaveCount(0);
-  await expect(page.locator(".quote-pending")).toContainText("待報價");
+  const pendingLine = page.locator(".line-card.pending-price");
+  await expect(pendingLine).toBeVisible();
+  await expect(pendingLine).toContainText("訂造特色電視櫃");
+  await expect(pendingLine).toContainText("待報價");
   await expect(
-    page.getByText("訂造特色電視櫃", { exact: true }).first(),
-  ).toBeVisible();
-  await expect(
-    page.getByText("有 1 項自訂工程待工程部報價，未可準備列印或提交。", {
+    page.getByText("有 1 項自訂工程待工程部報價，未可提交或列印。", {
       exact: true,
     }),
   ).toBeVisible();
   await expect(
-    page.locator(".print-readiness button", {
-      hasText: "準備列印報價單",
-    }),
-  ).toBeDisabled();
-  await expect(
-    page.locator("header").getByRole("button", {
-      name: /準備列印報價單/,
-    }),
+    page.getByRole("button", { name: /前往預覽及成交/ }),
   ).toBeDisabled();
   const quoteUrl = page.url();
 
@@ -80,16 +72,15 @@ test("Sales新增工程popup顯示自訂工程及發給工程部報價UI", async
 
   await switchRole(page, "文文B MM");
   await page.goto(quoteUrl);
+  await expect(page.getByRole("heading", { name: "修改報價" })).toBeVisible();
   await expect(page.locator(".quote-pending")).toHaveCount(0);
   await expect(page.getByText("HK$8,000.00").first()).toBeVisible();
   await expect(
-    page.getByText("報價單必須最少有一項工程價目表項目，未可準備列印或提交。", {
+    page.getByText("報價單必須最少有一項工程價目表項目，未可提交或列印。", {
       exact: true,
     }),
   ).toBeVisible();
   await expect(
-    page.locator("header").getByRole("button", {
-      name: /準備列印報價單/,
-    }),
+    page.getByRole("button", { name: /前往預覽及成交/ }),
   ).toBeDisabled();
 });
