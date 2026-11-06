@@ -162,6 +162,10 @@ export interface QuoteLine {
   productStyle?: ProductStyleSnapshot;
   /** 自訂工程尚待工程部報價；未可計入正式成交或列印。 */
   pricePending?: boolean;
+  /** 由 Sales 加入的自訂工程，不是價目表項目。 */
+  customWork?: boolean;
+  customRequestId?: string;
+  customRequestStatus?: "pending" | "answered";
 }
 export interface Signature {
   date: string;
@@ -492,11 +496,35 @@ export interface AuditEvent {
   detail: string;
   at: string;
 }
+export type CustomWorkRequestStatus = "pending" | "answered";
+export interface CustomWorkRequest {
+  id: string;
+  quoteId: string;
+  lineId: string;
+  quoteNumber: string;
+  customerName: string;
+  salesId: string;
+  salesName: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  requestedBy: string;
+  requestedAt: string;
+  status: CustomWorkRequestStatus;
+  price?: number;
+  answeredBy?: string;
+  answeredAt?: string;
+  notes?: string;
+}
+export interface CustomWorkRequestView extends CustomWorkRequest {
+  quoteStatus: string;
+}
 export interface Notification {
   id: string;
   actorId: string;
   quoteId: string;
   invoiceId?: string;
+  customRequestId?: string;
   message: string;
   read: boolean;
   createdAt: string;
@@ -539,6 +567,7 @@ export interface AppState {
   salesRosterMembers: SalesRosterMember[];
   audits: AuditEvent[];
   notifications: Notification[];
+  customWorkRequests: CustomWorkRequest[];
   monthlySequences: Record<string, number>;
   quoteSequences: Record<string, number>;
   receiptSequences: Record<string, number>;

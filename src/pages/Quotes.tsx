@@ -557,6 +557,8 @@ export function QuoteEditor() {
     );
   }
   const pendingCount = lines.filter((line) => line.pricePending).length;
+  const onlyCustom =
+    lines.length > 0 && lines.every((line) => line.customWork);
   function save(destination: "draft" | "deal") {
     const q = run(
       () =>
@@ -607,7 +609,7 @@ export function QuoteEditor() {
       notes: "本項目需要工程部提供實質價錢後，才可以再報給客人。",
       published: true,
     };
-    setLines([
+    const nextLines = [
       ...lines,
       {
         id: lineId,
@@ -616,15 +618,34 @@ export function QuoteEditor() {
         position: "",
         length: 0,
         width: 0,
-        dimensionUnit: "呎",
+        dimensionUnit: "呎" as const,
         quantity: 1,
         style: "",
         notes: "等待工程部報價",
         pricePending: true,
+        customWork: true,
       },
-    ]);
-    setCustomWork("");
-    setPicker(false);
+    ];
+    const saved = run(
+      () => {
+        const quote = engine.saveDraft(actor, id, {
+          customer,
+          lines: nextLines,
+          discount,
+          discountMode,
+          discountValue,
+          reason,
+        });
+        engine.createCustomWorkRequest(actor, quote.id, lineId);
+        return quote;
+      },
+      "已發送工程部報價。",
+    );
+    if (saved) {
+      setPicker(false);
+      setCustomWork("");
+      nav(`/quotes/${saved.id}`, { replace: true });
+    }
   }
   function add(s: ServiceItem) {
     if (
@@ -790,6 +811,7 @@ export function QuoteEditor() {
                         </div>
                         <Button
                           variant="ghost"
+                          disabled={Boolean(l.customRequestId)}
                           aria-label={`移除${s.name}`}
                           onClick={() =>
                             setLines(lines.filter((_, n) => n !== i))
@@ -857,6 +879,7 @@ export function QuoteEditor() {
                               min="1"
                               step="1"
                               value={l.quantity}
+                              disabled={Boolean(l.customRequestId)}
                               onChange={(e) =>
                                 update(i, { quantity: Number(e.target.value) })
                               }
@@ -1063,6 +1086,11 @@ export function QuoteEditor() {
               有 {pendingCount} 項自訂工程待工程部報價，未可提交或列印。
             </p>
           )}
+          {pendingCount === 0 && onlyCustom && (
+            <p className="inline-warning">
+              報價單必須最少有一項工程價目表項目，未可提交或列印。
+            </p>
+          )}
           <div className="summary-total">
             <span>成交金額</span>
             <strong>{money(pricing.total)}</strong>
@@ -1079,7 +1107,7 @@ export function QuoteEditor() {
             <Button
               className="full-width"
               variant="primary"
-              disabled={pendingCount > 0}
+              disabled={pendingCount > 0 || onlyCustom}
               onClick={() => save("deal")}
             >
               前往預覽及成交 <ArrowRight size={20} />
@@ -1498,6 +1526,8 @@ export function QuoteDetail() {
   const detailPendingCount = v.lines.filter(
     (line) => line.pricePending,
   ).length;
+  const detailOnlyCustom =
+    v.lines.length > 0 && v.lines.every((line) => line.customWork);
   let payments = [] as ReturnType<typeof engine.listPayments>;
   try {
     payments = engine.listPayments(actor).filter((x) => x.quoteId === id);
@@ -1526,7 +1556,7 @@ export function QuoteDetail() {
               返回列表
             </Button>
             <Button
-              disabled={detailPendingCount > 0}
+              disabled={detailPendingCount > 0 || detailOnlyCustom}
               onClick={() =>
                 own && !preparation
                   ? setPrepare(true)
@@ -1555,6 +1585,11 @@ export function QuoteDetail() {
       {detailPendingCount > 0 && (
         <p className="inline-warning">
           有 {detailPendingCount} 項自訂工程待工程部報價，未可準備列印或提交。
+        </p>
+      )}
+      {detailPendingCount === 0 && detailOnlyCustom && (
+        <p className="inline-warning">
+          報價單必須最少有一項工程價目表項目，未可準備列印或提交。
         </p>
       )}
       <div className="detail-layout">

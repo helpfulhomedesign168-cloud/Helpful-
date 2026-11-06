@@ -26,6 +26,7 @@ import { Documents } from "./pages/Documents";
 import { UserProfile, Users } from "./pages/Users";
 import { AccountingDashboard } from "./pages/AccountingDashboard";
 import { BusinessOrders } from "./pages/BusinessOrders";
+import { CustomWorkRequests } from "./pages/CustomWorkRequests";
 import { Button, Empty } from "./components/ui";
 import "./styles.css";
 function Home() {
@@ -132,6 +133,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={["finance_supervisor", "admin"]}>
                   <BusinessOrders />
+                </Guard>
+              }
+            />
+            <Route
+              path="/custom-work-requests"
+              element={
+                <Guard roles={["cs_supervisor", "admin"]}>
+                  <CustomWorkRequests />
                 </Guard>
               }
             />

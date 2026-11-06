@@ -73,6 +73,9 @@ export function Shell() {
       ]
     : actor.role === "cs" || actor.role === "cs_supervisor"
       ? [
+          ...(actor.role === "cs_supervisor"
+            ? [["/custom-work-requests", "自訂工程請示", FileText]]
+            : []),
           ["/handoff", "工程單", ArrowRightLeft],
           ["/orders", "工程管理", Hammer],
           ["/contractors", "工程師傅", HardHat],
@@ -112,6 +115,7 @@ export function Shell() {
               ["/suppliers", "供應商", Truck],
               ["/municipal-orders", "市政單", FileText],
               ["/business-orders", "營業單", Files],
+              ["/custom-work-requests", "自訂工程請示", FileText],
               ["/customers", "客戶", Users],
               ["/product-styles", "產品款式", Palette],
               ["/services", "工程價目", Tags],
@@ -254,7 +258,9 @@ export function Shell() {
                     nav(
                       actor.role === "cs" ||
                       actor.role === "cs_supervisor"
-                        ? "/handoff"
+                        ? n.customRequestId
+                          ? "/custom-work-requests"
+                          : "/handoff"
                         : actor.role === "finance"
                           ? "/finance"
                           : actor.role === "clerk" ||
@@ -262,7 +268,9 @@ export function Shell() {
                             ? n.invoiceId
                               ? "/invoices/" + n.invoiceId
                               : "/submissions"
-                            : "/quotes/" + n.quoteId,
+                            : n.customRequestId
+                              ? "/quotes/" + n.quoteId + "/edit"
+                              : "/quotes/" + n.quoteId,
                     );
                   }}
                 >
