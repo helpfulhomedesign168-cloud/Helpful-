@@ -519,12 +519,59 @@ export interface CustomWorkRequest {
 export interface CustomWorkRequestView extends CustomWorkRequest {
   quoteStatus: string;
 }
+export type CancellationCaseStatus =
+  | "pending"
+  | "awaiting_credit_note"
+  | "awaiting_transfer"
+  | "completed";
+
+export interface CommissionReversal {
+  actorId: string;
+  actorName: string;
+  amount: number;
+}
+
+export interface CancellationCase {
+  id: string;
+  invoiceId: string;
+  quoteId: string;
+  invoiceNumber: string;
+  customerName: string;
+  salesId: string;
+  salesName: string;
+  reason: string;
+  createdBy: string;
+  createdAt: string;
+  status: CancellationCaseStatus;
+  updatedAt?: string;
+  refundAmount?: number;
+  deductions?: number;
+  refundReason?: string;
+  bankName?: string;
+  bankAccountName?: string;
+  bankAccountNumber?: string;
+  creditNote?: Attachment;
+  signedCreditNote?: Attachment;
+  transferProof?: Attachment;
+  transferReference?: string;
+  completedAt?: string;
+  completedBy?: string;
+  commissionReversals: CommissionReversal[];
+}
+
+export interface CancellationCaseView extends CancellationCase {
+  paid: number;
+  threshold: number;
+  canRefund: boolean;
+}
+
 export interface Notification {
   id: string;
   actorId: string;
   quoteId: string;
   invoiceId?: string;
   customRequestId?: string;
+  cancellationCaseId?: string;
   message: string;
   read: boolean;
   createdAt: string;
@@ -568,6 +615,7 @@ export interface AppState {
   audits: AuditEvent[];
   notifications: Notification[];
   customWorkRequests: CustomWorkRequest[];
+  cancellationCases: CancellationCase[];
   monthlySequences: Record<string, number>;
   quoteSequences: Record<string, number>;
   receiptSequences: Record<string, number>;

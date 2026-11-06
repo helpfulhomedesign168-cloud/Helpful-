@@ -823,13 +823,20 @@ export function Invoices() {
     return actors.find((candidate) => candidate.id === quote.ownerId)?.name || "";
   };
   const engineeringLabel = (invoice: (typeof invoices)[number]) => {
+    if (invoice.voided) return "已退訂";
     const order = orderByInvoice.get(invoice.id);
     if (order?.status === "completed") return "已完成工程";
     if (order?.csReleasedAt) return "已發工程部";
     return "待收足訂金";
   };
   const statusRank = (label: string) =>
-    label === "已完成工程" ? 3 : label === "已發工程部" ? 2 : 1;
+    label === "已退訂"
+      ? 4
+      : label === "已完成工程"
+        ? 3
+        : label === "已發工程部"
+          ? 2
+          : 1;
   const quoteOf = (invoice: Invoice) =>
     engine.getQuote(actor, invoice.quoteId);
   const parentOf = (invoice: Invoice) => {
@@ -840,11 +847,13 @@ export function Invoices() {
   };
   const statusKeyOf = (invoice: Invoice) => {
     const label = engineeringLabel(invoice);
-    return label === "已完成工程"
-      ? "completed"
-      : label === "已發工程部"
-        ? "released"
-        : "pending";
+    return label === "已退訂"
+      ? "voided"
+      : label === "已完成工程"
+        ? "completed"
+        : label === "已發工程部"
+          ? "released"
+          : "pending";
   };
   const invoices: Invoice[] = [...engine.listInvoices(actor)]
     .filter((invoice) => {
@@ -927,6 +936,7 @@ export function Invoices() {
               <option value="pending">待收足訂金</option>
               <option value="released">已發工程部</option>
               <option value="completed">已完成工程</option>
+              <option value="voided">已退訂</option>
             </select>
             <select
               aria-label="Invoice Team"
@@ -1046,9 +1056,11 @@ export function Invoices() {
                       <td>
                         <Button
                           variant={
-                            engineering === "已完成工程"
-                              ? "primary"
-                              : "secondary"
+                            engineering === "已退訂"
+                              ? "danger"
+                              : engineering === "已完成工程"
+                                ? "primary"
+                                : "secondary"
                           }
                           onClick={() => nav("/invoices/" + invoice.id)}
                         >
@@ -1087,6 +1099,8 @@ export function InvoiceDetail() {
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const [activePayment, setActivePayment] = useState<Payment | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   let invoice;
   try {
     invoice = engine.getInvoice(actor, id);
@@ -1113,6 +1127,17 @@ export function InvoiceDetail() {
   const order = engine
     .listOrders(actor)
     .find((item) => item.invoiceId === invoice!.id);
+  let cancellationCase;
+  try {
+    cancellationCase = engine
+      .listCancellationCases(actor)
+      .find((item) => item.invoiceId === invoice!.id);
+  } catch {}
+  const canCreateCancellation =
+    actor.role === "clerk" &&
+    !invoice.voided &&
+    status.validPaid < invoice.netTotal * 0.5 &&
+    !cancellationCase;
   const openPayment = (stage: (typeof status.installments)[number]) => {
     setPaymentStage(stage.installment);
     setAmount(Math.max(0, stage.amount - stage.received - stage.pending));
@@ -1135,6 +1160,20 @@ export function InvoiceDetail() {
             <Button onClick={() => nav("/documents/invoice/" + invoice.id)}>
               <Printer size={20} /> 預覽Invoice
             </Button>
+            {cancellationCase && (
+              <Button
+                onClick={() =>
+                  nav("/cancellation-cases/" + cancellationCase!.id)
+                }
+              >
+                查看退訂個案
+              </Button>
+            )}
+            {canCreateCancellation && (
+              <Button variant="danger" onClick={() => setCancelOpen(true)}>
+                建立退訂個案
+              </Button>
+            )}
           </>
         }
       />
@@ -1408,6 +1447,51 @@ export function InvoiceDetail() {
               }}
             >
               儲存待核對期款
+            </Button>
+          </div>
+        </Dialog>
+      )}
+      {cancelOpen && (
+        <Dialog
+          title="建立退訂個案"
+          onClose={() => {
+            setCancelOpen(false);
+            setCancelReason("");
+          }}
+        >
+          <p className="dialog-intro">
+            此操作只適用於付款未達50%及未開始工程的Invoice。會計將處理退款及Credit Note。
+          </p>
+          <Field label="退訂原因" required>
+            <textarea
+              aria-label="退訂原因"
+              value={cancelReason}
+              onChange={(event) => setCancelReason(event.target.value)}
+              placeholder="客人退訂原因、合約條款或相關備註"
+            />
+          </Field>
+          <div className="dialog-actions">
+            <Button onClick={() => setCancelOpen(false)}>取消</Button>
+            <Button
+              variant="danger"
+              disabled={!cancelReason.trim()}
+              onClick={() => {
+                const created = run(
+                  () =>
+                    engine.createCancellationCase(
+                      actor,
+                      invoice!.id,
+                      cancelReason,
+                    ),
+                  "退訂個案已建立。",
+                );
+                if (created) {
+                  setCancelOpen(false);
+                  nav("/cancellation-cases/" + created.id);
+                }
+              }}
+            >
+              建立個案
             </Button>
           </div>
         </Dialog>

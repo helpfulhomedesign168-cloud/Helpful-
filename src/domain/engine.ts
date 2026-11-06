@@ -14,6 +14,9 @@ import {
   type AuditEvent,
   type Customer,
   type CustomerProfile,
+  type CancellationCase,
+  type CancellationCaseView,
+  type CommissionReversal,
   type CustomWorkRequest,
   type CustomWorkRequestView,
   type DraftInput,
@@ -730,6 +733,7 @@ export class Engine {
       migrated.customers ??= [];
       migrated.extraWorks ??= [];
       migrated.customWorkRequests ??= [];
+      migrated.cancellationCases ??= [];
       migrated.serviceCategories ??= [...DEFAULT_SERVICE_CATEGORIES];
       migrated.assignments.forEach((assignment) => {
         assignment.endDate ??= assignment.date;
@@ -1073,6 +1077,7 @@ export class Engine {
     message: string,
     invoiceId?: string,
     customRequestId?: string,
+    cancellationCaseId?: string,
   ): void {
     state.notifications.push({
       id: uid("notice"),
@@ -1080,6 +1085,7 @@ export class Engine {
       quoteId,
       invoiceId,
       customRequestId,
+      cancellationCaseId,
       message,
       read: false,
       createdAt: NOW,
@@ -2739,7 +2745,10 @@ export class Engine {
     // Bonus is counted when the clerk issues the Invoice: the Invoice month
     // is the qualification month, independent of the first payment date.
     const bonusEntries: PerformanceEntry[] = this.state.invoices
-      .filter((invoice) => invoice.createdAt.startsWith(month))
+      .filter(
+        (invoice) =>
+          invoice.createdAt.startsWith(month) && !invoice.voided,
+      )
       .flatMap((invoice) => {
         const quote = this.state.quotes.find(
           (item) => item.id === invoice.quoteId,
@@ -2790,7 +2799,19 @@ export class Engine {
       bonusEntries.reduce((sum, entry) => D(sum).plus(entry.total), D(0)),
     );
     const commission = moneyValue(
-      entries.reduce((sum, entry) => D(sum).plus(entry.commission), D(0)),
+      D(
+        entries.reduce((sum, entry) => D(sum).plus(entry.commission), D(0)),
+      ).minus(
+        this.state.cancellationCases
+          .filter(
+            (request) =>
+              request.status === "completed" &&
+              request.completedAt?.startsWith(month),
+          )
+          .flatMap((request) => request.commissionReversals)
+          .filter((reversal) => reversal.actorId === actor.id)
+          .reduce((sum, reversal) => D(sum).plus(reversal.amount), D(0)),
+      ),
     );
     let bonus = 0;
     let nextTarget: number | undefined;
@@ -3972,6 +3993,300 @@ export class Engine {
         ...deepCopy(request),
         quoteStatus: "草稿",
       };
+    });
+    return output;
+  }
+  private assertInvoiceRefundable(invoice: Invoice): void {
+    if (invoice.voided) fail("此Invoice已退訂。");
+    const linkedOrder = this.state.orders.find(
+      (order) => order.invoiceId === invoice.id,
+    );
+    if (
+      linkedOrder?.csReleasedAt ||
+      this.state.assignments.some(
+        (assignment) => assignment.workOrderId === linkedOrder?.id,
+      )
+    )
+      fail("工程已開始，不可退訂。");
+    const status = this.paymentStatusRaw(invoice);
+    if (status.validPaid >= invoice.netTotal * 0.5)
+      fail("累計有效付款已達50%，不可退訂。");
+  }
+  private cancellationView(
+    request: CancellationCase,
+  ): CancellationCaseView {
+    const invoice = this.state.invoices.find(
+      (item) => item.id === request.invoiceId,
+    );
+    const paid = invoice
+      ? this.paymentStatusRaw(invoice).validPaid
+      : 0;
+    const threshold = invoice ? moneyValue(invoice.netTotal * 0.5) : 0;
+    return {
+      ...deepCopy(request),
+      paid,
+      threshold,
+      canRefund: Boolean(invoice) && !invoice!.voided && paid < threshold,
+    };
+  }
+  listCancellationCases(actorInput: Actor): CancellationCaseView[] {
+    const actor = this.actor(actorInput);
+    if (
+      ![
+        "clerk",
+        "finance",
+        "finance_supervisor",
+        "admin",
+      ].includes(actor.role)
+    )
+      fail("你沒有查看退訂個案的權限。");
+    return this.state.cancellationCases
+      .map((request) => this.cancellationView(request))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+  getCancellationCase(
+    actorInput: Actor,
+    id: string,
+  ): CancellationCaseView {
+    const actor = this.actor(actorInput);
+    if (
+      ![
+        "clerk",
+        "finance",
+        "finance_supervisor",
+        "admin",
+      ].includes(actor.role)
+    )
+      fail("你沒有查看退訂個案的權限。");
+    const request =
+      this.state.cancellationCases.find((item) => item.id === id) ??
+      fail("找不到退訂個案。");
+    return this.cancellationView(request);
+  }
+  createCancellationCase(
+    actorInput: Actor,
+    invoiceId: string,
+    reason: string,
+  ): CancellationCaseView {
+    const actor = this.actor(actorInput);
+    if (!this.isClerk(actor) && !this.isAdmin(actor))
+      fail("只有開單員可建立退訂個案。");
+    if (!reason.trim()) fail("請填寫退訂原因。");
+    let output!: CancellationCaseView;
+    this.mutate((state) => {
+      const invoice =
+        state.invoices.find((item) => item.id === invoiceId) ??
+        fail("找不到Invoice。");
+      this.assertInvoiceRefundable(invoice);
+      if (
+        state.cancellationCases.some(
+          (item) =>
+            item.invoiceId === invoice.id &&
+            item.status !== "completed",
+        )
+      )
+        fail("此Invoice已有進行中的退訂個案。");
+      const quote = state.quotes.find((item) => item.id === invoice.quoteId);
+      const owner = state.actors.find((item) => item.id === quote?.ownerId);
+      const request: CancellationCase = {
+        id: uid("refund"),
+        invoiceId: invoice.id,
+        quoteId: invoice.quoteId,
+        invoiceNumber: invoice.number,
+        customerName: invoice.customer.name,
+        salesId: owner?.id ?? "",
+        salesName: owner?.name ?? "—",
+        reason: reason.trim(),
+        createdBy: actor.id,
+        createdAt: NOW,
+        status: "pending",
+        commissionReversals: [],
+      };
+      state.cancellationCases.push(request);
+      state.actors
+        .filter(
+          (item) =>
+            ["finance", "finance_supervisor"].includes(item.role) &&
+            item.active !== false,
+        )
+        .forEach((accountant) =>
+          this.notify(
+            state,
+            accountant.id,
+            invoice.quoteId,
+            `新退訂個案：${invoice.number} · ${invoice.customer.name}`,
+            invoice.id,
+            undefined,
+            request.id,
+          ),
+        );
+      this.audit(state, {
+        quoteId: invoice.quoteId,
+        actorId: actor.id,
+        action: "cancellation_requested",
+        detail: `退訂個案：${invoice.number} · ${reason.trim()}`,
+      });
+      output = this.cancellationView(request);
+    });
+    return output;
+  }
+  updateCancellationCase(
+    actorInput: Actor,
+    id: string,
+    input: {
+      refundAmount?: number;
+      deductions?: number;
+      refundReason?: string;
+      bankName?: string;
+      bankAccountName?: string;
+      bankAccountNumber?: string;
+      creditNote?: Attachment;
+      signedCreditNote?: Attachment;
+      transferProof?: Attachment;
+      transferReference?: string;
+    },
+  ): CancellationCaseView {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "finance" && !this.isAdmin(actor))
+      fail("只有會計可處理退款資料。");
+    let output!: CancellationCaseView;
+    this.mutate((state) => {
+      const request =
+        state.cancellationCases.find((item) => item.id === id) ??
+        fail("找不到退訂個案。");
+      if (request.status === "completed")
+        fail("此退訂個案已完成，不可再修改。");
+      const invoice =
+        state.invoices.find((item) => item.id === request.invoiceId) ??
+        fail("找不到Invoice。");
+      this.assertInvoiceRefundable(invoice);
+      const status = this.paymentStatusRaw(invoice);
+      if (
+        input.refundAmount !== undefined &&
+        input.refundAmount > status.validPaid
+      )
+        fail("退款金額不可大於已收有效付款。");
+      if (input.refundAmount !== undefined) request.refundAmount = moneyValue(input.refundAmount);
+      if (input.deductions !== undefined) request.deductions = moneyValue(input.deductions);
+      request.refundReason = input.refundReason?.trim() || request.refundReason;
+      request.bankName = input.bankName?.trim() || request.bankName;
+      request.bankAccountName =
+        input.bankAccountName?.trim() || request.bankAccountName;
+      request.bankAccountNumber =
+        input.bankAccountNumber?.trim() || request.bankAccountNumber;
+      request.creditNote = input.creditNote ?? request.creditNote;
+      request.signedCreditNote =
+        input.signedCreditNote ?? request.signedCreditNote;
+      request.transferProof = input.transferProof ?? request.transferProof;
+      request.transferReference =
+        input.transferReference?.trim() || request.transferReference;
+      request.updatedAt = NOW;
+      request.status = request.signedCreditNote
+        ? "awaiting_transfer"
+        : "awaiting_credit_note";
+      output = this.cancellationView(request);
+    });
+    return output;
+  }
+  private cancellationCommissionShares(
+    invoice: Invoice,
+  ): CommissionReversal[] {
+    const quote = this.state.quotes.find(
+      (item) => item.id === invoice.quoteId,
+    );
+    const version = quote?.versions.find(
+      (item) => item.id === invoice.versionId,
+    );
+    if (!quote || !version) return [];
+    const low = factor(version.discount).lt(0.95);
+    const shares: CommissionReversal[] = [];
+    const add = (actorId: string, amount: number) => {
+      if (!actorId || amount <= 0) return;
+      const actor = this.state.actors.find((item) => item.id === actorId);
+      if (!actor) return;
+      shares.push({
+        actorId,
+        actorName: actor.name,
+        amount: moneyValue(amount),
+      });
+    };
+    const owner = this.state.actors.find((item) => item.id === quote.ownerId);
+    if (owner)
+      add(owner.id, invoice.netTotal * (low ? 0.06 : 0.08));
+    const supervisorId = version.signature?.supervisorId;
+    if (supervisorId) {
+      const rate =
+        quote.team === "A"
+          ? low
+            ? 0.03
+            : 0.04
+          : low
+            ? 0.02
+            : 0.03;
+      add(supervisorId, invoice.netTotal * rate);
+    }
+    if (quote.team === "B")
+      add("head-don", invoice.netTotal * 0.01);
+    return shares;
+  }
+  completeCancellationRefund(
+    actorInput: Actor,
+    id: string,
+  ): CancellationCaseView {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "finance" && !this.isAdmin(actor))
+      fail("只有會計可執行退款。");
+    let output!: CancellationCaseView;
+    this.mutate((state) => {
+      const request =
+        state.cancellationCases.find((item) => item.id === id) ??
+        fail("找不到退訂個案。");
+      if (request.status === "completed") fail("此退訂個案已完成。");
+      const invoice =
+        state.invoices.find((item) => item.id === request.invoiceId) ??
+        fail("找不到Invoice。");
+      this.assertInvoiceRefundable(invoice);
+      if (!request.creditNote) fail("請先上載 Credit Note。");
+      if (!request.signedCreditNote)
+        fail("請先上載客人已簽 Credit Note。");
+      if (!request.transferProof)
+        fail("請先上載銀行轉帳證明。");
+      if (!request.refundAmount || request.refundAmount <= 0)
+        fail("請輸入退款金額。");
+      if (!request.bankName || !request.bankAccountName || !request.bankAccountNumber)
+        fail("請填寫退款銀行資料。");
+      const status = this.paymentStatusRaw(invoice);
+      if (request.refundAmount > status.validPaid)
+        fail("退款金額不可大於已收有效付款。");
+      request.commissionReversals =
+        this.cancellationCommissionShares(invoice);
+      request.status = "completed";
+      request.completedAt = NOW;
+      request.completedBy = actor.id;
+      request.updatedAt = NOW;
+      invoice.voided = true;
+      invoice.voidedAt = NOW;
+      invoice.voidReason = request.reason;
+      const quote = state.quotes.find(
+        (item) => item.id === request.quoteId,
+      );
+      if (quote) quote.updatedAt = NOW;
+      this.audit(state, {
+        quoteId: request.quoteId,
+        actorId: actor.id,
+        action: "refund_completed",
+        detail: `退款 ${invoice.number} HK$${moneyValue(request.refundAmount).toFixed(2)}`,
+      });
+      this.notify(
+        state,
+        request.salesId,
+        request.quoteId,
+        `退訂已完成：${invoice.number}，退款 HK$${moneyValue(request.refundAmount).toFixed(2)}。`,
+        invoice.id,
+        undefined,
+        request.id,
+      );
+      output = this.cancellationView(request);
     });
     return output;
   }
@@ -6334,6 +6649,7 @@ export function createSeedState(): AppState {
     ],
     notifications: [],
     customWorkRequests: [],
+    cancellationCases: [],
     monthlySequences: { "2026-10": 1 },
     quoteSequences: { "2026-10": 6 },
     receiptSequences: {},

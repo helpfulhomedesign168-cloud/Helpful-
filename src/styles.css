@@ -6751,3 +6751,30 @@ textarea {
 .request-answered-price {
   color: #4f6b4a;
 }
+
+/* Cancellation & refund */
+.cancellation-list { overflow: hidden; }
+.cancellation-table { min-width: 980px; }
+.cancellation-table td small { display:block; margin-top:4px; color:#8a9282; font-size:11px; }
+.cancellation-reason { max-width: 250px; }
+.cancellation-summary {
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:16px;
+}
+.cancellation-summary > div { padding:14px 18px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+.cancellation-summary span { display:block; margin-bottom:5px; color:#7d8577; font-size:12px; }
+.cancellation-summary strong { font-size:18px; }
+.cancellation-layout { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:16px; align-items:start; }
+.cancellation-main { display:grid; gap:14px; }
+.cancellation-section { padding:18px 20px; }
+.cancellation-section h2, .cancellation-side h2 { margin:0 0 14px; font-size:19px; }
+.cancellation-side { padding:18px 20px; position:sticky; top:20px; }
+.cancellation-side > p { color:#7d8577; font-size:12px; line-height:1.6; }
+.cancellation-side-note { margin-top:16px; padding-top:12px; border-top:1px solid #edf0e7; }
+.cancellation-actions { display:flex; gap:10px; justify-content:flex-end; }
+.commission-reversal-list > div { display:flex; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid #edf0e7; font-size:13px; }
+.commission-reversal-list strong { color:#a33d32; }
+.commission-reversal-total { border-bottom:0 !important; font-weight:600; }
+@media (max-width: 1000px) {
+  .cancellation-layout { grid-template-columns:1fr; }
+  .cancellation-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}

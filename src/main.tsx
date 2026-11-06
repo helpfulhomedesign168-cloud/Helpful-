@@ -27,6 +27,10 @@ import { UserProfile, Users } from "./pages/Users";
 import { AccountingDashboard } from "./pages/AccountingDashboard";
 import { BusinessOrders } from "./pages/BusinessOrders";
 import { CustomWorkRequests } from "./pages/CustomWorkRequests";
+import {
+  CancellationCaseDetail,
+  CancellationCases,
+} from "./pages/CancellationCases";
 import { Button, Empty } from "./components/ui";
 import "./styles.css";
 function Home() {
@@ -133,6 +137,36 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={["finance_supervisor", "admin"]}>
                   <BusinessOrders />
+                </Guard>
+              }
+            />
+            <Route
+              path="/cancellation-cases"
+              element={
+                <Guard
+                  roles={[
+                    "clerk",
+                    "finance",
+                    "finance_supervisor",
+                    "admin",
+                  ]}
+                >
+                  <CancellationCases />
+                </Guard>
+              }
+            />
+            <Route
+              path="/cancellation-cases/:id"
+              element={
+                <Guard
+                  roles={[
+                    "clerk",
+                    "finance",
+                    "finance_supervisor",
+                    "admin",
+                  ]}
+                >
+                  <CancellationCaseDetail />
                 </Guard>
               }
             />
