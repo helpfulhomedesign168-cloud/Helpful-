@@ -19,6 +19,8 @@ export function CustomWorkRequests() {
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [catalogRequest, setCatalogRequest] = useState<string | null>(null);
   const [catalogCategory, setCatalogCategory] = useState("其他");
+  const [catalogName, setCatalogName] = useState("");
+  const [catalogDetails, setCatalogDetails] = useState("");
   let categories: string[] = [];
   try {
     categories = engine.listServiceCategories(actor);
@@ -157,6 +159,8 @@ export function CustomWorkRequests() {
                                     ? "其他"
                                     : categories[0] ?? "其他",
                                 );
+                                setCatalogName(request.description);
+                                setCatalogDetails("由自訂工程請示加入");
                                 setCatalogRequest(request.id);
                               }}
                             >
@@ -179,9 +183,23 @@ export function CustomWorkRequests() {
           onClose={() => setCatalogRequest(null)}
         >
           <p className="dialog-intro">
-            會以「{catalogItem.description}」及工程部出街價{" "}
-            {money(catalogItem.price ?? 0)} 建立價目表項目。成本預設為 60%，可日後在工程價目調整。
+            會以工程部出街價 {money(catalogItem.price ?? 0)} 建立價目表項目。成本預設為 60%，可日後在工程價目調整。
           </p>
+          <Field label="工程名稱" required>
+            <input
+              aria-label="價目表工程名稱"
+              value={catalogName}
+              onChange={(event) => setCatalogName(event.target.value)}
+            />
+          </Field>
+          <Field label="工程詳細／內容">
+            <textarea
+              aria-label="價目表工程詳細"
+              value={catalogDetails}
+              onChange={(event) => setCatalogDetails(event.target.value)}
+              placeholder="可修改工程範圍、內容或備註"
+            />
+          </Field>
           <Field label="工程分類" required>
             <select
               aria-label="工程分類"
@@ -205,7 +223,11 @@ export function CustomWorkRequests() {
                     engine.addCustomWorkToCatalog(
                       actor,
                       catalogItem.id,
-                      catalogCategory,
+                      {
+                        category: catalogCategory,
+                        name: catalogName,
+                        details: catalogDetails,
+                      },
                     ),
                   "已加入工程價目表。",
                 );
