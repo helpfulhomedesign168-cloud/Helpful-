@@ -1706,7 +1706,11 @@ export function QuoteDetail() {
                     <strong>先準備正式報價單，才可交客人簽署</strong>
                     <p>確認當日主管後會產生報價號，再開啟紙本預覽。</p>
                   </div>
-                  <Button variant="primary" onClick={() => setPrepare(true)}>
+                  <Button
+                    variant="primary"
+                    disabled={detailPendingCount > 0 || detailOnlyCustom}
+                    onClick={() => setPrepare(true)}
+                  >
                     準備列印報價單
                   </Button>
                 </div>

@@ -43,6 +43,11 @@ test("Sales新增工程popup顯示自訂工程及發給工程部報價UI", async
     }),
   ).toBeVisible();
   await expect(
+    page.locator(".print-readiness button", {
+      hasText: "準備列印報價單",
+    }),
+  ).toBeDisabled();
+  await expect(
     page.locator("header").getByRole("button", {
       name: /準備列印報價單/,
     }),
