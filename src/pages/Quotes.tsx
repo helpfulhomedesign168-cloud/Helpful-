@@ -636,15 +636,30 @@ export function QuoteEditor() {
           discountValue,
           reason,
         });
-        engine.createCustomWorkRequest(actor, quote.id, lineId);
-        return quote;
+        const request = engine.createCustomWorkRequest(
+          actor,
+          quote.id,
+          lineId,
+        );
+        return { quote, request };
       },
       "已發送工程部報價。",
     );
     if (saved) {
+      setLines(
+        nextLines.map((line) =>
+          line.id === lineId
+            ? {
+                ...line,
+                customRequestId: saved.request.id,
+                customRequestStatus: "pending" as const,
+              }
+            : line,
+        ),
+      );
       setPicker(false);
       setCustomWork("");
-      nav(`/quotes/${saved.id}`, { replace: true });
+      nav(`/quotes/${saved.quote.id}/edit`, { replace: true });
     }
   }
   function add(s: ServiceItem) {
