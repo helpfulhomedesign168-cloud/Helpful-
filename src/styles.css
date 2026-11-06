@@ -6636,3 +6636,118 @@ textarea {
 .business-order-field {
   display: block;
 }
+
+/* Sales custom work request (UI only; workflow next phase) */
+.custom-work-request {
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e8ebe2;
+}
+.custom-work-request-row {
+  display: flex;
+  gap: 10px;
+}
+.custom-work-request-row input {
+  flex: 1;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid #d8ddd1;
+  border-radius: 7px;
+  background: #fff;
+}
+.custom-work-request-row .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.custom-work-request > p {
+  margin: 7px 0 0;
+  color: #8a9282;
+  font-size: 12px;
+}
+.custom-work-request > p.custom-work-notice {
+  color: #5c6755;
+}
+@media (max-width: 640px) {
+  .custom-work-request-row {
+    flex-direction: column;
+  }
+  .custom-work-request-row .btn {
+    width: 100%;
+  }
+}
+
+.line-card.pending-price {
+  border-color: #d8c7a6;
+  background: #fffdf8;
+}
+.quote-pending {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 5px;
+  background: #f1e8d5;
+  color: #8a6227;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Custom work request queue */
+.custom-request-panel {
+  overflow: hidden;
+}
+.custom-request-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 18px;
+  border-bottom: 1px solid #eef0e9;
+}
+.custom-request-tabs button {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #737b6d;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.custom-request-tabs button.active {
+  background: #e9ede2;
+  color: #30352d;
+  font-weight: 600;
+}
+.custom-request-table {
+  min-width: 940px;
+}
+.custom-request-table td small {
+  display: block;
+  margin-top: 4px;
+  color: #8a9282;
+  font-size: 11px;
+}
+.custom-request-table tr.request-pending td {
+  background: #fffdf8;
+}
+.request-price-entry {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.request-price-entry input {
+  width: 130px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d8ddd1;
+  border-radius: 6px;
+  text-align: right;
+}
+.request-price-entry .btn {
+  min-height: 38px;
+  white-space: nowrap;
+}
+.request-answered-price {
+  color: #4f6b4a;
+}

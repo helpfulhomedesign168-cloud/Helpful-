@@ -14,6 +14,8 @@ import {
   type AuditEvent,
   type Customer,
   type CustomerProfile,
+  type CustomWorkRequest,
+  type CustomWorkRequestView,
   type DraftInput,
   type Eligibility,
   type ExtraWork,
@@ -727,6 +729,7 @@ export class Engine {
       migrated.workOrderSequences ??= {};
       migrated.customers ??= [];
       migrated.extraWorks ??= [];
+      migrated.customWorkRequests ??= [];
       migrated.serviceCategories ??= [...DEFAULT_SERVICE_CATEGORIES];
       migrated.assignments.forEach((assignment) => {
         assignment.endDate ??= assignment.date;
@@ -1069,12 +1072,14 @@ export class Engine {
     quoteId: string,
     message: string,
     invoiceId?: string,
+    customRequestId?: string,
   ): void {
     state.notifications.push({
       id: uid("notice"),
       actorId,
       quoteId,
       invoiceId,
+      customRequestId,
       message,
       read: false,
       createdAt: NOW,
@@ -3803,6 +3808,173 @@ export class Engine {
       );
     });
   }
+  createCustomWorkRequest(
+    actorInput: Actor,
+    quoteId: string,
+    lineId: string,
+  ): CustomWorkRequestView {
+    const actor = this.actor(actorInput);
+    if (!["sales", "supervisor", "head"].includes(actor.role))
+      fail("只有Sales可發出自訂工程報價要求。");
+    let output!: CustomWorkRequestView;
+    this.mutate((state) => {
+      const quote =
+        state.quotes.find((item) => item.id === quoteId) ??
+        fail("找不到報價。");
+      if (quote.archived || quote.submission || quote.invoiceId)
+        fail("此報價已不可再發出自訂工程要求。");
+      if (quote.ownerId !== actor.id && actor.role === "sales")
+        fail("你只可為自己的報價發出自訂工程要求。");
+      const version = currentVersion(quote);
+      const line =
+        version.lines.find((item) => item.id === lineId) ??
+        fail("找不到自訂工程項目。");
+      if (!line.customWork || !line.pricePending)
+        fail("此項目不需要工程部報價。");
+      if (
+        state.customWorkRequests.some(
+          (item) => item.lineId === lineId,
+        )
+      )
+        fail("此自訂工程已發送工程部報價。");
+      const owner =
+        state.actors.find((item) => item.id === quote.ownerId) ??
+        fail("找不到Sales。");
+      const request: CustomWorkRequest = {
+        id: uid("custom-request"),
+        quoteId: quote.id,
+        lineId: line.id,
+        quoteNumber: quote.number,
+        customerName: version.customer.name || "未填客戶",
+        salesId: owner.id,
+        salesName: owner.name,
+        description: line.itemSnapshot.name,
+        quantity: line.quantity,
+        unit: line.itemSnapshot.unit,
+        requestedBy: actor.id,
+        requestedAt: NOW,
+        status: "pending",
+      };
+      state.customWorkRequests.push(request);
+      line.customRequestId = request.id;
+      line.customRequestStatus = "pending";
+      this.notify(
+        state,
+        request.salesId,
+        quote.id,
+        `自訂工程「${request.description}」已發送工程部報價。`,
+        undefined,
+        request.id,
+      );
+      state.actors
+        .filter(
+          (item) =>
+            item.role === "cs_supervisor" && item.active !== false,
+        )
+        .forEach((supervisor) =>
+          this.notify(
+            state,
+            supervisor.id,
+            quote.id,
+            `新自訂工程報價要求：${request.customerName} · ${request.description}`,
+            undefined,
+            request.id,
+          ),
+        );
+      this.audit(state, {
+        quoteId: quote.id,
+        actorId: actor.id,
+        action: "custom_work_requested",
+        detail: `自訂工程請示：${request.description}`,
+      });
+      output = {
+        ...request,
+        quoteStatus: quote.submission ? "已提交" : "草稿",
+      };
+    });
+    return output;
+  }
+  listCustomWorkRequests(actorInput: Actor): CustomWorkRequestView[] {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "cs_supervisor" && !this.isAdmin(actor))
+      fail("只有工程部主管可查看自訂工程請示。");
+    return this.state.customWorkRequests
+      .map((request) => {
+        const quote = this.state.quotes.find(
+          (item) => item.id === request.quoteId,
+        );
+        return {
+          ...deepCopy(request),
+          quoteStatus: quote?.submission
+            ? quote.invoiceId
+              ? "已開單"
+              : "已提交"
+            : "草稿",
+        };
+      })
+      .sort((a, b) => {
+        if (a.status !== b.status) return a.status === "pending" ? -1 : 1;
+        return b.requestedAt.localeCompare(a.requestedAt);
+      });
+  }
+  answerCustomWorkRequest(
+    actorInput: Actor,
+    requestId: string,
+    price: number,
+    notes?: string,
+  ): CustomWorkRequestView {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "cs_supervisor" && !this.isAdmin(actor))
+      fail("只有工程部主管可回覆自訂工程報價。");
+    if (!Number.isFinite(price) || price < 0)
+      fail("請輸入有效的工程報價。");
+    let output!: CustomWorkRequestView;
+    this.mutate((state) => {
+      const request =
+        state.customWorkRequests.find((item) => item.id === requestId) ??
+        fail("找不到自訂工程請示。");
+      if (request.status !== "pending")
+        fail("此自訂工程請示已回覆。");
+      const quote =
+        state.quotes.find((item) => item.id === request.quoteId) ??
+        fail("找不到報價。");
+      if (quote.archived || quote.submission || quote.invoiceId)
+        fail("此報價已不可再更新自訂工程價錢。");
+      const version = currentVersion(quote);
+      const line =
+        version.lines.find((item) => item.id === request.lineId) ??
+        fail("找不到自訂工程項目。");
+      if (!line.pricePending) fail("此自訂工程已有價錢。");
+      request.status = "answered";
+      request.price = moneyValue(price);
+      request.answeredBy = actor.id;
+      request.answeredAt = NOW;
+      request.notes = notes?.trim() || undefined;
+      line.itemSnapshot.price = moneyValue(price);
+      line.pricePending = false;
+      line.customRequestStatus = "answered";
+      quote.updatedAt = NOW;
+      this.audit(state, {
+        quoteId: quote.id,
+        actorId: actor.id,
+        action: "custom_work_answered",
+        detail: `自訂工程報價：${request.description} HK$${moneyValue(price).toFixed(2)}`,
+      });
+      this.notify(
+        state,
+        quote.ownerId,
+        quote.id,
+        `自訂工程「${request.description}」已報價 HK$${moneyValue(price).toFixed(2)}，請更新草稿報價。`,
+        undefined,
+        request.id,
+      );
+      output = {
+        ...deepCopy(request),
+        quoteStatus: "草稿",
+      };
+    });
+    return output;
+  }
   notifications(actorInput: Actor): Notification[] {
     const actor = this.actor(actorInput);
     return deepCopy(
@@ -3844,6 +4016,16 @@ export class Engine {
         fail("已轉 Invoice 的來源不可修改，請使用工程變更流程。");
       const services = new Map(state.services.map((item) => [item.id, item]));
       const rebuilt = input.lines.map((line, index) => {
+        if (line.pricePending) {
+          if (!line.itemSnapshot?.name?.trim())
+            fail(`第 ${index + 1} 項自訂工程內容無效。`);
+          return {
+            ...deepCopy(line),
+            id: line.id || uid("line"),
+            itemSnapshot: deepCopy(line.itemSnapshot),
+            pricePending: true,
+          };
+        }
         const service = services.get(line.itemId);
         if (!service || !service.published)
           fail(`第 ${index + 1} 項工程目錄無效或未發布。`);
@@ -3853,6 +4035,22 @@ export class Engine {
           itemSnapshot: deepCopy(service),
         };
       });
+      if (quote) {
+        state.customWorkRequests
+          .filter((request) => request.quoteId === quote.id)
+          .forEach((request) => {
+            const incoming = rebuilt.find(
+              (line) => line.id === request.lineId,
+            );
+            if (!incoming)
+              fail("已送出的自訂工程不可刪除；請先由工程部完成或取消請示。");
+            if (
+              incoming.itemSnapshot.name !== request.description ||
+              incoming.quantity !== request.quantity
+            )
+              fail("已送出的自訂工程內容或數量不可修改。");
+          });
+      }
       const basePricing = calculatePricing(rebuilt, 1, state.services, true);
       const selectedDiscount = resolveDraftDiscount(
         input,
@@ -4040,6 +4238,13 @@ export class Engine {
         ...validEngineering(version, state.services),
       ];
       if (required.length) fail(`請先補齊報價資料：${required.join("、")}`);
+      if (version.lines.some((line) => line.pricePending))
+        fail("有自訂工程待工程部報價，未可準備正式報價單。");
+      if (
+        version.lines.length > 0 &&
+        version.lines.every((line) => line.customWork)
+      )
+        fail("報價單必須最少有一項工程價目表項目，未可準備正式報價單。");
       const raw = calculatePricing(
         version.lines,
         version.discount,
@@ -6128,6 +6333,7 @@ export function createSeedState(): AppState {
       },
     ],
     notifications: [],
+    customWorkRequests: [],
     monthlySequences: { "2026-10": 1 },
     quoteSequences: { "2026-10": 6 },
     receiptSequences: {},
