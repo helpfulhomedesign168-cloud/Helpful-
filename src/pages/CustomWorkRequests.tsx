@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { Badge, Button, Empty, PageHead } from "../components/ui";
+import {
+  Badge,
+  Button,
+  Dialog,
+  Empty,
+  Field,
+  PageHead,
+} from "../components/ui";
 import { useApp } from "../context";
 import { money } from "../domain/types";
 
@@ -10,6 +17,17 @@ export function CustomWorkRequests() {
   const requests = engine.listCustomWorkRequests(actor);
   const [filter, setFilter] = useState<Filter>("pending");
   const [prices, setPrices] = useState<Record<string, string>>({});
+  const [catalogRequest, setCatalogRequest] = useState<string | null>(null);
+  const [catalogCategory, setCatalogCategory] = useState("其他");
+  const [catalogName, setCatalogName] = useState("");
+  const [catalogDetails, setCatalogDetails] = useState("");
+  let categories: string[] = [];
+  try {
+    categories = engine.listServiceCategories(actor);
+  } catch {}
+  const catalogItem = catalogRequest
+    ? requests.find((request) => request.id === catalogRequest)
+    : undefined;
   const pending = requests.filter((request) => request.status === "pending");
   const answered = requests.filter((request) => request.status === "answered");
   const visible =
@@ -127,9 +145,29 @@ export function CustomWorkRequests() {
                           </Button>
                         </div>
                       ) : (
-                        <strong className="request-answered-price">
-                          {money(request.price ?? 0)}
-                        </strong>
+                        <div className="request-catalog-action">
+                          <strong className="request-answered-price">
+                            {money(request.price ?? 0)}
+                          </strong>
+                          {request.catalogServiceId ? (
+                            <Badge>已加入價目表</Badge>
+                          ) : (
+                            <Button
+                              onClick={() => {
+                                setCatalogCategory(
+                                  categories.includes("其他")
+                                    ? "其他"
+                                    : categories[0] ?? "其他",
+                                );
+                                setCatalogName(request.description);
+                                setCatalogDetails("由自訂工程請示加入");
+                                setCatalogRequest(request.id);
+                              }}
+                            >
+                              加入工程價目表
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -139,6 +177,68 @@ export function CustomWorkRequests() {
           </div>
         )}
       </div>
+      {catalogItem && (
+        <Dialog
+          title="加入工程價目表"
+          onClose={() => setCatalogRequest(null)}
+        >
+          <p className="dialog-intro">
+            會以工程部出街價 {money(catalogItem.price ?? 0)} 建立價目表項目。成本預設為 60%，可日後在工程價目調整。
+          </p>
+          <Field label="工程名稱" required>
+            <input
+              aria-label="價目表工程名稱"
+              value={catalogName}
+              onChange={(event) => setCatalogName(event.target.value)}
+            />
+          </Field>
+          <Field label="工程詳細／內容">
+            <textarea
+              aria-label="價目表工程詳細"
+              value={catalogDetails}
+              onChange={(event) => setCatalogDetails(event.target.value)}
+              placeholder="可修改工程範圍、內容或備註"
+            />
+          </Field>
+          <Field label="工程分類" required>
+            <select
+              aria-label="工程分類"
+              value={catalogCategory}
+              onChange={(event) => setCatalogCategory(event.target.value)}
+            >
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div className="dialog-actions">
+            <Button onClick={() => setCatalogRequest(null)}>取消</Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                const saved = run(
+                  () =>
+                    engine.addCustomWorkToCatalog(
+                      actor,
+                      catalogItem.id,
+                      {
+                        category: catalogCategory,
+                        name: catalogName,
+                        details: catalogDetails,
+                      },
+                    ),
+                  "已加入工程價目表。",
+                );
+                if (saved) setCatalogRequest(null);
+              }}
+            >
+              確認加入
+            </Button>
+          </div>
+        </Dialog>
+      )}
     </>
   );
 }

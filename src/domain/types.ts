@@ -515,6 +515,7 @@ export interface CustomWorkRequest {
   answeredBy?: string;
   answeredAt?: string;
   notes?: string;
+  catalogServiceId?: string;
 }
 export interface CustomWorkRequestView extends CustomWorkRequest {
   quoteStatus: string;

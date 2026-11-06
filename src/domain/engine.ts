@@ -4290,6 +4290,76 @@ export class Engine {
     });
     return output;
   }
+  addCustomWorkToCatalog(
+    actorInput: Actor,
+    requestId: string,
+    input: {
+      category: string;
+      name: string;
+      details?: string;
+    },
+  ): ServiceItem {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "cs_supervisor" && !this.isAdmin(actor))
+      fail("只有工程部主管可將自訂工程加入價目表。");
+    let output!: ServiceItem;
+    this.mutate((state) => {
+      const request =
+        state.customWorkRequests.find((item) => item.id === requestId) ??
+        fail("找不到自訂工程請示。");
+      if (request.status !== "answered")
+        fail("工程部主管回覆價錢後才可加入價目表。");
+      if (request.catalogServiceId)
+        fail("此自訂工程已加入工程價目表。");
+      if (!request.price || request.price <= 0)
+        fail("此自訂工程未有有效價錢。");
+      if (!state.serviceCategories.includes(input.category))
+        fail("工程分類無效。");
+      if (!input.name.trim())
+        fail("請填寫工程名稱。");
+      let sequence = state.services.length + 1;
+      let code = `CW${String(sequence).padStart(4, "0")}`;
+      while (state.services.some((item) => item.code === code)) {
+        sequence += 1;
+        code = `CW${String(sequence).padStart(4, "0")}`;
+      }
+      const service: ServiceItem = {
+        id: uid("service"),
+        code,
+        name: input.name.trim(),
+        category: input.category,
+        unit: request.unit || "項",
+        details: input.details?.trim() || "由自訂工程請示加入",
+        scope: "",
+        linkedServiceIds: [],
+        price: moneyValue(request.price),
+        measure: "fixed",
+        minQty: 0,
+        minAmount: 0,
+        increment: 0,
+        minScope: "line",
+        execution: "contractor",
+        costMode: "ratio",
+        options: [],
+        allowPending: false,
+        notes: "由工程部主管回覆的自訂工程價錢建立；成本預設 60%，可在工程價目調整。",
+        published: true,
+      };
+      if (!serviceComplete(service))
+        fail("工程價目資料不完整。");
+      state.services.push(service);
+      request.catalogServiceId = service.id;
+      request.answeredAt = request.answeredAt ?? NOW;
+      this.audit(state, {
+        quoteId: request.quoteId,
+        actorId: actor.id,
+        action: "custom_work_cataloged",
+        detail: `自訂工程加入價目表：${service.name}`,
+      });
+      output = deepCopy(service);
+    });
+    return output;
+  }
   notifications(actorInput: Actor): Notification[] {
     const actor = this.actor(actorInput);
     return deepCopy(
