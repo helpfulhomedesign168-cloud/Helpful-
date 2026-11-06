@@ -64,11 +64,16 @@ test("Sales新增工程popup顯示自訂工程及發給工程部報價UI", async
     .fill("8000");
   await requestRow.getByRole("button", { name: "回覆報價" }).click();
   await page.getByRole("tab", { name: /已回覆/ }).click();
-  await expect(
-    page
-      .locator(".custom-request-table tbody tr")
-      .filter({ hasText: "訂造特色電視櫃" }),
-  ).toContainText("HK$8,000.00");
+  const answeredRow = page
+    .locator(".custom-request-table tbody tr")
+    .filter({ hasText: "訂造特色電視櫃" });
+  await expect(answeredRow).toContainText("HK$8,000.00");
+  await answeredRow
+    .getByRole("button", { name: "加入工程價目表", exact: true })
+    .click();
+  await page.getByLabel("工程分類").selectOption("其他");
+  await page.getByRole("button", { name: "確認加入", exact: true }).click();
+  await expect(answeredRow).toContainText("已加入價目表");
 
   await switchRole(page, "文文B MM");
   await page.goto(quoteUrl);
@@ -83,4 +88,14 @@ test("Sales新增工程popup顯示自訂工程及發給工程部報價UI", async
   await expect(
     page.getByRole("button", { name: /前往預覽及成交/ }),
   ).toBeDisabled();
+
+  await page
+    .locator("nav")
+    .getByRole("link", { name: "建立報價", exact: true })
+    .click();
+  await page.getByRole("button", { name: "新增工程", exact: true }).click();
+  await page.getByPlaceholder("搜尋工程名稱").fill("訂造特色電視櫃");
+  await expect(
+    page.locator(".service-option").filter({ hasText: "訂造特色電視櫃" }),
+  ).toBeVisible();
 });
