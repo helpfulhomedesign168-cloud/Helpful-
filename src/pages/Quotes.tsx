@@ -126,7 +126,17 @@ export function Quotes() {
     new URLSearchParams(location.search).get("tab") || "pending",
   );
   const [monthFilter, setMonthFilter] = useState("all");
+  const [teamFilter, setTeamFilter] = useState("all");
+  const [salesFilter, setSalesFilter] = useState("all");
   const qs = engine.listQuotes(actor);
+  const canFilterOwner = ["admin", "admin_staff", "head"].includes(
+    actor.role,
+  );
+  const ownerOptions = engine
+    .listActors()
+    .filter((candidate) =>
+      ["sales", "supervisor", "head"].includes(candidate.role),
+    );
   const quoteMonths = [...new Set(
     qs.map((quote) => currentVersion(quote).createdAt.slice(0, 7)),
   )]
@@ -144,6 +154,8 @@ export function Quotes() {
       (q) =>
         (monthFilter === "all" ||
           currentVersion(q).createdAt.startsWith(monthFilter)) &&
+        (teamFilter === "all" || q.team === teamFilter) &&
+        (salesFilter === "all" || q.ownerId === salesFilter) &&
         `${q.number} ${currentVersion(q).customer.name} ${currentVersion(q).customer.district} ${currentVersion(q).customer.phone}`
           .toLowerCase()
           .includes(search.toLowerCase()),
@@ -151,7 +163,7 @@ export function Quotes() {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const pager = usePagination(
     shown,
-    `${tab}|${search}|${monthFilter}`,
+    `${tab}|${search}|${monthFilter}|${teamFilter}|${salesFilter}`,
   );
   return (
     <>
@@ -192,7 +204,32 @@ export function Quotes() {
               </option>
             ))}
           </select>
-          <span className="muted">{qs.length} 張報價</span>
+          {canFilterOwner && (
+            <>
+              <select
+                aria-label="報價Team"
+                value={teamFilter}
+                onChange={(event) => setTeamFilter(event.target.value)}
+              >
+                <option value="all">全部 Team</option>
+                <option value="A">Team A</option>
+                <option value="B">Team B</option>
+              </select>
+              <select
+                aria-label="報價Sales"
+                value={salesFilter}
+                onChange={(event) => setSalesFilter(event.target.value)}
+              >
+                <option value="all">全部 Sales</option>
+                {ownerOptions.map((owner) => (
+                  <option key={owner.id} value={owner.id}>
+                    {owner.name}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+          <span className="muted">{shown.length} 張報價</span>
         </div>
         <div className="tabs">
           {[
@@ -235,6 +272,7 @@ export function Quotes() {
                   <th>報價／版本</th>
                   <th>日期</th>
                   <th>客戶／工程地區</th>
+                  {canFilterOwner && <th>Sales</th>}
                   <th className="numeric">成交金額</th>
                   <th>目前進度</th>
                   <th />
@@ -260,6 +298,14 @@ export function Quotes() {
                           {v.customer.estate ? " · " + v.customer.estate : ""}
                         </small>
                       </td>
+                      {canFilterOwner && (
+                        <td>
+                          {engine
+                            .listActors()
+                            .find((owner) => owner.id === q.ownerId)?.name ??
+                            "—"}
+                        </td>
+                      )}
                       <td className="numeric money">{money(p.total)}</td>
                       <td>
                         <Badge strong={e.stage === "issued"}>{e.label}</Badge>
