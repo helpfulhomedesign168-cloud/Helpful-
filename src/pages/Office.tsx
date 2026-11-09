@@ -1166,12 +1166,12 @@ export function InvoiceDetail() {
                   nav("/cancellation-cases/" + cancellationCase!.id)
                 }
               >
-                查看退訂個案
+                查看退款個案
               </Button>
             )}
             {canCreateCancellation && (
               <Button variant="danger" onClick={() => setCancelOpen(true)}>
-                建立退訂個案
+                建立退款個案
               </Button>
             )}
           </>
@@ -1453,7 +1453,7 @@ export function InvoiceDetail() {
       )}
       {cancelOpen && (
         <Dialog
-          title="建立退訂個案"
+          title="建立退款個案"
           onClose={() => {
             setCancelOpen(false);
             setCancelReason("");
@@ -1462,12 +1462,12 @@ export function InvoiceDetail() {
           <p className="dialog-intro">
             此操作只適用於付款未達50%及未開始工程的Invoice。會計將處理退款及Credit Note。
           </p>
-          <Field label="退訂原因" required>
+          <Field label="退款原因" required>
             <textarea
-              aria-label="退訂原因"
+              aria-label="退款原因"
               value={cancelReason}
               onChange={(event) => setCancelReason(event.target.value)}
-              placeholder="客人退訂原因、合約條款或相關備註"
+              placeholder="客人退款原因、合約條款或相關備註"
             />
           </Field>
           <div className="dialog-actions">
@@ -1483,7 +1483,7 @@ export function InvoiceDetail() {
                       invoice!.id,
                       cancelReason,
                     ),
-                  "退訂個案已建立。",
+                  "退款個案已建立。",
                 );
                 if (created) {
                   setCancelOpen(false);

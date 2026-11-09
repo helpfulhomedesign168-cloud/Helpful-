@@ -5,7 +5,7 @@ async function switchRole(page: import("@playwright/test").Page, name: string) {
   await page.locator(".role-option").filter({ hasText: name }).first().click();
 }
 
-test("開單員建立退訂個案，會計退款及扣回佣金", async ({ page }) => {
+test("開單員建立退款個案，會計退款及扣回佣金", async ({ page }) => {
   await page.goto("/");
   await switchRole(page, "開單員");
   await page
@@ -16,10 +16,10 @@ test("開單員建立退訂個案，會計退款及扣回佣金", async ({ page 
   await quoteRow.getByRole("button", { name: /已核對並開單/ }).click();
   await expect(page).toHaveURL(/\/invoices\//);
   await page
-    .getByRole("button", { name: "建立退訂個案", exact: true })
+    .getByRole("button", { name: "建立退款個案", exact: true })
     .click();
-  const dialog = page.getByRole("dialog", { name: "建立退訂個案" });
-  await dialog.getByLabel("退訂原因").fill("客人取消工程");
+  const dialog = page.getByRole("dialog", { name: "建立退款個案" });
+  await dialog.getByLabel("退款原因").fill("客人取消工程");
   await dialog.getByRole("button", { name: "建立個案", exact: true }).click();
   await expect(page).toHaveURL(/\/cancellation-cases\//);
   const caseUrl = page.url();
@@ -29,7 +29,9 @@ test("開單員建立退訂個案，會計退款及扣回佣金", async ({ page 
   await page.goto(caseUrl);
   await page.getByLabel("退款金額").fill("3000");
   await page.getByLabel("扣減金額").fill("1200");
-  await page.getByLabel("退款原因").fill("合約扣除行政費");
+  await page
+    .getByPlaceholder("例如：合約訂明沒收訂金、行政費")
+    .fill("合約扣除行政費");
   await page.getByLabel("銀行名稱").fill("Demo Bank");
   await page.getByLabel("退款戶名").fill("王小虎");
   await page.getByLabel("退款戶口號碼").fill("123456789");

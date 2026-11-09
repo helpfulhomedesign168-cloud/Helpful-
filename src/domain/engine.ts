@@ -4039,7 +4039,7 @@ export class Engine {
         "admin",
       ].includes(actor.role)
     )
-      fail("你沒有查看退訂個案的權限。");
+      fail("你沒有查看退款個案的權限。");
     return this.state.cancellationCases
       .map((request) => this.cancellationView(request))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -4057,10 +4057,10 @@ export class Engine {
         "admin",
       ].includes(actor.role)
     )
-      fail("你沒有查看退訂個案的權限。");
+      fail("你沒有查看退款個案的權限。");
     const request =
       this.state.cancellationCases.find((item) => item.id === id) ??
-      fail("找不到退訂個案。");
+      fail("找不到退款個案。");
     return this.cancellationView(request);
   }
   createCancellationCase(
@@ -4070,8 +4070,8 @@ export class Engine {
   ): CancellationCaseView {
     const actor = this.actor(actorInput);
     if (!this.isClerk(actor) && !this.isAdmin(actor))
-      fail("只有開單員可建立退訂個案。");
-    if (!reason.trim()) fail("請填寫退訂原因。");
+      fail("只有開單員可建立退款個案。");
+    if (!reason.trim()) fail("請填寫退款原因。");
     let output!: CancellationCaseView;
     this.mutate((state) => {
       const invoice =
@@ -4085,7 +4085,7 @@ export class Engine {
             item.status !== "completed",
         )
       )
-        fail("此Invoice已有進行中的退訂個案。");
+        fail("此Invoice已有進行中的退款個案。");
       const quote = state.quotes.find((item) => item.id === invoice.quoteId);
       const owner = state.actors.find((item) => item.id === quote?.ownerId);
       const request: CancellationCase = {
@@ -4114,7 +4114,7 @@ export class Engine {
             state,
             accountant.id,
             invoice.quoteId,
-            `新退訂個案：${invoice.number} · ${invoice.customer.name}`,
+            `新退款個案：${invoice.number} · ${invoice.customer.name}`,
             invoice.id,
             undefined,
             request.id,
@@ -4124,7 +4124,7 @@ export class Engine {
         quoteId: invoice.quoteId,
         actorId: actor.id,
         action: "cancellation_requested",
-        detail: `退訂個案：${invoice.number} · ${reason.trim()}`,
+        detail: `退款個案：${invoice.number} · ${reason.trim()}`,
       });
       output = this.cancellationView(request);
     });
@@ -4153,9 +4153,9 @@ export class Engine {
     this.mutate((state) => {
       const request =
         state.cancellationCases.find((item) => item.id === id) ??
-        fail("找不到退訂個案。");
+        fail("找不到退款個案。");
       if (request.status === "completed")
-        fail("此退訂個案已完成，不可再修改。");
+        fail("此退款個案已完成，不可再修改。");
       const invoice =
         state.invoices.find((item) => item.id === request.invoiceId) ??
         fail("找不到Invoice。");
@@ -4240,8 +4240,8 @@ export class Engine {
     this.mutate((state) => {
       const request =
         state.cancellationCases.find((item) => item.id === id) ??
-        fail("找不到退訂個案。");
-      if (request.status === "completed") fail("此退訂個案已完成。");
+        fail("找不到退款個案。");
+      if (request.status === "completed") fail("此退款個案已完成。");
       const invoice =
         state.invoices.find((item) => item.id === request.invoiceId) ??
         fail("找不到Invoice。");
