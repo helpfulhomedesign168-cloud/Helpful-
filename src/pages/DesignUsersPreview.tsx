@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Plus, ChevronRight } from "lucide-react";
+import { Bell, Plus, ChevronRight, X } from "lucide-react";
 import { useApp } from "../context";
 import { Actor, ROLE_NAMES, Role } from "../domain/types";
 
@@ -45,6 +45,22 @@ function PreviewAvatar({ user }: { user: Actor }) {
 export function DesignUsersPreview() {
   const { actor, engine } = useApp();
   const [activeTab, setActiveTab] = useState("sales");
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!menuOpen) {
+      document.body.style.overflow = "";
+      return;
+    }
+    document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
   const users = engine
     .listUsers(actor)
     .filter((user) => user.active !== false);
@@ -58,6 +74,18 @@ export function DesignUsersPreview() {
   return (
     <div className="preview-app">
       <header className="preview-topbar">
+        <button
+          type="button"
+          className={`preview-menu-toggle ${menuOpen ? "open" : ""}`}
+          aria-label={menuOpen ? "關閉選單" : "開啟選單"}
+          aria-expanded={menuOpen}
+          aria-controls="preview-sidebar"
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
         <Link to="/users" className="preview-brand">
           <img src="/design-assets/logo.svg" alt="好幫手家居裝修設計有限公司" />
         </Link>
@@ -77,7 +105,21 @@ export function DesignUsersPreview() {
           </div>
         </div>
       </header>
-      <aside className="preview-sidebar">
+      <aside
+        id="preview-sidebar"
+        className={`preview-sidebar ${menuOpen ? "open" : ""}`}
+      >
+        <div className="preview-drawer-head">
+          <img src="/design-assets/logo.svg" alt="好幫手" />
+          <button
+            type="button"
+            className="preview-drawer-close"
+            aria-label="關閉選單"
+            onClick={() => setMenuOpen(false)}
+          >
+            <X size={24} />
+          </button>
+        </div>
         <nav>
           {NAV.map(([path, label, icon]) => (
             <Link
@@ -86,6 +128,7 @@ export function DesignUsersPreview() {
               className={`preview-nav-item ${
                 label === "用戶管理" ? "active" : ""
               }`}
+              onClick={() => setMenuOpen(false)}
             >
               <img
                 src={`/design-assets/icons/${icon}.svg`}
@@ -98,12 +141,19 @@ export function DesignUsersPreview() {
           ))}
         </nav>
       </aside>
+      <button
+        type="button"
+        className={`preview-overlay ${menuOpen ? "visible" : ""}`}
+        aria-label="關閉選單"
+        tabIndex={menuOpen ? 0 : -1}
+        onClick={() => setMenuOpen(false)}
+      />
       <main className="preview-main">
         <div className="preview-page-head">
           <h1>用戶管理</h1>
           <Link to="/users/new" className="preview-primary-button">
             <Plus size={26} />
-            新增用戶
+            <span className="preview-primary-label">新增用戶</span>
           </Link>
         </div>
         <section className="preview-card">
