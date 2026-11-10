@@ -8409,3 +8409,69 @@ textarea::placeholder {
 .nav-caption {
   display: none;
 }
+
+/* Business orders filters: match the handoff filter language */
+.business-order-toolbar {
+  align-items: center;
+  gap: 12px;
+  padding: 20px 26px 16px;
+  border-bottom: 0;
+}
+.business-order-toolbar > .search {
+  flex: 1 1 260px;
+  min-width: 220px;
+  max-width: none;
+  width: auto;
+  height: 46px;
+}
+.business-order-field {
+  position: relative;
+  display: block;
+  flex: 0 0 158px;
+  width: 158px;
+}
+.business-order-field select {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  min-height: 46px;
+  appearance: none;
+  padding: 0 38px 0 16px;
+  border-color: #d2d9e3;
+  border-radius: 8px;
+  color: #313642;
+  font-size: 14px;
+}
+.business-order-field svg {
+  position: absolute;
+  top: 14px;
+  right: 13px;
+  pointer-events: none;
+  color: #5e6571;
+}
+@media (max-width: 1100px) {
+  .business-order-toolbar {
+    flex-wrap: wrap;
+  }
+  .business-order-toolbar > .search {
+    flex-basis: 100%;
+  }
+  .business-order-field {
+    flex: 1 1 140px;
+    width: auto;
+  }
+}
+@media (max-width: 760px) {
+  .business-order-toolbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 14px;
+  }
+  .business-order-toolbar > .search {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .business-order-field {
+    width: 100%;
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Badge,
@@ -95,6 +96,7 @@ export function BusinessOrders() {
                 </option>
               ))}
             </select>
+            <ChevronDown size={18} />
           </label>
           <label className="business-order-field">
             <select
@@ -111,6 +113,7 @@ export function BusinessOrders() {
                 );
               })}
             </select>
+            <ChevronDown size={18} />
           </label>
           <label className="business-order-field">
             <select
@@ -125,6 +128,7 @@ export function BusinessOrders() {
                 </option>
               ))}
             </select>
+            <ChevronDown size={18} />
           </label>
           <label className="business-order-field">
             <select
@@ -139,6 +143,7 @@ export function BusinessOrders() {
                 </option>
               ))}
             </select>
+            <ChevronDown size={18} />
           </label>
         </div>
         <div className="business-order-status-tabs" role="tablist">
