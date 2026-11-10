@@ -1818,6 +1818,21 @@ function dateRange(startDate: string, endDate: string): string[] {
   return dates;
 }
 
+const CALENDAR_EVENT_COLORS = [
+  { bg: "#88BAFF", text: "#0D1B40" }, // Primary Blue 3
+  { bg: "#FFD29A", text: "#5A2800" }, // Primary Orange 3
+  { bg: "#C9B8FF", text: "#2F1B5E" }, // purple
+  { bg: "#A8E6C3", text: "#12452C" }, // green
+  { bg: "#FFC4D6", text: "#5C1F36" }, // pink
+  { bg: "#FFE59A", text: "#4D3A00" }, // yellow
+];
+function calendarEventColor(id: string) {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1)
+    hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
+  return CALENDAR_EVENT_COLORS[hash % CALENDAR_EVENT_COLORS.length];
+}
+
 function WorkOrderCalendar({
   order,
   assignments,
@@ -1972,19 +1987,24 @@ function WorkOrderCalendar({
             </div>
             {weekBars[weekIndex].length > 0 && (
               <div className="calendar-week-events">
-                {weekBars[weekIndex].map((bar) => (
-                  <div
-                    className="calendar-event-bar"
-                    key={`${bar.event.id}-${weekIndex}`}
-                    style={{
-                      gridColumn: `${bar.startCol + 1} / span ${bar.endCol - bar.startCol + 1}`,
-                      gridRow: bar.lane + 1,
-                    }}
-                    title={bar.event.label}
-                  >
-                    {bar.event.label}
-                  </div>
-                ))}
+                {weekBars[weekIndex].map((bar) => {
+                  const tone = calendarEventColor(bar.event.id);
+                  return (
+                    <div
+                      className="calendar-event-bar"
+                      key={`${bar.event.id}-${weekIndex}`}
+                      style={{
+                        gridColumn: `${bar.startCol + 1} / span ${bar.endCol - bar.startCol + 1}`,
+                        gridRow: bar.lane + 1,
+                        background: tone.bg,
+                        color: tone.text,
+                      }}
+                      title={bar.event.label}
+                    >
+                      {bar.event.label}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -2148,6 +2168,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   const [extraSupplierId, setExtraSupplierId] = useState("");
   const [extraCategory, setExtraCategory] = useState("");
   const [dates, setDates] = useState(false);
+  const [extraMenu, setExtraMenu] = useState(false);
   const [start, setStart] = useState(order.startDate);
   const [end, setEnd] = useState(order.endDate);
   const [reason, setReason] = useState("");
@@ -2268,59 +2289,61 @@ function OrderPanel({ order }: { order: WorkOrder }) {
     setExtraCategory(existing?.category ?? "");
   };
   const closeExtra = () => setExtraKind(null);
+  let categories: InvoiceCategory[] = [];
+  try {
+    const quote = engine.getQuote(actor, order.quoteId);
+    categories = quote.orderCategories?.length
+      ? quote.orderCategories
+      : invoice.category
+        ? [invoice.category]
+        : [];
+  } catch {
+    categories = invoice.category ? [invoice.category] : [];
+  }
   return (
     <>
-      <div className="workorder-head">
-        <h1>{order.number}</h1>
-        <div className="workorder-head-actions">
-          {order.status === "completed" ? (
-            <Badge strong>工程完成</Badge>
-          ) : (
-            canEdit && (
-              <Button
-                onClick={() =>
-                  run(
-                    () => engine.completeWorkOrder(actor, order!.id),
-                    "工程已標記為完成。",
-                  )
-                }
-              >
-                <Check size={18} /> 工程完成
-              </Button>
-            )
-          )}
-          <Button onClick={() => nav("/documents/invoice/" + invoice.id)}>
-            <Printer size={20} />
-            Invoice
-          </Button>
-        </div>
-      </div>
-      <div className="order-banner order-banner-with-dates">
-        <div>
-          <span>工程地址</span>
-          <strong>{order.customer.address}</strong>
-        </div>
-        <div className="order-period">
-          <div>
-            <span>預計開工</span>
-            <strong>{order.startDate}</strong>
+      <div className="wo-detail-head">
+        <div className="wo-title">
+          <div className="wo-number-line">
+            <h1>{order.number}</h1>
+            <CategoryChips categories={categories} />
+            {order.status === "completed" && <Badge strong>工程完成</Badge>}
           </div>
-          <div>
-            <span>預計完工</span>
-            <strong>{order.endDate}</strong>
-          </div>
+          <small className="wo-invoice-number">INV:{invoice.number}</small>
+        </div>
+        <div className="wo-date-summary">
+          <span>工程時間</span>
+          <strong>
+            由 {order.startDate} 至 {order.endDate}
+          </strong>
           {canEdit && (
-            <Button
-              variant="primary"
+            <button
+              type="button"
+              className="wo-edit-date"
+              aria-label="修改工程日期"
               onClick={() => {
                 setStart(order.startDate);
                 setEnd(order.endDate);
                 setDates(true);
               }}
             >
-              修改日期
-            </Button>
+              <PenLine size={20} />
+            </button>
           )}
+        </div>
+      </div>
+      <div className="wo-customer-row">
+        <div>
+          <span>聯絡人</span>
+          <strong>{order.customer.name}</strong>
+        </div>
+        <div>
+          <span>聯絡電話</span>
+          <strong>{order.customer.phone || "—"}</strong>
+        </div>
+        <div className="wo-customer-address">
+          <span>工程地址</span>
+          <strong>{order.customer.address}</strong>
         </div>
       </div>
       <WorkOrderCalendar
@@ -2331,44 +2354,24 @@ function OrderPanel({ order }: { order: WorkOrder }) {
       />
       <Section title="工程內容" className="engineering-content-card">
         <div className="extra-works">
-          <strong>額外工程</strong>
-          <div className="extra-work-actions">
-            {(
-              [
-                "measure",
-                "delivery",
-                "transport",
-                "fabrication",
-              ] as ExtraWorkKind[]
-            ).map((kind) => {
-              const existing = extraWorks.find(
-                (extra) => extra.kind === kind,
-              );
-              return (
-                <button
-                  type="button"
-                  key={kind}
-                  className={`extra-work-button ${existing ? "scheduled" : ""}`}
-                  onClick={() => openExtra(kind)}
-                >
-                  {existing ? "更改" : "安排"}
-                  {EXTRA_WORK_LABELS[kind]}
-                </button>
-              );
-            })}
-
-          </div>
+          <Button
+            variant="primary"
+            className="extra-add-button"
+            onClick={() => setExtraMenu(true)}
+          >
+            <Plus size={19} /> 額外工程
+          </Button>
         </div>
         <div className="engineering-table-wrap">
           <table className="engineering-table">
             <thead>
               <tr>
                 <th scope="col">工程項目</th>
+                <th scope="col">規格</th>
                 <th scope="col">執行師傅</th>
                 <th scope="col">師傅收費</th>
-                <th scope="col">開工時間</th>
+                <th scope="col">工程時間</th>
                 <th scope="col">完工時間</th>
-                <th scope="col">備註</th>
                 <th scope="col">操作</th>
               </tr>
             </thead>
@@ -2388,15 +2391,6 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                         {line.position}
                         {line.style ? ` · ${line.style}` : ""}
                       </small>
-                      <small>
-                        {line.itemSnapshot.measure === "area"
-                          ? `${line.length} × ${line.width} ${line.dimensionUnit}`
-                          : line.itemSnapshot.measure === "length"
-                            ? `${line.length} ${line.dimensionUnit}`
-                            : line.itemSnapshot.measure === "fixed"
-                              ? "一式"
-                              : `${line.quantity} ${line.itemSnapshot.unit}`}
-                      </small>
                       {line.productStyle && (
                         <div className="order-product-style">
                           <OrderStyleThumb
@@ -2409,6 +2403,15 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                           </small>
                         </div>
                       )}
+                    </td>
+                    <td className="engineering-spec">
+                      {line.itemSnapshot.measure === "area"
+                        ? `${line.length} × ${line.width} ${line.dimensionUnit}`
+                        : line.itemSnapshot.measure === "length"
+                          ? `${line.length} ${line.dimensionUnit}`
+                          : line.itemSnapshot.measure === "fixed"
+                            ? "一式"
+                            : `${line.quantity} ${line.itemSnapshot.unit}`}
                     </td>
                     <td>{resource?.name ?? "—"}</td>
                     <td>
@@ -2435,13 +2438,11 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                     </td>
                     <td>{assignment?.date ?? "—"}</td>
                     <td>{assignment?.endDate ?? assignment?.date ?? "—"}</td>
-                    <td>{assignment?.notes || "—"}</td>
                     <td>
                       <div className="engineering-row-actions">
-                        {assignment && <Badge strong>已安排</Badge>}
                         {canEdit && (
                           <Button
-                            variant={assignment ? "ghost" : "secondary"}
+                            variant={assignment ? "secondary" : "primary"}
                             onClick={() =>
                               openAssignment(line.id, assignment?.id)
                             }
@@ -2464,6 +2465,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                       <strong>{EXTRA_WORK_LABELS[extra.kind]}</strong>
                       <small>額外工程</small>
                     </td>
+                    <td>—</td>
                     <td>
                       {extra.kind === "fabrication"
                         ? suppliers.find((supplier) => supplier.id === extra.supplierId)?.name ?? "—"
@@ -2480,10 +2482,8 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                     </td>
                     <td>{extra.startDate}</td>
                     <td>{extra.endDate}</td>
-                    <td>{extra.notes || "—"}</td>
                     <td>
                       <div className="engineering-row-actions">
-                        <Badge strong>已安排</Badge>
                         {canEdit && (
                           <Button
                             variant="ghost"
@@ -2831,6 +2831,41 @@ function OrderPanel({ order }: { order: WorkOrder }) {
             >
               儲存安排
             </Button>
+          </div>
+        </Dialog>
+      )}
+      {extraMenu && (
+        <Dialog title="額外工程" onClose={() => setExtraMenu(false)}>
+          <p className="dialog-intro">
+            選擇要安排的額外工程；已安排的項目可再更改。
+          </p>
+          <div className="extra-menu-list">
+            {(
+              [
+                "measure",
+                "delivery",
+                "transport",
+                "fabrication",
+              ] as ExtraWorkKind[]
+            ).map((kind) => {
+              const existing = extraWorks.find(
+                (extra) => extra.kind === kind,
+              );
+              return (
+                <button
+                  type="button"
+                  key={kind}
+                  className="extra-menu-item"
+                  onClick={() => {
+                    setExtraMenu(false);
+                    openExtra(kind);
+                  }}
+                >
+                  <span>{EXTRA_WORK_LABELS[kind]}</span>
+                  <strong>{existing ? "更改" : "安排"}</strong>
+                </button>
+              );
+            })}
           </div>
         </Dialog>
       )}

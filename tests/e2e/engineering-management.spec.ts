@@ -74,6 +74,19 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
       .filter({ hasText: "上午" })
       .first(),
   ).toContainText("黃日強 (Danny)");
+  const eventColor = await page
+    .locator(".calendar-event-bar")
+    .filter({ hasText: "上午" })
+    .first()
+    .evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect([
+    "rgb(136, 186, 255)",
+    "rgb(255, 210, 154)",
+    "rgb(201, 184, 255)",
+    "rgb(168, 230, 195)",
+    "rgb(255, 196, 214)",
+    "rgb(255, 229, 154)",
+  ]).toContain(eventColor);
   const itemRow = page
     .locator(".engineering-table tbody tr")
     .filter({ hasText: "木門" });
@@ -99,7 +112,8 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
       .first(),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "安排度尺", exact: true }).click();
+  await page.getByRole("button", { name: "額外工程", exact: true }).click();
+  await page.getByRole("button", { name: /度尺/ }).click();
   const extraDialog = page.getByRole("dialog", { name: "安排度尺" });
   await extraDialog
     .getByLabel("執行師傅", { exact: false })
@@ -115,7 +129,8 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await expect(
     page.locator(".engineering-table tbody tr").filter({ hasText: "度尺" }),
   ).toContainText("HK$500.00");
-  await page.getByRole("button", { name: "安排造貨", exact: true }).click();
+  await page.getByRole("button", { name: "額外工程", exact: true }).click();
+  await page.getByRole("button", { name: /造貨/ }).click();
   const fabrication = page.getByRole("dialog", { name: "安排造貨" });
   await fabrication
     .getByLabel("供應商", { exact: false })
