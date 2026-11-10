@@ -1551,7 +1551,17 @@ export function Handoff() {
   );
   return (
     <>
-      <PageHead eyebrow="CS工程部" title="工程單" />
+      <PageHead
+        eyebrow="CS工程部"
+        title="工程單"
+        actions={
+          actor.role === "admin" ? (
+            <Link className="btn" to="/design/orders">
+              預覽新設計
+            </Link>
+          ) : undefined
+        }
+      />
       <div className="list-panel">
         <div className="submission-toolbar">
           <Search

@@ -17,7 +17,7 @@ const DEPARTMENTS: Array<{ key: string; label: string; roles: Role[] }> = [
 
 const NAV = [
   ["/design/users", "用戶管理", "nav-users"],
-  ["/handoff", "工程單", "nav-orders"],
+  ["/design/orders", "工程單", "nav-orders"],
   ["/orders", "工程管理", "nav-engineering"],
   ["/contractors", "工程師傅", "nav-contractors"],
   ["/suppliers", "供應商", "nav-suppliers"],
