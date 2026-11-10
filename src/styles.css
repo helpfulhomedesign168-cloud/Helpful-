@@ -9023,3 +9023,43 @@ textarea::placeholder {
 .order-rail-invoice-print svg {
   color: #78aef2;
 }
+
+/* SVG reference: self-pay green, group-buy blue, 8萬 orange */
+.order-rail-dot.self-pay {
+  background: #00d157;
+}
+.order-rail-dot.group-buy {
+  background: #1e7cff;
+}
+.order-rail-dot.grant-80k {
+  background: #ff8e00;
+}
+/* Extra work rows use Primary Orange 4 */
+.engineering-table .extra-work-row {
+  background: #fff5e9;
+}
+
+/* Header INV + printer is one text/icon button */
+.wo-invoice-print {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #78aef2;
+  font-size: 14px;
+  text-align: left;
+}
+.wo-invoice-print:hover span {
+  text-decoration: underline;
+}
+.wo-invoice-print svg {
+  color: #78aef2;
+}
+
+.wo-invoice-print svg {
+  width: 20px;
+  height: 20px;
+}

@@ -42,9 +42,9 @@ const DEMO_CATEGORIES: InvoiceCategory[][] = [
 ];
 
 const CATEGORY_CLASS: Record<string, string> = {
-  "grant-80k": "green",
-  "group-buy": "orange",
-  "self-pay": "blue",
+  "self-pay": "green",
+  "group-buy": "blue",
+  "grant-80k": "orange",
 };
 
 export function DesignOrdersPreview() {

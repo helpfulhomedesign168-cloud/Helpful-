@@ -1902,22 +1902,7 @@ function WorkOrderRail({
                     ))}
                   </span>
                 </span>
-                {invoiceNumber ? (
-                  <button
-                    type="button"
-                    className="order-rail-invoice-print"
-                    aria-label={`列印 ${invoiceNumber} Invoice`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      nav("/documents/invoice/" + order.invoiceId);
-                    }}
-                  >
-                    <span>INV:{invoiceNumber}</span>
-                    <Printer size={17} />
-                  </button>
-                ) : (
-                  <small>INV:—</small>
-                )}
+                <small>INV-{invoiceNumber || "—"}</small>
               </div>
             );
           })
@@ -2452,7 +2437,15 @@ function OrderPanel({ order }: { order: WorkOrder }) {
             <CategoryChips categories={categories} />
             {order.status === "completed" && <Badge strong>工程完成</Badge>}
           </div>
-          <small className="wo-invoice-number">INV:{invoice.number}</small>
+          <button
+            type="button"
+            className="wo-invoice-print"
+            aria-label={`列印 ${invoice.number} Invoice`}
+            onClick={() => nav("/documents/invoice/" + invoice.id)}
+          >
+            <span>INV-{invoice.number}</span>
+            <Printer size={18} />
+          </button>
         </div>
         <div className="wo-date-summary">
           <span>工程時間</span>
