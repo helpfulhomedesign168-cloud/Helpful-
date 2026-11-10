@@ -9148,3 +9148,19 @@ textarea::placeholder {
 .engineering-content-card .section-head .btn {
   flex: 0 0 auto;
 }
+
+/* Under the navy filter divider, the two panels meet with square top corners. */
+.order-rail {
+  border-radius: 0 0 0 16px;
+}
+.workorder-main {
+  border-radius: 0 0 16px 0;
+}
+@media (max-width: 900px) {
+  .order-rail {
+    border-radius: 16px;
+  }
+  .workorder-main {
+    border-radius: 16px;
+  }
+}
