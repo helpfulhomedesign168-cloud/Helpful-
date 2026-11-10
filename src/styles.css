@@ -9063,3 +9063,63 @@ textarea::placeholder {
   width: 20px;
   height: 20px;
 }
+
+/* Rail card: dots on the number line, compact height */
+.order-rail-row {
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+.order-rail-row > .order-rail-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.order-rail-row > .order-rail-row-top > .order-rail-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 0;
+}
+.order-rail-row > .order-rail-row-top .order-rail-dot {
+  display: inline-block;
+  margin-top: 0;
+}
+.order-rail-row small {
+  display: block;
+  margin-top: 2px;
+}
+
+/* Rail and detail are one continuous surface; no middle gap.
+   The rail no longer owns an inner scrollbar. */
+.orders-workspace {
+  gap: 0;
+}
+.order-rail {
+  max-height: none;
+  overflow: visible;
+  border-radius: 16px 0 0 16px;
+  border-right: 0;
+}
+.order-rail-list {
+  overflow: visible;
+}
+.workorder-main {
+  border-radius: 0 16px 16px 0;
+}
+.wo-customer-address {
+  text-align: left;
+}
+
+@media (max-width: 900px) {
+  .order-rail {
+    border-radius: 16px;
+    border-right: 1px solid var(--line);
+  }
+  .workorder-main {
+    border-radius: 16px;
+  }
+  .orders-workspace {
+    gap: 16px;
+  }
+}
