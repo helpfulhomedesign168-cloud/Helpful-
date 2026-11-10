@@ -161,6 +161,9 @@ export function Users() {
                 <UserCog size={18} /> 已停用帳戶（{inactiveUsers.length}）
               </Button>
             )}
+            <Link className="btn" to="/design/users">
+              預覽新設計
+            </Link>
             <Link className="btn btn-primary" to="/users/new">
               <Plus size={20} /> 新增用戶
             </Link>
