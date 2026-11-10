@@ -38,6 +38,7 @@ test("Sales可將產品款式snapshot加入報價行", async ({ page }) => {
 
   await switchRole(page, "文文B MM");
   await page.goto("/quotes/new");
+  await page.getByRole("button", { name: "下一步", exact: true }).click();
   await page.getByRole("button", { name: "新增工程", exact: true }).click();
   const picker = page.getByRole("dialog", { name: "新增工程項目" });
   await picker.getByPlaceholder("搜尋工程名稱").fill("廚房生態夾板吊櫃");

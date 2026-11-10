@@ -44,6 +44,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   await page.getByLabel(/^聯絡電話/).fill("91238800");
   await page.getByLabel("WhatsApp電話", { exact: false }).fill("91238800");
   await page.getByLabel("工程地區", { exact: false }).selectOption("黃大仙");
+  await page.getByRole("button", { name: "下一步", exact: true }).click();
   await page.getByRole("button", { name: "新增工程", exact: true }).click();
   await page
     .getByRole("dialog")

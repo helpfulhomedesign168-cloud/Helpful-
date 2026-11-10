@@ -514,10 +514,38 @@ export function CustomerForm({
     </>
   );
 }
+const QUOTE_WIZARD_STEPS = [
+  ["1", "客戶資料"],
+  ["2", "工程項目"],
+  ["3", "列印簽署"],
+  ["4", "遞交office"],
+];
+
+export function QuoteWizardProgress({ step }: { step: number }) {
+  return (
+    <div className="quote-wizard-progress">
+      {QUOTE_WIZARD_STEPS.map(([number, label], index) => {
+        const done = step > index + 1;
+        const active = step === index + 1;
+        return (
+          <div
+            key={number}
+            className={`quote-wizard-step ${done ? "done" : ""} ${active ? "active" : ""}`}
+          >
+            <span>{done ? <Check size={26} /> : number}</span>
+            <strong>{label}</strong>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function QuoteEditor() {
   const { actor, engine, run } = useApp();
   const { id } = useParams();
   const nav = useNavigate();
+  const wizard = !id;
   let existing: Quote | undefined;
   try {
     if (id) existing = engine.getQuote(actor, id);
@@ -553,6 +581,7 @@ export function QuoteEditor() {
       : "custom",
   );
   const [reason, setReason] = useState("");
+  const [wizardStep, setWizardStep] = useState(1);
   const [picker, setPicker] = useState(false);
   const [customers, setCustomers] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
@@ -623,7 +652,7 @@ export function QuoteEditor() {
   const pendingCount = lines.filter((line) => line.pricePending).length;
   const onlyCustom =
     lines.length > 0 && lines.every((line) => line.customWork);
-  function save(destination: "draft" | "deal") {
+  function save(destination: "draft" | "deal" | "handoff") {
     const q = run(
       () =>
         engine.saveDraft(actor, id, {
@@ -644,9 +673,11 @@ export function QuoteEditor() {
       nav(
         clerkEditor
           ? "/quotes/" + q.id
-          : destination === "deal"
-            ? "/quotes/" + q.id
-            : "/quotes/" + q.id + "/edit",
+          : destination === "handoff" && wizard
+            ? "/quotes/" + q.id + "/handoff"
+            : destination === "deal" || destination === "handoff"
+              ? "/quotes/" + q.id
+              : "/quotes/" + q.id + "/edit",
       );
   }
   function addCustomWork() {
@@ -821,14 +852,18 @@ export function QuoteEditor() {
           </>
         }
       />
+      {wizard && <QuoteWizardProgress step={wizardStep} />}
       {clerkEditor && (
         <p className="inline-warning">
           開單員更正模式：儲存後會建立新版本，項目及價錢會更新；原版本保留，
           需要重新準備列印、客戶簽署及提交Office。
         </p>
       )}
-      <div className="editor-layout">
+      <div
+        className={`editor-layout ${wizard ? `quote-wizard-layout wizard-step-${wizardStep}` : ""}`}
+      >
         <div className="editor-main">
+          {(!wizard || wizardStep === 1) && (
           <Section
             number="01"
             title="客戶資料"
@@ -838,6 +873,8 @@ export function QuoteEditor() {
           >
             <CustomerForm value={customer} onChange={setCustomer} />
           </Section>
+          )}
+          {(!wizard || wizardStep === 2) && (
           <Section
             number="02"
             title="工程項目"
@@ -1076,6 +1113,7 @@ export function QuoteEditor() {
               </div>
             )}
           </Section>
+          )}
           {(base?.signature || clerkEditor) && (
             <Section title="版本修改原因">
               <Field label="修改原因" required>
@@ -1088,6 +1126,7 @@ export function QuoteEditor() {
             </Section>
           )}
         </div>
+        {(!wizard || wizardStep === 2) && (
         <aside className="quote-summary">
           <h2>報價摘要</h2>
           <div className="summary-row">
@@ -1193,7 +1232,28 @@ export function QuoteEditor() {
             </Button>
           )}
         </aside>
+        )}
       </div>
+      {wizard && (
+        <div className="quote-wizard-footer">
+          {wizardStep === 2 && (
+            <Button onClick={() => setWizardStep(1)}>上一步</Button>
+          )}
+          {wizardStep === 1 ? (
+            <Button variant="primary" onClick={() => setWizardStep(2)}>
+              下一步 <ArrowRight size={18} />
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              disabled={pendingCount > 0 || onlyCustom}
+              onClick={() => save("handoff")}
+            >
+              下一步：列印簽署 <ArrowRight size={18} />
+            </Button>
+          )}
+        </div>
+      )}
       {styleLineIndex !== null && (
         <Dialog
           wide

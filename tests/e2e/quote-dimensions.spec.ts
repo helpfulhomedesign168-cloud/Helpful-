@@ -11,6 +11,7 @@ test("報價尺寸可切換呎／寸並即時換算", async ({ page }) => {
   await page.goto("/");
   await switchRole(page, "文文B MM");
   await page.goto("/quotes/new");
+  await page.getByRole("button", { name: "下一步", exact: true }).click();
   await page.getByRole("button", { name: "新增工程", exact: true }).click();
   const picker = page.getByRole("dialog", { name: "新增工程項目" });
   await picker.getByPlaceholder("搜尋工程名稱").fill("廚房牆身/地台 清拆打鑿");

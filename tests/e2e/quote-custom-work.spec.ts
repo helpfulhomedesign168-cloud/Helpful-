@@ -10,6 +10,7 @@ test("Sales新增工程popup顯示自訂工程及發給工程部報價UI", async
   await page.locator(".actor-button").click();
   await page.locator(".role-option").filter({ hasText: "文文B MM" }).first().click();
   await page.goto("/quotes/new");
+  await page.getByRole("button", { name: "下一步", exact: true }).click();
   await page.getByRole("button", { name: "新增工程", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "新增工程項目" })).toBeVisible();
   const input = page.getByLabel("自訂工程內容");
@@ -95,6 +96,7 @@ test("Sales新增工程popup顯示自訂工程及發給工程部報價UI", async
     .locator("nav")
     .getByRole("link", { name: "建立報價", exact: true })
     .click();
+  await page.getByRole("button", { name: "下一步", exact: true }).click();
   await page.getByRole("button", { name: "新增工程", exact: true }).click();
   await page
     .getByPlaceholder("搜尋工程名稱")

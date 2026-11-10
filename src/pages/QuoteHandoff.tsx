@@ -1,0 +1,476 @@
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  Check,
+  FileCheck2,
+  Printer,
+  Send,
+  Upload,
+} from "lucide-react";
+import {
+  Badge,
+  Button,
+  Empty,
+  Field,
+  PageHead,
+  UploadField,
+} from "../components/ui";
+import { useApp, saveAttachment } from "../context";
+import {
+  Attachment,
+  DEMO_TODAY,
+  INVOICE_CATEGORY_NAMES,
+  InvoiceCategory,
+  METHOD_NAMES,
+  money,
+  Payment,
+  currentVersion,
+} from "../domain/types";
+import { QuoteWizardProgress } from "./Quotes";
+
+function paymentMethodOptions() {
+  return Object.entries(METHOD_NAMES).map(([value, label]) => ({ value, label }));
+}
+
+export function QuoteHandoff() {
+  const { id = "" } = useParams();
+  const { actor, engine, run } = useApp();
+  const nav = useNavigate();
+  let quote: ReturnType<typeof engine.getQuote> | undefined;
+  try {
+    quote = engine.getQuote(actor, id);
+  } catch {}
+  if (!quote)
+    return (
+      <Empty
+        title="沒有這張報價的查看權限"
+        action={<Button onClick={() => nav("/quotes")}>返回報價管理</Button>}
+      />
+    );
+  const version = currentVersion(quote);
+  const preparation = version.printPreparation;
+  const signature = version.signature;
+  const [step, setStep] = useState(signature ? 4 : 3);
+  const [printDate, setPrintDate] = useState(preparation?.date ?? DEMO_TODAY);
+  const [supervisorId, setSupervisorId] = useState(
+    preparation?.supervisorId ?? "",
+  );
+  const [confirmSigned, setConfirmSigned] = useState(false);
+  const [amount, setAmount] = useState("1500");
+  const [method, setMethod] = useState<Payment["method"]>("cash");
+  const [custody, setCustody] = useState<Payment["custody"]>("sales");
+  const [paymentDate, setPaymentDate] = useState(DEMO_TODAY);
+  const [reference, setReference] = useState("");
+  const [proof, setProof] = useState<Attachment | undefined>();
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (signature) setStep(4);
+  }, [signature?.createdAt]);
+  const supervisors = engine
+    .listActors()
+    .filter(
+      (candidate) =>
+        candidate.role === "head" ||
+        (candidate.role === "supervisor" && candidate.team === quote.team),
+    );
+  let payments: Payment[] = [];
+  try {
+    payments = engine
+      .listPayments(actor)
+      .filter((payment) => payment.quoteId === quote!.id);
+  } catch {}
+  const canEdit = quote.ownerId === actor.id;
+  const signedDocument = version.signedDocument;
+  const signed =
+    Boolean(signature) ||
+    version.signedDocumentQuoteNumber === preparation?.quoteNumber &&
+      Boolean(version.signedDocument);
+  const paymentDone = payments.length > 0;
+  const canSubmit = Boolean(signature) && paymentDone && !quote.submission;
+  const prepare = () => {
+    const prepared = run(
+      () =>
+        engine.prepareQuoteForPrint(actor, quote!.id, {
+          date: printDate,
+          supervisorId,
+        }),
+      "已生成正式報價號，可以列印交客人簽署。",
+    );
+    if (prepared) {
+      setSupervisorId(
+        currentVersion(prepared).printPreparation?.supervisorId ??
+          supervisorId,
+      );
+    }
+  };
+  const savePayment = async (file?: File) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const attachment = await saveAttachment(file);
+      setProof(attachment);
+    } catch (error) {
+      run(() => {
+        throw error;
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+  const recordPayment = () => {
+    if (!amount || Number(amount) <= 0) return;
+    run(
+      () =>
+        engine.recordPayment(actor, quote!.id, {
+          amount: Number(amount),
+          method,
+          custody,
+          date: paymentDate,
+          reference,
+          proof,
+        }),
+      "客戶付款已登記。",
+    );
+  };
+  const currentStep = quote.submission ? 4 : step;
+  return (
+    <>
+      <PageHead
+        title="建立報價"
+        actions={
+          <>
+            <Button onClick={() => nav(`/quotes/${id}/edit`)}>
+              <ArrowLeft size={18} /> 返回
+            </Button>
+            <Button onClick={() => nav(`/quotes/${id}`)}>報價詳情</Button>
+          </>
+        }
+      />
+      <QuoteWizardProgress step={currentStep} />
+      {currentStep === 3 && (
+        <>
+          <h2 className="quote-step-title">3. 列印簽署</h2>
+          <div className="handoff-actions">
+            {preparation ? (
+              <Button
+                variant="primary"
+                onClick={() => nav(`/documents/quote/${id}`)}
+              >
+                <Printer size={18} /> 列印報價單
+              </Button>
+            ) : (
+              <Button variant="primary" onClick={prepare} disabled={!supervisorId}>
+                <Printer size={18} /> 準備列印報價單
+              </Button>
+            )}
+            <Button onClick={() => nav(`/quotes/${id}/edit`)}>修改報價</Button>
+          </div>
+          <div className="handoff-print-grid">
+            <div className="handoff-print-settings">
+              <h3>報價摘要</h3>
+              <Field label="簽署日期" required>
+                <input
+                  type="date"
+                  max={DEMO_TODAY}
+                  value={printDate}
+                  disabled={Boolean(preparation)}
+                  onChange={(event) => setPrintDate(event.target.value)}
+                />
+              </Field>
+              <Field label="當日主管" required>
+                <select
+                  value={supervisorId}
+                  disabled={Boolean(preparation)}
+                  onChange={(event) => setSupervisorId(event.target.value)}
+                >
+                  <option value="">選擇當日主管</option>
+                  {supervisors.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="handoff-category-block">
+                <strong>訂單分類</strong>
+                <div className="order-category-chips">
+                  {(Object.keys(INVOICE_CATEGORY_NAMES) as InvoiceCategory[]).map(
+                    (category) => {
+                      const active = (quote.orderCategories ?? []).includes(category);
+                      return (
+                        <button
+                          type="button"
+                          key={category}
+                          className={active ? "selected" : ""}
+                          disabled={Boolean(preparation) || !canEdit}
+                          onClick={() => {
+                            const current = quote.orderCategories ?? [];
+                            const next = active
+                              ? current.filter((item) => item !== category)
+                              : [...current, category];
+                            run(
+                              () =>
+                                engine.updateQuoteOrderMeta(actor, quote.id, {
+                                  orderCategories: next,
+                                }),
+                              "訂單分類已更新。",
+                            );
+                          }}
+                        >
+                          {INVOICE_CATEGORY_NAMES[category]}
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+              </div>
+              {preparation && (
+                <div className="handoff-prepared">
+                  <span>正式報價號</span>
+                  <strong>{preparation.quoteNumber}</strong>
+                  <span>列印日期</span>
+                  <strong>{preparation.date}</strong>
+                  <span>當日主管</span>
+                  <strong>
+                    {engine
+                      .listActors()
+                      .find((candidate) => candidate.id === preparation.supervisorId)
+                      ?.name}
+                  </strong>
+                </div>
+              )}
+              <p className="handoff-note">
+                請列印此版本交客人簽署，回來上載同一份已簽紙本。
+              </p>
+            </div>
+            <div className="handoff-quote-preview">
+              {preparation ? (
+                <iframe
+                  key={preparation.quoteNumber}
+                  title="報價單預覽"
+                  src={`/documents/quote/${id}`}
+                />
+              ) : (
+                <div className="handoff-preview-placeholder">
+                  <Printer size={28} />
+                  <strong>先準備列印，才顯示正式報價單</strong>
+                  <p>選擇簽署日期及當日主管，系統會產生正式報價號。</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="quote-wizard-footer">
+            <Button onClick={() => nav(`/quotes/${id}/edit`)}>上一步</Button>
+            <Button
+              variant="primary"
+              disabled={!preparation}
+              onClick={() => setStep(4)}
+            >
+              下一步
+            </Button>
+          </div>
+        </>
+      )}
+      {currentStep === 4 && (
+        <>
+          <h2 className="quote-step-title">4. 遞交office</h2>
+          <div className="handoff-quote-number">
+            報價單號碼：<strong>{preparation?.quoteNumber ?? quote.number}</strong>
+          </div>
+          <div className="handoff-card">
+            <div className="handoff-card-head">
+              <h3>1. 客戶簽署</h3>
+              {signature && <span className="handoff-done">✓ 已完成</span>}
+            </div>
+            <div className="handoff-sign-grid">
+              <div>
+                <p>客戶姓名：<strong>{version.customer.name}</strong></p>
+                <p>聯絡電話：<strong>{version.customer.phone}</strong></p>
+                <p>客戶地址：<strong>{version.customer.address}</strong></p>
+                <p>簽署日期：<strong>{preparation?.date ?? "—"}</strong></p>
+                <p>當日主管：<strong>{engine.listActors().find((candidate) => candidate.id === preparation?.supervisorId)?.name ?? "—"}</strong></p>
+              </div>
+              {signedDocument ? (
+                <button
+                  type="button"
+                  className="handoff-signed-file"
+                  onClick={() => nav(`/documents/quote/${id}`)}
+                >
+                  <FileCheck2 size={22} />
+                  {signedDocument.name}
+                </button>
+              ) : (
+                <UploadField
+                  label="上載已簽文件"
+                  onSave={(attachment) =>
+                    engine.uploadDocument(actor, quote.id, attachment)
+                  }
+                />
+              )}
+            </div>
+            {!signature && (
+              <>
+                <label className="handoff-confirm-check">
+                  <input
+                    type="checkbox"
+                    checked={confirmSigned}
+                    onChange={(event) => setConfirmSigned(event.target.checked)}
+                  />
+                  我確認客戶已簽署上述正式報價版本
+                </label>
+                <div className="handoff-card-action">
+                  <Button
+                    variant="primary"
+                    disabled={!signedDocument || !confirmSigned}
+                    onClick={() =>
+                      run(
+                        () =>
+                          engine.recordSignature(actor, quote.id, {
+                            date: preparation?.date ?? printDate,
+                            supervisorId:
+                              preparation?.supervisorId ?? supervisorId,
+                            confirmed: confirmSigned,
+                          }),
+                        "指定版本的客戶簽署已確認。",
+                      )
+                    }
+                  >
+                    確認客戶已簽
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="handoff-card">
+            <div className="handoff-card-head">
+              <h3>2. 登記客戶付款</h3>
+              {paymentDone && <span className="handoff-done">✓ 已完成</span>}
+            </div>
+            {!paymentDone && (
+              <>
+                <div className="handoff-payment-grid">
+                  <Field label="付款金額（HKD）" required>
+                    <input
+                      type="number"
+                      min=".01"
+                      value={amount}
+                      onChange={(event) => setAmount(event.target.value)}
+                    />
+                  </Field>
+                  <Field label="付款方式" required>
+                    <select
+                      value={method}
+                      onChange={(event) =>
+                        setMethod(event.target.value as Payment["method"])
+                      }
+                    >
+                      {paymentMethodOptions().map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="收款／保管位置">
+                    <select
+                      value={custody}
+                      onChange={(event) =>
+                        setCustody(event.target.value as Payment["custody"])
+                      }
+                    >
+                      <option value="sales">Sales保管</option>
+                      <option value="company">公司戶口／公司</option>
+                    </select>
+                  </Field>
+                  <Field label="收款日期" required>
+                    <input
+                      type="date"
+                      max={DEMO_TODAY}
+                      value={paymentDate}
+                      onChange={(event) => setPaymentDate(event.target.value)}
+                    />
+                  </Field>
+                  <Field label="交易／支票參考">
+                    <input
+                      value={reference}
+                      onChange={(event) => setReference(event.target.value)}
+                    />
+                  </Field>
+                  <Field label="付款證明" required>
+                    <label className="handoff-payment-upload">
+                      <Upload size={18} />
+                      <span>
+                        {proof?.name ?? (busy ? "上載中…" : "上載付款記錄")}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        aria-label="上載付款記錄"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          void savePayment(file);
+                        }}
+                      />
+                    </label>
+                  </Field>
+                </div>
+                <div className="handoff-card-action">
+                  <Button
+                    variant="primary"
+                    disabled={!signature || !proof || Number(amount) <= 0 || busy}
+                    onClick={recordPayment}
+                  >
+                    確認客戶付款
+                  </Button>
+                </div>
+              </>
+            )}
+            {paymentDone && (
+              <div className="handoff-payment-summary">
+                {payments.map((payment) => (
+                  <div key={payment.id}>
+                    <strong>{money(payment.amount)}</strong>
+                    <small>{METHOD_NAMES[payment.method]} · {payment.date}</small>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="handoff-card handoff-office-card">
+            <div className="handoff-card-head">
+              <h3>3. 交Office跟進</h3>
+              {quote.submission && <span className="handoff-done">✓ 已完成</span>}
+            </div>
+            {!quote.submission && (
+              <div className="handoff-card-action">
+                <Button
+                  variant="primary"
+                  disabled={!canSubmit}
+                  onClick={() =>
+                    run(
+                      () => engine.submitOffice(actor, quote.id),
+                      "已交Office；開單、會計及CS將按同一來源跟進。",
+                    )
+                  }
+                >
+                  提交Office
+                </Button>
+              </div>
+            )}
+            {quote.submission && (
+              <p className="handoff-note">已提交 Office，報價流程已完成。</p>
+            )}
+          </div>
+          <div className="quote-wizard-footer">
+            <Button onClick={() => setStep(3)}>上一步</Button>
+            {quote.submission && (
+              <Button onClick={() => nav(`/quotes/${id}`)}>查看報價</Button>
+            )}
+          </div>
+        </>
+      )}
+    </>
+  );
+}

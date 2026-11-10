@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Provider, useApp } from "./context";
 import { Shell, roleHome } from "./components/Shell";
 import { QuoteEditor, QuoteDetail, Quotes } from "./pages/Quotes";
+import { QuoteHandoff } from "./pages/QuoteHandoff";
 import { SalesSchedule } from "./pages/SalesSchedule";
 import {
   Finance,
@@ -97,6 +98,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={sales}>
                   <QuoteEditor />
+                </Guard>
+              }
+            />
+            <Route
+              path="/quotes/:id/handoff"
+              element={
+                <Guard roles={[...sales, "admin", "admin_staff"]}>
+                  <QuoteHandoff />
                 </Guard>
               }
             />
