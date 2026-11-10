@@ -1718,21 +1718,6 @@ type OrderFilters = {
   category: string;
 };
 
-const DEMO_CATEGORY_SETS: InvoiceCategory[][] = [
-  ["self-pay", "group-buy"],
-  ["self-pay", "grant-80k"],
-  ["grant-80k", "self-pay", "group-buy"],
-  ["group-buy"],
-  ["grant-80k"],
-  ["self-pay"],
-];
-function demoCategoriesForOrder(id: string) {
-  let hash = 0;
-  for (let index = 0; index < id.length; index += 1)
-    hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
-  return DEMO_CATEGORY_SETS[hash % DEMO_CATEGORY_SETS.length];
-}
-
 function EngineeringFilters({
   filters,
   onChange,
@@ -1811,7 +1796,6 @@ function EngineeringFilters({
             }
           >
             <option value="all">全部類別</option>
-            <option value="demo">示範類別（合併）</option>
             <option value="self-pay">自費</option>
             <option value="group-buy">團購</option>
             <option value="grant-80k">8萬資助</option>
@@ -1850,7 +1834,7 @@ function WorkOrderRail({
         order.csOwnerId !== filters.ownerId
       )
         return false;
-      if (filters.category !== "all" && filters.category !== "demo") {
+      if (filters.category !== "all") {
         let invoiceCategory: InvoiceCategory | undefined;
         try {
           invoiceCategory = engine.getInvoice(actor, order.invoiceId).category;
@@ -1896,8 +1880,6 @@ function WorkOrderRail({
               if (quote.orderCategories?.length)
                 categories = quote.orderCategories;
             } catch {}
-            if (filters.category === "demo")
-              categories = demoCategoriesForOrder(order.id);
             return (
               <div
                 key={order.id}
@@ -2299,13 +2281,7 @@ function SitePhotos({
   );
 }
 
-function OrderPanel({
-  order,
-  demoCategories = false,
-}: {
-  order: WorkOrder;
-  demoCategories?: boolean;
-}) {
+function OrderPanel({ order }: { order: WorkOrder }) {
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
   const [selectedLineId, setSelectedLineId] = useState("");
@@ -2460,7 +2436,6 @@ function OrderPanel({
   } catch {
     categories = invoice.category ? [invoice.category] : [];
   }
-  if (demoCategories) categories = demoCategoriesForOrder(order.id);
   return (
     <>
       <div className="wo-detail-head">
@@ -3169,10 +3144,7 @@ export function OrderDetail() {
       <div className="orders-workspace">
         <WorkOrderRail selectedId={id} filters={filters} />
         <div className="workorder-main">
-          <OrderPanel
-            order={order}
-            demoCategories={filters.category === "demo"}
-          />
+          <OrderPanel order={order} />
         </div>
       </div>
     </>

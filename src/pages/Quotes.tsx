@@ -178,15 +178,10 @@ export function Quotes() {
         title="報價管理"
         actions={
           salesRoles.includes(actor.role) && (
-            <>
-              <Link className="btn" to="/design/quote">
-                預覽新報價流程
-              </Link>
-              <Button variant="primary" onClick={() => nav("/quotes/new")}>
-                <Plus size={22} />
-                建立報價
-              </Button>
-            </>
+            <Button variant="primary" onClick={() => nav("/quotes/new")}>
+              <Plus size={22} />
+              建立報價
+            </Button>
           )
         }
       />

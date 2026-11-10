@@ -24,9 +24,6 @@ import {
 } from "./pages/MunicipalOrders";
 import { Documents } from "./pages/Documents";
 import { UserProfile, Users } from "./pages/Users";
-import { DesignUsersPreview } from "./pages/DesignUsersPreview";
-import { QuoteWizardPreview } from "./pages/QuoteWizardPreview";
-import { DesignOrdersPreview } from "./pages/DesignOrdersPreview";
 import { AccountingDashboard } from "./pages/AccountingDashboard";
 import { BusinessOrders } from "./pages/BusinessOrders";
 import { CustomWorkRequests } from "./pages/CustomWorkRequests";
@@ -84,22 +81,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <Provider>
       <BrowserRouter>
         <Routes>
-          <Route
-            path="/design/users"
-            element={
-              <Guard roles={["admin"]}>
-                <DesignUsersPreview />
-              </Guard>
-            }
-          />
-          <Route
-            path="/design/orders"
-            element={
-              <Guard roles={["admin"]}>
-                <DesignOrdersPreview />
-              </Guard>
-            }
-          />
           <Route path="/documents/:kind/:id" element={<Documents />} />
           <Route element={<Shell />}>
             <Route path="/" element={<Home />} />
@@ -108,14 +89,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={[...sales, "admin", "admin_staff", "finance"]}>
                   <Quotes />
-                </Guard>
-              }
-            />
-            <Route
-              path="/design/quote"
-              element={
-                <Guard roles={["sales", "supervisor", "head", "admin", "admin_staff"]}>
-                  <QuoteWizardPreview />
                 </Guard>
               }
             />
