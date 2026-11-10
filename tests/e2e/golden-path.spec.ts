@@ -243,7 +243,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   }
   await expect(railRow).toBeVisible();
   await railRow.click();
-  await expect(page.locator(".workorder-head h1")).toHaveText(/^D26\d{5}$/);
+  await expect(page.locator(".wo-title h1")).toHaveText(/^D26\d{5}$/);
   await page.getByRole("button", { name: "安排", exact: true }).first().click();
   await page
     .getByLabel("執行師傅", { exact: false })

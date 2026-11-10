@@ -12,6 +12,8 @@ import {
   Eligibility,
   Quote,
   currentVersion,
+  InvoiceCategory,
+  INVOICE_CATEGORY_NAMES,
 } from "../domain/types";
 import {
   saveAttachment,
@@ -32,6 +34,35 @@ export function Button({
     </button>
   );
 }
+
+const CATEGORY_TONES: Record<string, string> = {
+  "self-pay": "green",
+  "group-buy": "blue",
+  "grant-80k": "orange",
+};
+
+export function CategoryChips({
+  categories,
+}: {
+  categories: InvoiceCategory[];
+}) {
+  if (!categories.length) return <span className="muted">—</span>;
+  return (
+    <span className="category-chips">
+      {categories.map((category) => (
+        <span
+          key={category}
+          className={`category-chip ${CATEGORY_TONES[category] ?? "neutral"}`}
+        >
+          {category === "grant-80k"
+            ? "8萬"
+            : INVOICE_CATEGORY_NAMES[category]}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function Badge({
   children,
   strong = false,

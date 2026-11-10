@@ -2322,6 +2322,12 @@ export class Engine {
           customerName: version.customer.name,
           phone: version.customer.phone,
           category: invoice?.category ?? quote.officeCategory,
+          categories:
+            quote.orderCategories?.length
+              ? quote.orderCategories
+              : invoice?.category || quote.officeCategory
+                ? [invoice?.category ?? quote.officeCategory!]
+                : [],
           csOwnerId: order.csOwnerId,
           csOwnerName: csOwner?.name,
           district: version.customer.district,

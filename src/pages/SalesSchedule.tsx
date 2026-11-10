@@ -15,17 +15,17 @@ import {
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 const TEAM_COLORS = [
-  { bg: "#f4e786", text: "#5b4d00" },
-  { bg: "#9dc9f2", text: "#173f61" },
-  { bg: "#d9b8e8", text: "#532d63" },
-  { bg: "#f2b5b5", text: "#6a2020" },
-  { bg: "#a8d8c4", text: "#174d39" },
-  { bg: "#f3c78e", text: "#5d3a0b" },
-  { bg: "#b9c7ef", text: "#283966" },
-  { bg: "#d7d2a8", text: "#4f4a18" },
+  { bg: "#FFE3CC", text: "#7A3300" },
+  { bg: "#DCEBFF", text: "#0D1B40" },
+  { bg: "#E2EBF7", text: "#0D1B40" },
+  { bg: "#EBEBEB", text: "#3D3D3D" },
+  { bg: "#FFD29A", text: "#5A2800" },
+  { bg: "#BFBFBF", text: "#191919" },
+  { bg: "#F8F8F8", text: "#3D3D3D" },
+  { bg: "#88BAFF", text: "#0D1B40" },
 ];
-const OFF_COLOR = { bg: "#f2c0ab", text: "#6b2d18" };
-const PH_COLOR = { bg: "#78986c", text: "#ffffff" };
+const OFF_COLOR = { bg: "#FFE3CC", text: "#7A3300" };
+const PH_COLOR = { bg: "#0D1B40", text: "#ffffff" };
 const EARLY_COLOR = { bg: "#dcdcd8", text: "#3d4039" };
 
 function monthDays(month: string) {

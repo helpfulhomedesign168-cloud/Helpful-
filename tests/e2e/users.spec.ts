@@ -26,7 +26,12 @@ test("Super Admin可用部門tabs及profile管理用戶", async ({ page }) => {
   ).toContainText("會計主管");
   await page.getByRole("tab", { name: /^Sales/ }).click();
   const headers = await page.locator(".user-list-table thead th").allTextContents();
-  expect(headers.slice(0, 4)).toEqual(["姓名", "部門", "聯絡電話", "Email"]);
+  expect(headers.slice(0, 4)).toEqual([
+    "用戶姓名",
+    "職位",
+    "聯絡電話",
+    "電郵",
+  ]);
   expect(headers).not.toContain("Code");
   expect(headers).not.toContain("Team");
 

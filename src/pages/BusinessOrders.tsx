@@ -1,8 +1,10 @@
 import React, { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Badge,
   Button,
+  CategoryChips,
   Empty,
   PageHead,
   Pagination,
@@ -10,7 +12,12 @@ import {
   usePagination,
 } from "../components/ui";
 import { useApp } from "../context";
-import { DEMO_TODAY, INVOICE_CATEGORY_NAMES, money } from "../domain/types";
+import {
+  DEMO_TODAY,
+  INVOICE_CATEGORY_NAMES,
+  InvoiceCategory,
+  money,
+} from "../domain/types";
 
 type StatusFilter = "all" | "ongoing" | "completed" | "voided";
 
@@ -59,6 +66,12 @@ export function BusinessOrders() {
   const turnover = sum(filtered.map((row) => row.revenue));
   const expenses = sum(filtered.map((row) => row.expenses));
   const collected = sum(filtered.map((row) => row.collected));
+  const categoryOf = (value: string): InvoiceCategory | undefined => {
+    if (value === "自費") return "self-pay";
+    if (value === "團購") return "group-buy";
+    if (value === "8萬資助" || value === "8萬") return "grant-80k";
+    return undefined;
+  };
   const salesName = (id: string) =>
     engine.listActors().find((item) => item.id === id)?.name ?? "—";
   return (
@@ -83,6 +96,7 @@ export function BusinessOrders() {
                 </option>
               ))}
             </select>
+            <ChevronDown size={18} />
           </label>
           <label className="business-order-field">
             <select
@@ -99,6 +113,7 @@ export function BusinessOrders() {
                 );
               })}
             </select>
+            <ChevronDown size={18} />
           </label>
           <label className="business-order-field">
             <select
@@ -113,6 +128,7 @@ export function BusinessOrders() {
                 </option>
               ))}
             </select>
+            <ChevronDown size={18} />
           </label>
           <label className="business-order-field">
             <select
@@ -127,6 +143,7 @@ export function BusinessOrders() {
                 </option>
               ))}
             </select>
+            <ChevronDown size={18} />
           </label>
         </div>
         <div className="business-order-status-tabs" role="tablist">
@@ -208,7 +225,15 @@ export function BusinessOrders() {
                       <td>{row.createdAt.slice(0, 10)}</td>
                       <td>{row.customerName}</td>
                       <td>{salesName(row.salesId)}</td>
-                      <td>{row.category}</td>
+                      <td>
+                        <CategoryChips
+                          categories={
+                            categoryOf(row.category)
+                              ? [categoryOf(row.category)!]
+                              : []
+                          }
+                        />
+                      </td>
                       <td className="numeric">{money(row.revenue)}</td>
                       <td className="numeric">{money(row.expenses)}</td>
                       <td className="numeric">
