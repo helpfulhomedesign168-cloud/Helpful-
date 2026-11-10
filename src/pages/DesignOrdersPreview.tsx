@@ -29,6 +29,18 @@ const NAV = [
   ["/custom-work-requests", "報價請示", "nav-requests"],
 ];
 
+const DEMO_CATEGORIES: InvoiceCategory[][] = [
+  ["self-pay", "group-buy"],
+  ["self-pay", "grant-80k"],
+  ["grant-80k", "self-pay", "group-buy"],
+  ["group-buy"],
+  ["group-buy"],
+  ["grant-80k"],
+  ["self-pay", "grant-80k"],
+  ["self-pay"],
+  ["grant-80k"],
+];
+
 const CATEGORY_CLASS: Record<string, string> = {
   "self-pay": "green",
   "group-buy": "blue",
@@ -72,18 +84,6 @@ export function DesignOrdersPreview() {
   )
     .sort()
     .reverse();
-  const quoteCategories = (quoteId: string, fallback?: InvoiceCategory) => {
-    try {
-      const quote = engine.getQuote(actor, quoteId);
-      return quote.orderCategories?.length
-        ? quote.orderCategories
-        : fallback
-          ? [fallback]
-          : [];
-    } catch {
-      return fallback ? [fallback] : [];
-    }
-  };
   const shown = rows
     .filter((row) => {
       if (
@@ -263,8 +263,13 @@ export function DesignOrdersPreview() {
                 </tr>
               </thead>
               <tbody>
-                {paged.map((row) => {
-                  const categories = quoteCategories(row.quoteId, row.category);
+                {paged.map((row, index) => {
+                  // Design preview: representative category combinations.
+                  const categories =
+                    DEMO_CATEGORIES[
+                      ((currentPage - 1) * pageSize + index) %
+                        DEMO_CATEGORIES.length
+                    ];
                   return (
                     <tr key={row.workOrderId ?? row.quoteId}>
                       <td>

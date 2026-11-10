@@ -52,6 +52,15 @@ test("工程單設計預覽顯示filters、類別及pager", async ({ page }) => 
     "跟進同事",
   );
   await expect(page.locator(".preview-category").first()).toBeVisible();
+  await expect(
+    page.locator(".preview-category").filter({ hasText: "團購" }).first(),
+  ).toBeVisible();
+  await expect(
+    page.locator(".preview-category").filter({ hasText: "8萬" }).first(),
+  ).toBeVisible();
+  await expect(page.locator(".preview-category-group").nth(2)).toContainText(
+    "自費",
+  );
   await expect(page.locator(".preview-orders-pager")).toContainText("第 1 /");
   await page.getByRole("button", { name: "下一頁" }).click();
   await expect(page.locator(".preview-orders-pager")).toContainText("第 2 /");
