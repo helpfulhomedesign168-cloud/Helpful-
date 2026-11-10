@@ -1718,6 +1718,21 @@ type OrderFilters = {
   category: string;
 };
 
+const DEMO_CATEGORY_SETS: InvoiceCategory[][] = [
+  ["self-pay", "group-buy"],
+  ["self-pay", "grant-80k"],
+  ["grant-80k", "self-pay", "group-buy"],
+  ["group-buy"],
+  ["grant-80k"],
+  ["self-pay"],
+];
+function demoCategoriesForOrder(id: string) {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1)
+    hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
+  return DEMO_CATEGORY_SETS[hash % DEMO_CATEGORY_SETS.length];
+}
+
 function EngineeringFilters({
   filters,
   onChange,
@@ -1796,6 +1811,7 @@ function EngineeringFilters({
             }
           >
             <option value="all">全部類別</option>
+            <option value="demo">示範類別（合併）</option>
             <option value="self-pay">自費</option>
             <option value="group-buy">團購</option>
             <option value="grant-80k">8萬資助</option>
@@ -1834,7 +1850,7 @@ function WorkOrderRail({
         order.csOwnerId !== filters.ownerId
       )
         return false;
-      if (filters.category !== "all") {
+      if (filters.category !== "all" && filters.category !== "demo") {
         let invoiceCategory: InvoiceCategory | undefined;
         try {
           invoiceCategory = engine.getInvoice(actor, order.invoiceId).category;
@@ -1852,6 +1868,14 @@ function WorkOrderRail({
     orders,
     `${filters.month}|${filters.ownerId}|${filters.category}`,
   );
+  const openOrder = (orderId: string) => {
+    const query = new URLSearchParams({
+      month: filters.month,
+      ownerId: filters.ownerId,
+      category: filters.category,
+    });
+    nav(`/orders/${orderId}?${query.toString()}`);
+  };
   return (
     <aside className="order-rail">
       <div className="order-rail-head">
@@ -1872,16 +1896,18 @@ function WorkOrderRail({
               if (quote.orderCategories?.length)
                 categories = quote.orderCategories;
             } catch {}
+            if (filters.category === "demo")
+              categories = demoCategoriesForOrder(order.id);
             return (
               <div
                 key={order.id}
                 role="link"
                 tabIndex={0}
                 className={`order-rail-row ${selectedId === order.id ? "selected" : ""}`}
-                onClick={() => nav("/orders/" + order.id)}
+                onClick={() => openOrder(order.id)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ")
-                    nav("/orders/" + order.id);
+                    openOrder(order.id);
                 }}
               >
                 <span className="order-rail-row-top">
@@ -2273,7 +2299,13 @@ function SitePhotos({
   );
 }
 
-function OrderPanel({ order }: { order: WorkOrder }) {
+function OrderPanel({
+  order,
+  demoCategories = false,
+}: {
+  order: WorkOrder;
+  demoCategories?: boolean;
+}) {
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
   const [selectedLineId, setSelectedLineId] = useState("");
@@ -2428,6 +2460,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   } catch {
     categories = invoice.category ? [invoice.category] : [];
   }
+  if (demoCategories) categories = demoCategoriesForOrder(order.id);
   return (
     <>
       <div className="wo-detail-head">
@@ -2488,8 +2521,10 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         extraWorks={extraWorks}
         resources={resources}
       />
-      <Section title="工程內容" className="engineering-content-card">
-        <div className="extra-works">
+      <Section
+        title="工程內容"
+        className="engineering-content-card"
+        action={
           <Button
             variant="primary"
             className="extra-add-button"
@@ -2497,7 +2532,8 @@ function OrderPanel({ order }: { order: WorkOrder }) {
           >
             <Plus size={19} /> 額外工程
           </Button>
-        </div>
+        }
+      >
         <div className="engineering-table-wrap">
           <table className="engineering-table">
             <thead>
@@ -3098,10 +3134,11 @@ export function OrderDetail() {
   const { id = "" } = useParams();
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
+  const params = new URLSearchParams(window.location.search);
   const [filters, setFilters] = useState<OrderFilters>({
-    month: DEMO_TODAY.slice(0, 7),
-    ownerId: "all",
-    category: "all",
+    month: params.get("month") || DEMO_TODAY.slice(0, 7),
+    ownerId: params.get("ownerId") || "all",
+    category: params.get("category") || "all",
   });
   let order: WorkOrder | undefined;
   try {
@@ -3132,7 +3169,10 @@ export function OrderDetail() {
       <div className="orders-workspace">
         <WorkOrderRail selectedId={id} filters={filters} />
         <div className="workorder-main">
-          <OrderPanel order={order} />
+          <OrderPanel
+            order={order}
+            demoCategories={filters.category === "demo"}
+          />
         </div>
       </div>
     </>

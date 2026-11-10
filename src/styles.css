@@ -9123,3 +9123,28 @@ textarea::placeholder {
     gap: 16px;
   }
 }
+
+/* Empty detail fills the same height as the engineering rail. */
+.orders-workspace {
+  align-items: stretch;
+}
+.workorder-main {
+  height: 100%;
+}
+.workorder-main > .list-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 520px;
+  margin: 0;
+  border: 0;
+  background: #fff;
+}
+/* Keep the section action on the same line as the title. */
+.engineering-content-card .section-head {
+  align-items: center;
+}
+.engineering-content-card .section-head .btn {
+  flex: 0 0 auto;
+}

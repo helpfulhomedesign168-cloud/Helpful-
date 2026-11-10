@@ -189,3 +189,16 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await expect(page.locator(".order-rail-row").filter({ hasText: "D2600001" })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test("工程管理示範類別可預覽合併category", async ({ page }) => {
+  await page.goto("/");
+  await switchRole(page, "SuperAdmin");
+  await page.getByRole("link", { name: "工程管理", exact: true }).click();
+  await page.getByLabel("工程類別").selectOption("demo");
+  await page.locator(".order-rail-row").first().click();
+  await expect(page).toHaveURL(/category=demo/);
+  await expect(
+    page.locator(".order-rail-dot.grant-80k").first(),
+  ).toBeVisible();
+  await expect(page.locator(".wo-number-line .category-chip").first()).toBeVisible();
+});
