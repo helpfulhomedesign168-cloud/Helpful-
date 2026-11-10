@@ -9720,3 +9720,63 @@ textarea::placeholder {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Step 4 handoff interaction states */
+.quote-signed-thumb {
+  cursor: pointer;
+  text-align: center;
+}
+.quote-signed-thumb input,
+.quote-payment-upload input {
+  display: none;
+}
+.quote-signed-thumb.uploaded,
+.quote-payment-upload.uploaded {
+  border-color: #b9d8c2;
+  background: #f4fbf6;
+  color: #178a3b;
+}
+.quote-payment-upload {
+  cursor: pointer;
+}
+.quote-signed-thumb small,
+.quote-payment-upload small {
+  color: #6f7d90;
+  font-size: 11px;
+}
+.quote-signed-note {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 5px;
+  background: #fff5e9;
+  color: #794a20;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.quote-signed-note input {
+  flex: 0 0 auto;
+}
+.quote-card-action {
+  display: flex;
+  justify-content: center;
+  padding-top: 18px;
+}
+.quote-card-action .btn:disabled {
+  border: 1px solid #cbd4e0;
+  background: #fff;
+  color: #8d96a4;
+  opacity: 1;
+}
+.quote-submit-card .btn {
+  display: block;
+  margin: 16px auto 0;
+}
+.quote-submit-card .btn:disabled {
+  border: 1px solid #cbd4e0;
+  background: #fff;
+  color: #8d96a4;
+  opacity: 1;
+}

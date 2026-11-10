@@ -77,6 +77,14 @@ function Progress({ step }: { step: number }) {
 
 export function QuoteWizardPreview() {
   const [step, setStep] = useState(1);
+  const [signedUploaded, setSignedUploaded] = useState(false);
+  const [signedFileName, setSignedFileName] = useState("");
+  const [signedChecked, setSignedChecked] = useState(false);
+  const [signedConfirmed, setSignedConfirmed] = useState(false);
+  const [paymentProof, setPaymentProof] = useState(false);
+  const [paymentFileName, setPaymentFileName] = useState("");
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [officeSubmitted, setOfficeSubmitted] = useState(false);
   const nav = useNavigate();
   return (
     <div className="quote-wizard">
@@ -221,7 +229,10 @@ export function QuoteWizardPreview() {
           <h2 className="quote-step-title">4. 遞交office</h2>
           <div className="quote-number-line">報價單號碼：<strong>QDM260008</strong></div>
           <div className="quote-handoff-card">
-            <div className="quote-handoff-title"><h3>1. 客戶簽署</h3><span>✓ 已完成</span></div>
+            <div className="quote-handoff-title">
+              <h3>1. 客戶簽署</h3>
+              {signedConfirmed && <span>✓ 已完成</span>}
+            </div>
             <div className="quote-handoff-content">
               <div>
                 <p>客戶姓名：<strong>陳大文</strong></p>
@@ -230,31 +241,123 @@ export function QuoteWizardPreview() {
                 <p>簽署日期：<strong>22 / 10 / 2026</strong></p>
                 <p>當日主管：<strong>Don</strong></p>
               </div>
-              <div className="quote-signed-thumb">已簽報價副本</div>
+              <label className={`quote-signed-thumb ${signedUploaded ? "uploaded" : ""}`}>
+                {signedUploaded ? (
+                  <>
+                    <Check size={18} />
+                    <span>{signedFileName || "已簽報價副本"}</span>
+                    <small>重新上載</small>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={18} />
+                    <span>上載已簽文件</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  aria-label="上載已簽文件"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    setSignedFileName(file.name);
+                    setSignedUploaded(true);
+                  }}
+                />
+              </label>
             </div>
-            <div className="quote-signed-note"><Check size={16} /> 我確認客戶已簽署上述正式報價版本</div>
+            <label className="quote-signed-note">
+              <input
+                type="checkbox"
+                checked={signedChecked}
+                disabled={signedConfirmed}
+                onChange={(event) => setSignedChecked(event.target.checked)}
+              />
+              我確認客戶已簽署上述正式報價版本
+            </label>
+            {!signedConfirmed && (
+              <div className="quote-card-action">
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={!signedUploaded}
+                  onClick={() => {
+                    setSignedChecked(true);
+                    setSignedConfirmed(true);
+                  }}
+                >
+                  確認客戶已簽
+                </button>
+              </div>
+            )}
           </div>
           <div className="quote-handoff-card">
-            <div className="quote-handoff-title"><h3>2. 登記客戶付款</h3><span>✓ 已完成</span></div>
+            <div className="quote-handoff-title">
+              <h3>2. 登記客戶付款</h3>
+              {paymentConfirmed && <span>✓ 已完成</span>}
+            </div>
             <div className="quote-payment-layout">
               <div className="quote-payment-fields">
-                <label>付款金額 (HKD)*<input defaultValue="1500" /></label>
+                <label>付款金額 (HKD)*<input defaultValue="0" /></label>
                 <label>付款方式*<select defaultValue="cash"><option value="cash">現金</option><option value="transfer">銀行轉帳</option></select></label>
                 <label>收款／保管位置<select><option>Sales保管</option><option>公司戶口</option></select></label>
                 <label>收款日期<input type="date" defaultValue="2026-10-22" /></label>
               </div>
-              <div className="quote-payment-upload">
-                <Upload size={18} />
-                <span>上載付款記錄</span>
+              <label className={`quote-payment-upload ${paymentProof ? "uploaded" : ""}`}>
+                {paymentProof ? (
+                  <>
+                    <Check size={18} />
+                    <span>{paymentFileName || "付款記錄已上載"}</span>
+                    <small>重新上載</small>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={18} />
+                    <span>上載付款記錄</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  aria-label="上載付款記錄"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    setPaymentFileName(file.name);
+                    setPaymentProof(true);
+                  }}
+                />
+              </label>
+            </div>
+            {!paymentConfirmed && (
+              <div className="quote-card-action">
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={!paymentProof}
+                  onClick={() => setPaymentConfirmed(true)}
+                >
+                  確認客戶付款
+                </button>
               </div>
-            </div>
-            <div className="quote-payment-confirm">
-              <button className="btn btn-primary" type="button">確認客戶付款</button>
-            </div>
+            )}
           </div>
           <div className="quote-handoff-card quote-submit-card">
-            <h3>3. 交Office跟進</h3>
-            <button className="btn btn-primary">提交Office</button>
+            <div className="quote-handoff-title">
+              <h3>3. 交Office跟進</h3>
+              {officeSubmitted && <span>✓ 已完成</span>}
+            </div>
+            {!officeSubmitted && (
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={!signedConfirmed || !paymentConfirmed}
+                onClick={() => setOfficeSubmitted(true)}
+              >
+                提交Office
+              </button>
+            )}
           </div>
           <div className="quote-wizard-footer">
             <button className="btn" onClick={() => setStep(3)}>上一步</button>
