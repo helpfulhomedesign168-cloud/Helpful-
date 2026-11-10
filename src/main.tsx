@@ -25,6 +25,7 @@ import {
 import { Documents } from "./pages/Documents";
 import { UserProfile, Users } from "./pages/Users";
 import { DesignUsersPreview } from "./pages/DesignUsersPreview";
+import { QuoteWizardPreview } from "./pages/QuoteWizardPreview";
 import { DesignOrdersPreview } from "./pages/DesignOrdersPreview";
 import { AccountingDashboard } from "./pages/AccountingDashboard";
 import { BusinessOrders } from "./pages/BusinessOrders";
@@ -107,6 +108,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={[...sales, "admin", "admin_staff", "finance"]}>
                   <Quotes />
+                </Guard>
+              }
+            />
+            <Route
+              path="/design/quote"
+              element={
+                <Guard roles={["sales", "supervisor", "head", "admin", "admin_staff"]}>
+                  <QuoteWizardPreview />
                 </Guard>
               }
             />
