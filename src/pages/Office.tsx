@@ -1815,6 +1815,7 @@ function WorkOrderRail({
   filters: OrderFilters;
 }) {
   const { actor, engine } = useApp();
+  const nav = useNavigate();
   const manager =
     actor.role === "cs_supervisor" ||
     ["admin", "admin_staff"].includes(actor.role);
@@ -1872,10 +1873,16 @@ function WorkOrderRail({
                 categories = quote.orderCategories;
             } catch {}
             return (
-              <Link
+              <div
                 key={order.id}
-                to={"/orders/" + order.id}
+                role="link"
+                tabIndex={0}
                 className={`order-rail-row ${selectedId === order.id ? "selected" : ""}`}
+                onClick={() => nav("/orders/" + order.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ")
+                    nav("/orders/" + order.id);
+                }}
               >
                 <span className="order-rail-row-top">
                   <strong>{order.number}</strong>
@@ -1895,8 +1902,23 @@ function WorkOrderRail({
                     ))}
                   </span>
                 </span>
-                <small>INV:{invoiceNumber || "—"}</small>
-              </Link>
+                {invoiceNumber ? (
+                  <button
+                    type="button"
+                    className="order-rail-invoice-print"
+                    aria-label={`列印 ${invoiceNumber} Invoice`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      nav("/documents/invoice/" + order.invoiceId);
+                    }}
+                  >
+                    <span>INV:{invoiceNumber}</span>
+                    <Printer size={17} />
+                  </button>
+                ) : (
+                  <small>INV:—</small>
+                )}
+              </div>
             );
           })
         )}
@@ -2437,12 +2459,6 @@ function OrderPanel({ order }: { order: WorkOrder }) {
           <strong>
             由 {order.startDate} 至 {order.endDate}
           </strong>
-          <Button
-            className="wo-print-invoice"
-            onClick={() => nav("/documents/invoice/" + invoice.id)}
-          >
-            <Printer size={17} /> 列印 Invoice
-          </Button>
           {canEdit && (
             <button
               type="button"

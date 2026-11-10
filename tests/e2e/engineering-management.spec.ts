@@ -35,7 +35,9 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
     page.getByRole("heading", { name: "D2600001", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("region", { name: "工程日曆" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "列印 Invoice" })).toBeVisible();
+  await expect(
+    rail.getByRole("button", { name: /列印.*Invoice/ }).first(),
+  ).toBeVisible();
   await expect(rail.locator(".order-rail-dot").first()).toBeVisible();
 
   const photoInput = page.locator(".site-photo-upload input[type=file]");

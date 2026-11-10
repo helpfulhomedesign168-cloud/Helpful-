@@ -8988,3 +8988,38 @@ textarea::placeholder {
 .order-rail-head {
   display: none;
 }
+
+/* Join the filter bar to the workspace, matching the reference header */
+.orders-filter-bar {
+  width: 100%;
+  max-width: 1390px;
+  margin: 0 auto;
+  border-radius: 16px 16px 0 0;
+  border-bottom: 10px solid var(--navy);
+}
+.orders-workspace {
+  width: 100%;
+  max-width: 1390px;
+  margin: 0 auto;
+}
+.order-rail-row {
+  cursor: pointer;
+}
+.order-rail-invoice-print {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: 13px;
+  text-align: left;
+}
+.order-rail-invoice-print:hover span {
+  text-decoration: underline;
+}
+.order-rail-invoice-print svg {
+  color: #78aef2;
+}
