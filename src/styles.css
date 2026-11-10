@@ -7597,3 +7597,815 @@ textarea {
   background: #0d1b40;
   color: #fff;
 }
+
+/* ============================================================
+   Global visual direction v1.0
+   Applies to every module except the engineering-management
+   page content, which is intentionally left for a later pass.
+   ============================================================ */
+:root {
+  --canvas: #e2ebf7;
+  --line: #e3e8f1;
+  --secondary: #6f7887;
+  --soft: #f1f5fa;
+  --radius: 16px;
+  --control: 44px;
+  --gutter: 38px;
+  --navy: #0d1b40;
+  --blue: #1e7cff;
+  --orange: #ff6600;
+  font-size: 16px;
+}
+body {
+  background: var(--canvas);
+}
+.app-topbar {
+  position: fixed;
+  z-index: 40;
+  inset: 0 0 auto 0;
+  height: 82px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 34px;
+  background: #fff;
+}
+.app-brand {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+.app-brand img {
+  display: block;
+  width: 315px;
+  height: auto;
+}
+.app-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-left: auto;
+}
+.notification-button {
+  position: relative;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+.notification-count {
+  position: absolute;
+  top: 3px;
+  right: 0;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ec0027;
+  color: #fff;
+  font-size: 10px;
+  line-height: 17px;
+  text-align: center;
+}
+.actor-button {
+  min-height: 48px;
+  border-radius: 999px;
+  padding: 3px 8px 3px 3px;
+}
+.actor-button:hover {
+  background: #f3f6fb;
+}
+.actor-copy {
+  font-size: 14px;
+  line-height: 1.35;
+}
+.actor-copy small {
+  color: #8c93a0;
+  font-size: 12px;
+}
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #e2ebf7;
+  color: var(--navy);
+  font-size: 16px;
+  font-weight: 600;
+}
+.app-menu-toggle {
+  display: none;
+}
+.sidebar {
+  position: fixed;
+  z-index: 30;
+  inset: 82px auto 0 0;
+  width: 224px;
+  padding: 28px 20px 24px;
+  border: 0;
+  background: #1b1c1d;
+  color: #d9dce0;
+}
+.sidebar-drawer-head {
+  display: none;
+}
+.nav-caption {
+  padding: 0 15px 16px;
+  color: #8e949d;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+.sidebar nav {
+  gap: 4px;
+}
+.nav-item {
+  min-height: 46px;
+  padding: 0 15px;
+  gap: 13px;
+  border-radius: 999px;
+  color: #d9dce0;
+  font-size: 15px;
+}
+.nav-item:hover {
+  background: #2b2c2e;
+  color: #fff;
+}
+.nav-item.active {
+  background: var(--orange);
+  color: #fff;
+  font-weight: 500;
+}
+.nav-icon-asset {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  opacity: 0.78;
+}
+.nav-item.active .nav-icon-asset {
+  filter: brightness(0) invert(1);
+  opacity: 1;
+}
+.nav-icon-lucide {
+  opacity: 0.8;
+}
+.sidebar-bottom {
+  padding: 24px 15px 0;
+  color: #9ca1aa;
+}
+.prototype-tools {
+  color: #d9dce0;
+  font-size: 14px;
+}
+.demo-label,
+.build-label {
+  color: #7f858f;
+  font-size: 12px;
+}
+.app-main {
+  margin-left: 224px;
+  padding-top: 82px;
+  min-height: 100vh;
+}
+.workspace {
+  max-width: 1520px;
+  padding: 36px 40px 56px;
+  min-height: calc(100vh - 140px);
+}
+.app-footer {
+  padding: 0 40px 22px;
+  color: #8b94a2;
+  font-size: 12px;
+}
+.app-footer span {
+  font-size: 12px;
+}
+.page-head {
+  min-height: 0;
+  margin-bottom: 26px;
+}
+.page-head h1 {
+  font-size: 34px;
+  line-height: 1.3;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+.eyebrow {
+  margin-bottom: 8px;
+  color: #687384;
+  font-size: 13px;
+}
+.page-head p {
+  color: #6f7887;
+  font-size: 14px;
+}
+.btn {
+  min-height: var(--control);
+  padding: 0 20px;
+  border-color: #cdd4df;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.btn-primary {
+  border-color: var(--orange);
+  background: var(--orange);
+}
+.btn-primary:hover {
+  border-color: #e85d00;
+  background: #e85d00;
+}
+.btn-secondary:hover {
+  border-color: #aeb8c6;
+  background: #f5f8fc;
+}
+.btn-ghost:hover {
+  background: #eef3fa;
+}
+.badge {
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #eef3fa;
+  color: #40506a;
+  font-size: 12px;
+}
+.badge-strong {
+  border: 0;
+  background: #e2ebf7;
+  color: var(--navy);
+}
+.section,
+.list-panel {
+  border: 0;
+  border-radius: 16px;
+  background: #fff;
+}
+.list-toolbar {
+  padding: 22px 26px 16px;
+}
+.submission-toolbar {
+  padding: 22px 26px 16px;
+}
+.search {
+  height: 46px;
+  border-color: #d2d9e3;
+  border-radius: 8px;
+  font-size: 15px;
+}
+.tabs {
+  gap: 8px;
+  padding: 16px 26px;
+  border-bottom: 0;
+}
+.tabs > button {
+  min-height: 40px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 8px;
+  color: #b5bbc5;
+  font-size: 15px;
+}
+.tabs > button.selected {
+  border: 0;
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+}
+.tabs > button span {
+  background: rgba(13, 27, 64, 0.06);
+}
+.tabs > button.selected span {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+table {
+  font-size: 14px;
+}
+thead {
+  background: var(--navy);
+}
+th {
+  padding: 16px 20px;
+  border-bottom: 0;
+  background: var(--navy);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+}
+td {
+  padding: 18px 20px;
+  border-bottom: 1px solid #e6eaf2;
+  color: #313642;
+  font-size: 14px;
+}
+td strong {
+  color: #171a1f;
+  font-size: 15px;
+}
+td small {
+  color: #8d96a4;
+  font-size: 12px;
+}
+tbody tr:hover {
+  background: #f7f9fd;
+}
+.source-link {
+  color: var(--blue);
+  font-size: 15px;
+  text-decoration: none;
+}
+.field-label {
+  color: #4b5565;
+  font-size: 13px;
+}
+input:not([type="checkbox"]),
+select,
+textarea {
+  min-height: 44px;
+  border-color: #d2d9e3;
+  border-radius: 8px;
+  font-size: 15px;
+}
+input::placeholder,
+textarea::placeholder {
+  font-size: 14px;
+}
+.dialog {
+  border-radius: 16px;
+}
+.dialog-head h2 {
+  font-size: 21px;
+}
+.dialog-backdrop {
+  background: rgba(13, 14, 14, 0.48);
+}
+.muted {
+  color: #6f7887;
+  font-size: 14px;
+}
+.list-footnote {
+  color: #6f7887;
+  font-size: 13px;
+}
+.office-filter-row {
+  gap: 12px;
+  padding: 0 26px 18px;
+  border-bottom: 0;
+}
+.office-filter-row .field {
+  min-width: 180px;
+}
+.pagination {
+  padding: 18px 24px;
+}
+@media (max-width: 1100px) and (min-width: 761px) {
+  .app-topbar {
+    padding: 0 24px;
+  }
+  .app-brand img {
+    width: 270px;
+  }
+  .sidebar {
+    width: 196px;
+    padding: 24px 14px;
+  }
+  .nav-item {
+    gap: 10px;
+    padding: 0 12px;
+    font-size: 14px;
+  }
+  .app-main {
+    margin-left: 196px;
+  }
+  .workspace {
+    padding: 30px 28px 48px;
+  }
+}
+@media (max-width: 760px) {
+  .app-topbar {
+    height: 72px;
+    padding: 0 16px;
+  }
+  .app-brand {
+    display: none;
+  }
+  .app-topbar-actions {
+    gap: 6px;
+  }
+  .actor-copy,
+  .actor-button > svg {
+    display: none;
+  }
+  .actor-button {
+    padding: 2px;
+  }
+  .avatar {
+    width: 40px;
+    height: 40px;
+  }
+  .app-menu-toggle {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+    place-content: center;
+    gap: 5px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+  }
+  .app-menu-toggle span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--ink);
+  }
+  .sidebar {
+    inset: 0 auto 0 0;
+    z-index: 60;
+    width: min(82vw, 330px);
+    padding: 22px 18px;
+    transform: translateX(-100%);
+    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .sidebar-open {
+    transform: translateX(0);
+  }
+  .sidebar-drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .sidebar-drawer-head img {
+    width: 235px;
+    height: auto;
+  }
+  .sidebar-close {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: #2b2c2e;
+    color: #fff;
+  }
+  .nav-caption {
+    color: #8e949d;
+  }
+  .app-main {
+    margin-left: 0;
+    padding-top: 72px;
+  }
+  .workspace {
+    padding: 26px 16px 42px;
+  }
+  .app-footer {
+    padding: 0 18px 20px;
+    font-size: 11px;
+  }
+  .app-footer span {
+    font-size: 11px;
+  }
+  .page-head h1 {
+    font-size: 29px;
+  }
+  .page-head {
+    align-items: flex-start;
+  }
+  .page-actions {
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 0 16px;
+    font-size: 14px;
+  }
+  .tabs {
+    padding: 14px 16px;
+  }
+  .tabs > button {
+    padding: 0 15px;
+    font-size: 14px;
+  }
+  th,
+  td {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}
+
+/* Users page follows the new user-management reference */
+.user-tabs {
+  width: auto;
+  margin: 0;
+  padding: 16px 24px;
+  gap: 8px;
+  border: 0;
+  border-radius: 16px 16px 0 0;
+  background: #fff;
+}
+.user-tabs button {
+  min-height: 42px;
+  padding: 0 20px;
+  border-radius: 8px;
+  color: #b5bbc5;
+  font-size: 15px;
+}
+.user-tabs button.active {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+}
+.user-list-panel {
+  margin-top: 0;
+  border-radius: 0 0 16px 16px;
+}
+.user-list-table {
+  min-width: 760px;
+}
+.user-list-table .user-avatar {
+  width: 49px;
+  height: 49px;
+  background: #e2ebf7;
+  color: var(--navy);
+}
+.user-list-person {
+  gap: 13px;
+}
+.user-list-person strong {
+  font-size: 16px;
+}
+.user-view-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--blue);
+  font-weight: 500;
+  text-decoration: none;
+}
+.user-view-link:hover {
+  text-decoration: underline;
+}
+
+/* Shared category chips */
+.category-chips {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 13px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+}
+.category-chip + .category-chip {
+  border-left: 1px solid rgba(255, 255, 255, 0.5);
+}
+.category-chip.green {
+  background: #00d157;
+}
+.category-chip.blue {
+  background: #1e7cff;
+}
+.category-chip.orange {
+  background: #ff8e00;
+}
+.category-chip.neutral {
+  background: #8b93a1;
+}
+
+/* Catalog / contractor / product-style category tabs */
+.service-tabs {
+  gap: 8px;
+  padding: 16px 24px;
+  border-bottom: 0;
+}
+.service-tabs button {
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 8px;
+  color: #b5bbc5;
+  font-size: 15px;
+}
+.service-tabs button:hover {
+  background: #f2f6fc;
+  color: #313642;
+}
+.service-tabs button.active {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+}
+.service-tabs .service-tab-add,
+.service-tabs .service-tags-edit {
+  border-radius: 8px;
+}
+
+/* Accounting dashboard */
+.accounting-kpi {
+  min-height: 118px;
+  border: 0;
+  border-radius: 16px;
+}
+.accounting-kpi span {
+  color: #6f7887;
+  font-size: 12px;
+}
+.accounting-kpi strong {
+  font-size: 25px;
+}
+.accounting-kpi.primary,
+.accounting-kpi.net {
+  background: var(--navy);
+  border-color: var(--navy);
+}
+.accounting-kpi.primary span,
+.accounting-kpi.primary small,
+.accounting-kpi.net span,
+.accounting-kpi.net small {
+  color: #aab8d0;
+}
+.accounting-kpi.primary strong,
+.accounting-kpi.net strong {
+  color: #fff;
+}
+.accounting-period-tabs {
+  border: 0;
+  border-radius: 8px;
+  background: #f0f4fb;
+}
+.accounting-period-tabs button {
+  border-radius: 6px;
+}
+.accounting-period-tabs button.active {
+  background: var(--blue);
+}
+.accounting-chart-legend i.revenue,
+.chart-revenue {
+  fill: var(--orange);
+  background: var(--orange);
+}
+.accounting-chart-legend i.expenses,
+.chart-expenses {
+  stroke: #8b93a1;
+}
+.accounting-chart-legend i.profit,
+.chart-profit {
+  stroke: var(--blue);
+}
+.chart-grid {
+  stroke: #e6eaf2;
+}
+.accounting-section-head h2 {
+  font-size: 20px;
+}
+
+/* Fit the wide office tables inside the new 1440 content area */
+.submission-table {
+  min-width: 1080px;
+}
+.invoice-list-table {
+  min-width: 1080px;
+}
+.business-order-table {
+  min-width: 1100px;
+}
+.submission-table td:last-child .btn,
+.invoice-list-table td:last-child .btn,
+.business-order-table td:last-child .btn {
+  min-height: 38px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+.custom-request-tabs button,
+.business-order-status-tabs button {
+  border-radius: 8px;
+}
+.custom-request-tabs button.active,
+.business-order-status-tabs button.active {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+}
+.business-order-status-tabs {
+  border-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  .user-tabs {
+    gap: 4px;
+    padding: 12px 10px;
+  }
+  .user-tabs button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 4px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .user-list-table {
+    min-width: 0;
+    table-layout: fixed;
+  }
+  .user-list-table th,
+  .user-list-table td {
+    padding: 12px 6px;
+    font-size: 12px;
+  }
+  .user-list-table th:nth-child(1),
+  .user-list-table td:nth-child(1) {
+    width: 30%;
+  }
+  .user-list-table th:nth-child(2),
+  .user-list-table td:nth-child(2) {
+    width: 22%;
+  }
+  .user-list-table th:nth-child(3),
+  .user-list-table td:nth-child(3) {
+    width: 21%;
+  }
+  .user-list-table th:nth-child(4),
+  .user-list-table td:nth-child(4) {
+    width: 20%;
+  }
+  .user-list-table th:nth-child(5),
+  .user-list-table td:nth-child(5) {
+    width: 7%;
+    padding-left: 0;
+    padding-right: 4px;
+    text-align: right;
+  }
+  .user-list-table .user-avatar {
+    display: none;
+  }
+  .user-list-person strong {
+    font-size: 14px;
+  }
+  .user-view-link {
+    font-size: 0;
+    gap: 0;
+  }
+  .user-view-link svg {
+    width: 21px;
+    height: 21px;
+  }
+  .users-add-button {
+    width: 56px;
+    height: 56px;
+    min-height: 56px;
+    padding: 0;
+    border-radius: 50%;
+  }
+  .users-add-button span {
+    display: none;
+  }
+  .users-add-button svg {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+@media (max-width: 760px) {
+  .table-scroll .user-list-table {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+.app-menu-toggle span {
+  transition: transform 200ms ease, opacity 160ms ease;
+}
+.app-menu-toggle.open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.app-menu-toggle.open span:nth-child(2) {
+  opacity: 0;
+}
+.app-menu-toggle.open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* The design keeps the sidebar purely navigational; role identity is in the topbar. */
+.nav-caption {
+  display: none;
+}

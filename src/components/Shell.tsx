@@ -21,10 +21,30 @@ import {
   UserCog,
   Palette,
   Tags,
+  X,
 } from "lucide-react";
 import { useApp } from "../context";
 import { ROLE_NAMES } from "../domain/types";
 import { Button, Dialog, Notice } from "./ui";
+
+const NAV_ICON: Record<string, string> = {
+  用戶管理: "nav-users",
+  工程單: "nav-orders",
+  工程管理: "nav-engineering",
+  工程師傅: "nav-contractors",
+  供應商: "nav-suppliers",
+  市政單: "nav-municipal",
+  營業單: "nav-business",
+  退款: "nav-refund",
+  客戶: "nav-customers",
+  產品款式: "nav-product-styles",
+  工程價目: "nav-services",
+  自訂工程請示: "nav-requests",
+  報價請示: "nav-requests",
+  報價管理: "nav-requests",
+  報價查閱: "nav-business",
+   提交報價: "nav-orders",
+};
 export const roleHome = (role: string) =>
   role === "finance"
     ? "/finance"
@@ -128,19 +148,67 @@ export function Shell() {
   const unread = notices.filter((n) => !n.read).length;
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${mobile ? "sidebar-open" : ""}`}>
-        <NavLink to={roleHome(actor.role)} className="wordmark">
-          <span className="wordmark-symbol">H</span>
-          <span>
-            好幫手<strong>工程營運</strong>
-          </span>
+      <header className="app-topbar">
+        <button
+          className={`app-menu-toggle ${mobile ? "open" : ""}`}
+          aria-label={mobile ? "關閉選單" : "開啟選單"}
+          aria-expanded={mobile}
+          aria-controls="app-sidebar"
+          onClick={() => setMobile((open) => !open)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+        <NavLink to={roleHome(actor.role)} className="app-brand">
+          <img
+            src="/design-assets/logo.svg"
+            alt="好幫手家居裝修設計有限公司"
+          />
         </NavLink>
+        <div className="app-topbar-actions">
+          <button
+            className="notification-button"
+            onClick={() => setNotifications(!notifications)}
+            aria-label="通知"
+          >
+            <Bell size={22} />
+            {unread > 0 && <span className="notification-count">{unread}</span>}
+          </button>
+          <button className="actor-button" onClick={() => setRoles(true)}>
+            <span className="avatar">{actor.name.slice(0, 1)}</span>
+            <span className="actor-copy">
+              {actor.name}
+              <small>{ROLE_NAMES[actor.role]}</small>
+            </span>
+            <ChevronDown size={18} />
+          </button>
+        </div>
+      </header>
+      <aside
+        id="app-sidebar"
+        className={`sidebar ${mobile ? "sidebar-open" : ""}`}
+      >
+        <div className="sidebar-drawer-head">
+          <img
+            src="/design-assets/logo.svg"
+            alt="好幫手家居裝修設計有限公司"
+          />
+          <button
+            className="sidebar-close"
+            aria-label="關閉選單"
+            onClick={() => setMobile(false)}
+          >
+            <X size={22} />
+          </button>
+        </div>
         <div className="nav-caption">
           {selling ? "Sales 工作區" : office ? "Office 工作區" : "工作區"}
         </div>
         <nav>
           {items.map(([path, label, Icon]) => {
             const I = Icon as typeof Files;
+            const iconAsset = NAV_ICON[label as string];
             return (
               <NavLink
                 key={path as string}
@@ -151,8 +219,18 @@ export function Shell() {
                   "nav-item " + (isActive ? "active" : "")
                 }
               >
-                <I size={22} strokeWidth={1.7} />
-                {label as string}
+                {iconAsset ? (
+                  <img
+                    className="nav-icon-asset"
+                    src={`/design-assets/icons/${iconAsset}.svg`}
+                    alt=""
+                    width={25}
+                    height={25}
+                  />
+                ) : (
+                  <I className="nav-icon-lucide" size={22} strokeWidth={1.7} />
+                )}
+                <span>{label as string}</span>
               </NavLink>
             );
           })}
@@ -174,35 +252,6 @@ export function Shell() {
         />
       )}
       <div className="app-main">
-        <div className="topbar">
-          <button
-            className="mobile-menu icon-button"
-            aria-label="開啟選單"
-            onClick={() => setMobile(!mobile)}
-          >
-            <Menu />
-          </button>
-          <div className="topbar-actions">
-            <button
-              className="notification-button"
-              onClick={() => setNotifications(!notifications)}
-              aria-label="通知"
-            >
-              <Bell size={22} />
-              {unread > 0 && (
-                <span className="notification-count">{unread}</span>
-              )}
-            </button>
-            <button className="actor-button" onClick={() => setRoles(true)}>
-              <span className="avatar">{actor.name.slice(0, 1)}</span>
-              <span>
-                {actor.name}
-                <small>{ROLE_NAMES[actor.role]}</small>
-              </span>
-              <ChevronDown size={18} />
-            </button>
-          </div>
-        </div>
         <main className="workspace">
           <Notice />
           <Outlet />

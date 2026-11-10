@@ -681,6 +681,7 @@ export interface HandoffRow {
   customerName: string;
   phone: string;
   category?: InvoiceCategory;
+  categories: InvoiceCategory[];
   csOwnerId?: string;
   csOwnerName?: string;
   district: string;

@@ -25,6 +25,7 @@ import {
 import {
   Badge,
   Button,
+  CategoryChips,
   Dialog,
   Empty,
   Field,
@@ -732,16 +733,13 @@ export function Submissions() {
                       <td>
                         {quote.orderCategories?.length ||
                         quote.officeCategory ? (
-                          <div className="submission-category-list">
-                            {(quote.orderCategories?.length
-                              ? quote.orderCategories
-                              : [quote.officeCategory!]
-                            ).map((category) => (
-                              <Badge strong key={category}>
-                                {INVOICE_CATEGORY_NAMES[category]}
-                              </Badge>
-                            ))}
-                          </div>
+                          <CategoryChips
+                            categories={
+                              quote.orderCategories?.length
+                                ? quote.orderCategories
+                                : [quote.officeCategory!]
+                            }
+                          />
                         ) : (
                           <span className="pending-value">待Sales分類</span>
                         )}
@@ -1043,15 +1041,11 @@ export function Invoices() {
                         </div>
                       </td>
                       <td>
-                        <div className="submission-category-list">
-                          {invoice.category ? (
-                            <Badge strong>
-                              {INVOICE_CATEGORY_NAMES[invoice.category]}
-                            </Badge>
-                          ) : (
-                            <span className="pending-value">歷史未分類</span>
-                          )}
-                        </div>
+                        <CategoryChips
+                          categories={
+                            invoice.category ? [invoice.category] : []
+                          }
+                        />
                       </td>
                       <td>
                         <Button
@@ -1551,17 +1545,7 @@ export function Handoff() {
   );
   return (
     <>
-      <PageHead
-        eyebrow="CS工程部"
-        title="工程單"
-        actions={
-          actor.role === "admin" ? (
-            <Link className="btn" to="/design/orders">
-              預覽新設計
-            </Link>
-          ) : undefined
-        }
-      />
+      <PageHead eyebrow="CS工程部" title="工程單" />
       <div className="list-panel">
         <div className="submission-toolbar">
           <Search
@@ -1644,9 +1628,7 @@ export function Handoff() {
                     <td>{row.phone}</td>
                     <td>{row.salesName}</td>
                     <td>
-                      {row.category
-                        ? INVOICE_CATEGORY_NAMES[row.category]
-                        : "—"}
+                      <CategoryChips categories={row.categories} />
                     </td>
                     <td>{row.csOwnerName || "未安排"}</td>
                     <td>

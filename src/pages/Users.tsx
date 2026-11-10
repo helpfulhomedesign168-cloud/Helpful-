@@ -5,6 +5,7 @@ import {
   Check,
   ImagePlus,
   Plus,
+  ChevronRight,
   UserCog,
   UserRound,
 } from "lucide-react";
@@ -161,11 +162,8 @@ export function Users() {
                 <UserCog size={18} /> 已停用帳戶（{inactiveUsers.length}）
               </Button>
             )}
-            <Link className="btn" to="/design/users">
-              預覽新設計
-            </Link>
-            <Link className="btn btn-primary" to="/users/new">
-              <Plus size={20} /> 新增用戶
+            <Link className="btn btn-primary users-add-button" to="/users/new">
+              <Plus size={20} /> <span>新增用戶</span>
             </Link>
           </>
         }
@@ -180,12 +178,6 @@ export function Users() {
             onClick={() => setActiveTab(item.key)}
           >
             {item.label}
-            <span>
-              {
-                activeUsers.filter((user) => item.roles.includes(user.role))
-                  .length
-              }
-            </span>
           </button>
         ))}
       </div>
@@ -197,10 +189,10 @@ export function Users() {
             <table className="user-list-table">
               <thead>
                 <tr>
-                  <th>姓名</th>
-                  <th>部門</th>
+                  <th>用戶姓名</th>
+                  <th>職位</th>
                   <th>聯絡電話</th>
-                  <th>Email</th>
+                  <th>電郵</th>
                   <th />
                 </tr>
               </thead>
@@ -210,18 +202,15 @@ export function Users() {
                     <td>
                       <Link className="user-list-person" to={`/users/${user.id}`}>
                         <UserAvatar attachment={user.avatar} name={user.name} />
-                        <span>
-                          <strong>{user.name}</strong>
-                          <small>{ROLE_NAMES[user.role]}</small>
-                        </span>
+                        <strong>{user.name}</strong>
                       </Link>
                     </td>
-                    <td>{departmentForRole(user.role).label}</td>
+                    <td>{ROLE_NAMES[user.role]}</td>
                     <td>{user.phone || "—"}</td>
                     <td>{user.email || "—"}</td>
                     <td>
                       <Link className="user-view-link" to={`/users/${user.id}`}>
-                        查看
+                        查看 <ChevronRight size={18} />
                       </Link>
                     </td>
                   </tr>

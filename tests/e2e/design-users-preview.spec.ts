@@ -4,11 +4,7 @@ test("SuperAdmin可開啟新用戶管理設計預覽", async ({ page }) => {
   await page.goto("/");
   await page.locator(".actor-button").click();
   await page.locator(".role-option").filter({ hasText: "SuperAdmin" }).first().click();
-  await page
-    .locator("nav")
-    .getByRole("link", { name: "用戶管理", exact: true })
-    .click();
-  await page.getByRole("link", { name: "預覽新設計", exact: true }).click();
+  await page.goto("/design/users");
   await expect(page).toHaveURL(/\/design\/users$/);
   await expect(
     page.getByRole("heading", { name: "用戶管理", exact: true }),

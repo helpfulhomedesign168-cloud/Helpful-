@@ -53,7 +53,7 @@ test("提交報價：搜尋及三個篩選同一行，分類及狀態正確", as
   const classified = page
     .locator("tbody tr")
     .filter({ hasText: "QSHKK26100005" });
-  await expect(classified).toContainText("8萬資助");
+  await expect(classified).toContainText("8萬");
   await expect(
     classified.getByRole("button", { name: /已核對並開單/ }),
   ).toBeVisible();
