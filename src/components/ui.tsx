@@ -36,9 +36,9 @@ export function Button({
 }
 
 const CATEGORY_TONES: Record<string, string> = {
-  "self-pay": "green",
-  "group-buy": "blue",
-  "grant-80k": "orange",
+  "grant-80k": "green",
+  "group-buy": "orange",
+  "self-pay": "blue",
 };
 
 export function CategoryChips({

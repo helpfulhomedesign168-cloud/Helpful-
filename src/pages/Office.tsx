@@ -1712,10 +1712,109 @@ function formatMonthLabel(month: string) {
   return `${year}年${Number(value)}月`;
 }
 
-function WorkOrderRail({ selectedId }: { selectedId?: string }) {
+type OrderFilters = {
+  month: string;
+  ownerId: string;
+  category: string;
+};
+
+function EngineeringFilters({
+  filters,
+  onChange,
+}: {
+  filters: OrderFilters;
+  onChange: (next: OrderFilters) => void;
+}) {
   const { actor, engine } = useApp();
-  const [month, setMonth] = useState(DEMO_TODAY.slice(0, 7));
-  const [csFilter, setCsFilter] = useState("all");
+  const manager =
+    actor.role === "cs_supervisor" ||
+    ["admin", "admin_staff"].includes(actor.role);
+  let team = [] as ReturnType<typeof engine.listCsTeam>;
+  try {
+    if (manager) team = engine.listCsTeam(actor);
+  } catch {}
+  let orders = [] as ReturnType<typeof engine.listOrders>;
+  try {
+    orders = engine.listOrders(actor);
+  } catch {}
+  const months = Array.from(
+    new Set(
+      orders.map((order) =>
+        (order.csReleasedAt ?? order.createdAt).slice(0, 7),
+      ),
+    ),
+  )
+    .sort()
+    .reverse();
+  if (filters.month && !months.includes(filters.month))
+    months.unshift(filters.month);
+  return (
+    <div className="orders-filter-bar">
+      <h2>工程單</h2>
+      <div className="orders-filter-controls">
+        {manager && (
+          <label className="orders-filter-select">
+            <select
+              aria-label="跟進同事"
+              value={filters.ownerId}
+              onChange={(event) =>
+                onChange({ ...filters, ownerId: event.target.value })
+              }
+            >
+              <option value="all">全部同事</option>
+              {team.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={18} />
+          </label>
+        )}
+        <label className="orders-filter-select">
+          <select
+            aria-label="工程單月份"
+            value={filters.month}
+            onChange={(event) =>
+              onChange({ ...filters, month: event.target.value })
+            }
+          >
+            {months.map((month) => (
+              <option key={month} value={month}>
+                {formatMonthLabel(month)}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={18} />
+        </label>
+        <label className="orders-filter-select">
+          <select
+            aria-label="工程類別"
+            value={filters.category}
+            onChange={(event) =>
+              onChange({ ...filters, category: event.target.value })
+            }
+          >
+            <option value="all">全部類別</option>
+            <option value="self-pay">自費</option>
+            <option value="group-buy">團購</option>
+            <option value="grant-80k">8萬資助</option>
+          </select>
+          <ChevronDown size={18} />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function WorkOrderRail({
+  selectedId,
+  filters,
+}: {
+  selectedId?: string;
+  filters: OrderFilters;
+}) {
+  const { actor, engine } = useApp();
   const manager =
     actor.role === "cs_supervisor" ||
     ["admin", "admin_staff"].includes(actor.role);
@@ -1727,9 +1826,20 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
     .listOrders(actor)
     .filter((order) => {
       const arrived = order.csReleasedAt ?? order.createdAt;
-      if (month && !arrived.startsWith(month)) return false;
-      if (manager && csFilter !== "all" && order.csOwnerId !== csFilter)
+      if (filters.month && !arrived.startsWith(filters.month)) return false;
+      if (
+        manager &&
+        filters.ownerId !== "all" &&
+        order.csOwnerId !== filters.ownerId
+      )
         return false;
+      if (filters.category !== "all") {
+        let invoiceCategory: InvoiceCategory | undefined;
+        try {
+          invoiceCategory = engine.getInvoice(actor, order.invoiceId).category;
+        } catch {}
+        if (invoiceCategory !== filters.category) return false;
+      }
       return true;
     })
     .sort((a, b) =>
@@ -1737,46 +1847,29 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
         a.csReleasedAt ?? a.createdAt,
       ),
     );
-  const pager = usePagination(orders, `${month}|${csFilter}`);
+  const pager = usePagination(
+    orders,
+    `${filters.month}|${filters.ownerId}|${filters.category}`,
+  );
   return (
     <aside className="order-rail">
       <div className="order-rail-head">
         <h2>工程單</h2>
-        <label className="month-picker">
-          <span>{formatMonthLabel(month)}</span>
-          <CalendarDays size={18} />
-          <input
-            type="month"
-            aria-label="工程單月份"
-            value={month}
-            onChange={(event) => setMonth(event.target.value)}
-          />
-        </label>
       </div>
-      {manager && (
-        <div className="order-rail-manager">
-          <select
-            aria-label="跟進同事"
-            value={csFilter}
-            onChange={(event) => setCsFilter(event.target.value)}
-          >
-            <option value="all">全部同事</option>
-            {team.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
       <div className="order-rail-list">
         {orders.length === 0 ? (
           <p className="section-empty">此月份沒有工程單。</p>
         ) : (
           pager.items.map((order) => {
             let invoiceNumber = "";
+            let categories: InvoiceCategory[] = [];
             try {
-              invoiceNumber = engine.getInvoice(actor, order.invoiceId).number;
+              const invoice = engine.getInvoice(actor, order.invoiceId);
+              invoiceNumber = invoice.number;
+              categories = invoice.category ? [invoice.category] : [];
+              const quote = engine.getQuote(actor, order.quoteId);
+              if (quote.orderCategories?.length)
+                categories = quote.orderCategories;
             } catch {}
             return (
               <Link
@@ -1784,7 +1877,24 @@ function WorkOrderRail({ selectedId }: { selectedId?: string }) {
                 to={"/orders/" + order.id}
                 className={`order-rail-row ${selectedId === order.id ? "selected" : ""}`}
               >
-                <strong>{order.number}</strong>
+                <span className="order-rail-row-top">
+                  <strong>{order.number}</strong>
+                  <span className="order-rail-dots">
+                    {categories.map((category) => (
+                      <i
+                        key={category}
+                        className={`order-rail-dot ${category}`}
+                        title={
+                          category === "grant-80k"
+                            ? "8萬"
+                            : category === "group-buy"
+                              ? "團購"
+                              : "自費"
+                        }
+                      />
+                    ))}
+                  </span>
+                </span>
                 <small>INV:{invoiceNumber || "—"}</small>
               </Link>
             );
@@ -1963,7 +2073,16 @@ function WorkOrderCalendar({
       </div>
       <div className="calendar-grid">
         {weeks.map((week, weekIndex) => (
-          <div className="calendar-week" key={`week-${weekIndex}`}>
+          <div
+            className="calendar-week"
+            key={`week-${weekIndex}`}
+            style={{
+              minHeight: `${Math.max(
+                64,
+                30 + weekBars[weekIndex].length * 22 + 8,
+              )}px`,
+            }}
+          >
             <div className="calendar-week-days">
               {week.map((date, index) => {
                 if (!date)
@@ -2151,6 +2270,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
   const [selectedLineId, setSelectedLineId] = useState("");
+  const [openNoteId, setOpenNoteId] = useState("");
   const [editingAssignmentId, setEditingAssignmentId] = useState("");
   const [resourceId, setResource] = useState("");
   const [date, setDate] = useState(order.startDate);
@@ -2174,6 +2294,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   const [reason, setReason] = useState("");
   useEffect(() => {
     setSelectedLineId("");
+    setOpenNoteId("");
     setEditingAssignmentId("");
     setResource("");
     setNotes("");
@@ -2316,6 +2437,12 @@ function OrderPanel({ order }: { order: WorkOrder }) {
           <strong>
             由 {order.startDate} 至 {order.endDate}
           </strong>
+          <Button
+            className="wo-print-invoice"
+            onClick={() => nav("/documents/invoice/" + invoice.id)}
+          >
+            <Printer size={17} /> 列印 Invoice
+          </Button>
           {canEdit && (
             <button
               type="button"
@@ -2391,6 +2518,25 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                         {line.position}
                         {line.style ? ` · ${line.style}` : ""}
                       </small>
+                      {line.notes.trim() && (
+                        <>
+                          <button
+                            type="button"
+                            className="workorder-note-toggle"
+                            aria-expanded={openNoteId === line.id}
+                            onClick={() =>
+                              setOpenNoteId((current) =>
+                                current === line.id ? "" : line.id,
+                              )
+                            }
+                          >
+                            備註 <ChevronDown size={14} />
+                          </button>
+                          {openNoteId === line.id && (
+                            <p className="workorder-note-text">{line.notes}</p>
+                          )}
+                        </>
+                      )}
                       {line.productStyle && (
                         <div className="order-product-style">
                           <OrderStyleThumb
@@ -2447,7 +2593,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                               openAssignment(line.id, assignment?.id)
                             }
                           >
-                            {assignment ? "更改安排" : "安排"}
+                            {assignment ? "更改" : "安排"}
                           </Button>
                         )}
                       </div>
@@ -2489,7 +2635,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                             variant="ghost"
                             onClick={() => openExtra(extra.kind)}
                           >
-                            更改安排
+                            更改
                           </Button>
                         )}
                       </div>
@@ -2915,11 +3061,17 @@ function OrderPanel({ order }: { order: WorkOrder }) {
 }
 
 export function Orders() {
+  const [filters, setFilters] = useState<OrderFilters>({
+    month: DEMO_TODAY.slice(0, 7),
+    ownerId: "all",
+    category: "all",
+  });
   return (
     <>
       <PageHead title="工程管理" />
+      <EngineeringFilters filters={filters} onChange={setFilters} />
       <div className="orders-workspace">
-        <WorkOrderRail />
+        <WorkOrderRail filters={filters} />
         <div className="workorder-main">
           <div className="list-panel">
             <Empty
@@ -2937,6 +3089,11 @@ export function OrderDetail() {
   const { id = "" } = useParams();
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
+  const [filters, setFilters] = useState<OrderFilters>({
+    month: DEMO_TODAY.slice(0, 7),
+    ownerId: "all",
+    category: "all",
+  });
   let order: WorkOrder | undefined;
   try {
     order = engine.getOrder(actor, id);
@@ -2945,8 +3102,9 @@ export function OrderDetail() {
     return (
       <>
         <PageHead title="工程管理" />
+        <EngineeringFilters filters={filters} onChange={setFilters} />
         <div className="orders-workspace">
-          <WorkOrderRail selectedId={id} />
+          <WorkOrderRail selectedId={id} filters={filters} />
           <div className="workorder-main">
             <div className="list-panel">
               <Empty
@@ -2961,8 +3119,9 @@ export function OrderDetail() {
   return (
     <>
       <PageHead title="工程管理" />
+      <EngineeringFilters filters={filters} onChange={setFilters} />
       <div className="orders-workspace">
-        <WorkOrderRail selectedId={id} />
+        <WorkOrderRail selectedId={id} filters={filters} />
         <div className="workorder-main">
           <OrderPanel order={order} />
         </div>

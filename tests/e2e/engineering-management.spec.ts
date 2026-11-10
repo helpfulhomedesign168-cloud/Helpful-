@@ -24,17 +24,19 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await page.getByRole("link", { name: "工程管理", exact: true }).click();
   const rail = page.locator(".order-rail");
   await expect(rail).toContainText("D2600001");
-  await rail.getByLabel("跟進同事", { exact: true }).selectOption({ label: "Joe" });
+  await page.getByLabel("跟進同事", { exact: true }).selectOption({ label: "Joe" });
   await expect(rail).toContainText("D2600001");
-  await rail.getByLabel("跟進同事", { exact: true }).selectOption({ label: "Nicole" });
+  await page.getByLabel("跟進同事", { exact: true }).selectOption({ label: "Nicole" });
   await expect(rail.locator(".order-rail-row")).toHaveCount(0);
-  await rail.getByLabel("跟進同事", { exact: true }).selectOption({ label: "全部同事" });
+  await page.getByLabel("跟進同事", { exact: true }).selectOption({ label: "全部同事" });
   await rail.locator(".order-rail-row").filter({ hasText: "D2600001" }).click();
 
   await expect(
     page.getByRole("heading", { name: "D2600001", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("region", { name: "工程日曆" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "列印 Invoice" })).toBeVisible();
+  await expect(rail.locator(".order-rail-dot").first()).toBeVisible();
 
   const photoInput = page.locator(".site-photo-upload input[type=file]");
   await photoInput.setInputFiles([
@@ -87,6 +89,10 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
     "rgb(255, 196, 214)",
     "rgb(255, 229, 154)",
   ]).toContain(eventColor);
+  const noteToggle = page.locator(".workorder-note-toggle").first();
+  await expect(noteToggle).toBeVisible();
+  await noteToggle.click();
+  await expect(page.locator(".workorder-note-text")).toBeVisible();
   const itemRow = page
     .locator(".engineering-table tbody tr")
     .filter({ hasText: "木門" });
@@ -101,7 +107,7 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await expect(cost).toContainText("60.0%");
   await expect(cost).toContainText("淨賺");
 
-  await page.getByRole("button", { name: "更改安排", exact: true }).click();
+  await page.getByRole("button", { name: "更改", exact: true }).click();
   await expect(page.getByLabel("時段", { exact: false })).toHaveValue("上午");
   await page.getByLabel("時段", { exact: false }).selectOption("下午");
   await page.getByRole("button", { name: "儲存安排", exact: true }).click();
