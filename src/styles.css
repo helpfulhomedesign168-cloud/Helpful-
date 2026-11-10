@@ -9481,3 +9481,57 @@ textarea::placeholder {
   white-space: nowrap;
   margin-bottom: 0;
 }
+
+/* Step 1 form proportions follow the reference */
+.quote-form-grid.four {
+  grid-template-columns: 1.08fr 1.02fr 1.02fr 1fr;
+  gap: 22px;
+}
+.quote-form-grid.six {
+  grid-template-columns: 1fr 1fr 1fr 1fr 0.48fr 0.48fr;
+  gap: 20px;
+}
+.quote-form-grid.two {
+  grid-template-columns: 1.05fr 1fr;
+  gap: 24px;
+}
+
+/* Step 4 payment fields + proof upload follow the reference */
+.quote-payment-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 24px;
+  align-items: stretch;
+  margin-top: 16px;
+}
+.quote-payment-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 24px;
+}
+.quote-payment-upload {
+  display: flex;
+  min-height: 128px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #d8e0eb;
+  border-radius: 6px;
+  background: #f7f9fc;
+  color: #778399;
+  font-size: 12px;
+}
+.quote-payment-confirm {
+  display: flex;
+  justify-content: center;
+  padding-top: 20px;
+}
+@media (max-width: 900px) {
+  .quote-payment-layout {
+    grid-template-columns: 1fr;
+  }
+  .quote-payment-upload {
+    min-height: 90px;
+  }
+}

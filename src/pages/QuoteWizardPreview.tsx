@@ -1,6 +1,14 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Plus, Printer, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Plus,
+  Printer,
+  Trash2,
+  Upload,
+} from "lucide-react";
 
 const STEPS = [
   ["1", "客戶資料"],
@@ -223,11 +231,20 @@ export function QuoteWizardPreview() {
           </div>
           <div className="quote-handoff-card">
             <div className="quote-handoff-title"><h3>2. 登記客戶付款</h3><span>✓ 已完成</span></div>
-            <div className="quote-payment-grid">
-              <label>付款金額 (HKD)*<input defaultValue="1500" /></label>
-              <label>付款方式*<select defaultValue="cash"><option value="cash">現金</option><option value="transfer">銀行轉帳</option></select></label>
-              <label>收款／保管位置<select><option>Sales保管</option><option>公司戶口</option></select></label>
-              <label>收款日期<input type="date" defaultValue="2026-10-22" /></label>
+            <div className="quote-payment-layout">
+              <div className="quote-payment-fields">
+                <label>付款金額 (HKD)*<input defaultValue="1500" /></label>
+                <label>付款方式*<select defaultValue="cash"><option value="cash">現金</option><option value="transfer">銀行轉帳</option></select></label>
+                <label>收款／保管位置<select><option>Sales保管</option><option>公司戶口</option></select></label>
+                <label>收款日期<input type="date" defaultValue="2026-10-22" /></label>
+              </div>
+              <div className="quote-payment-upload">
+                <Upload size={18} />
+                <span>上載付款記錄</span>
+              </div>
+            </div>
+            <div className="quote-payment-confirm">
+              <button className="btn btn-primary" type="button">確認客戶付款</button>
             </div>
           </div>
           <div className="quote-handoff-card quote-submit-card">
