@@ -87,7 +87,7 @@ export function Shell() {
         ? [
             ["/finance", "收款核對", Receipt],
             ["/invoices", "已開單據", Files],
-            ["/cancellation-cases", "退訂／退款", FileText],
+            ["/cancellation-cases", "退款", FileText],
           ]
         : actor.role === "clerk" || actor.role === "finance_supervisor"
           ? [
@@ -103,7 +103,7 @@ export function Shell() {
                 : []),
               ["/submissions", "提交報價", ArrowRightLeft],
               ["/invoices", "單據管理", Files],
-              ["/cancellation-cases", "退訂／退款", FileText],
+              ["/cancellation-cases", "退款", FileText],
               ["/municipal-orders", "市政單", FileText],
               ["/customers", "客戶", Users],
             ]
@@ -117,7 +117,7 @@ export function Shell() {
               ["/suppliers", "供應商", Truck],
               ["/municipal-orders", "市政單", FileText],
               ["/business-orders", "營業單", Files],
-              ["/cancellation-cases", "退訂／退款", FileText],
+              ["/cancellation-cases", "退款", FileText],
               ["/custom-work-requests", "自訂工程請示", FileText],
               ["/customers", "客戶", Users],
               ["/product-styles", "產品款式", Palette],

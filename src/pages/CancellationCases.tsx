@@ -27,12 +27,12 @@ export function CancellationCases() {
   return (
     <>
       <PageHead
-        eyebrow="會計 · 退訂管理"
-        title="退訂／退款"
+        eyebrow="會計 · 退款管理"
+        title="退款"
       />
       <div className="list-panel cancellation-list">
         {cases.length === 0 ? (
-          <Empty title="暫時沒有退訂個案" />
+          <Empty title="暫時沒有退款個案" />
         ) : (
           <>
             <div className="table-scroll">
@@ -42,7 +42,7 @@ export function CancellationCases() {
                     <th>Invoice</th>
                     <th>客戶</th>
                     <th>Sales</th>
-                    <th>退訂原因</th>
+                    <th>退款原因</th>
                     <th className="numeric">已收款</th>
                     <th className="numeric">退款</th>
                     <th>狀態</th>
@@ -99,7 +99,7 @@ export function CancellationCaseDetail() {
   } catch {
     return (
       <Empty
-        title="找不到退訂個案"
+        title="找不到退款個案"
         action={
           <Button onClick={() => nav("/cancellation-cases")}>
             返回退訂列表
@@ -163,7 +163,7 @@ export function CancellationCaseDetail() {
     <>
       <PageHead
         eyebrow={`${caseItem.invoiceNumber} · ${caseItem.customerName}`}
-        title="退訂個案"
+        title="退款個案"
         actions={
           <Button onClick={() => nav("/cancellation-cases")}>
             返回退訂列表
@@ -192,7 +192,7 @@ export function CancellationCaseDetail() {
         <div className="cancellation-main">
           <section className="list-panel cancellation-section">
             <h2>退訂資料</h2>
-            <Field label="退訂原因">
+            <Field label="退款原因">
               <textarea value={caseItem.reason} readOnly />
             </Field>
             <div className="form-grid two">
