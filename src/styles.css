@@ -9535,3 +9535,76 @@ textarea::placeholder {
     min-height: 90px;
   }
 }
+
+/* Quote step 1 fields: exact reference grid */
+.quote-form-grid.four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px 22px;
+}
+.quote-form-grid.six {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) 0.42fr 0.42fr;
+  gap: 18px 16px;
+}
+.quote-form-grid.four input,
+.quote-form-grid.six input,
+.quote-form-grid.four select,
+.quote-form-grid.six select {
+  min-height: 50px;
+  height: 50px;
+  border-radius: 5px;
+  font-size: 14px;
+}
+.quote-step-section {
+  padding: 24px 22px;
+  background: #fff;
+}
+.quote-phone-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 50px;
+  overflow: hidden;
+  border: 1px solid #cfd8e4;
+  border-radius: 5px;
+  background: #fff;
+}
+.quote-phone-input select {
+  width: 72px;
+  min-height: 48px !important;
+  height: 48px !important;
+  flex: 0 0 72px;
+  appearance: none;
+  padding: 0 4px 0 14px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent;
+  color: #313642;
+  font-size: 14px;
+}
+.quote-phone-input > svg {
+  position: absolute;
+  left: 46px;
+  pointer-events: none;
+  color: #313642;
+}
+.quote-phone-input input {
+  min-width: 0;
+  flex: 1;
+  min-height: 48px !important;
+  height: 48px !important;
+  padding-left: 4px;
+  border: 0 !important;
+  border-left: 1px solid #dbe3ee !important;
+  border-radius: 0 !important;
+  box-shadow: none;
+  font-size: 14px;
+}
+.quote-phone-input input::placeholder {
+  color: #b8c0cc;
+}
+@media (max-width: 900px) {
+  .quote-form-grid.four,
+  .quote-form-grid.six {
+    grid-template-columns: 1fr 1fr;
+  }
+}

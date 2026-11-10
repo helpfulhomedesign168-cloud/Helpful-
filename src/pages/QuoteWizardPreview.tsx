@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronDown,
   Plus,
   Printer,
   Trash2,
@@ -101,8 +102,8 @@ export function QuoteWizardPreview() {
             <div className="quote-form-grid four">
               <label>客戶姓名*<input defaultValue="陳大文" /></label>
               <label>身份證號碼<input /></label>
-              <label>聯絡電話*<span className="input-with-prefix"><b>+852</b><input defaultValue="9432 2314" /></span></label>
-              <label>WhatsApp電話*<span className="input-with-prefix"><b>+852</b><input defaultValue="9432 2314" /></span></label>
+              <label>聯絡電話<span className="quote-phone-input"><select defaultValue="+852"><option>+852</option><option>+853</option><option>+86</option></select><ChevronDown size={16} /><input placeholder="9123 4567" /></span></label>
+              <label>WhatsApp電話*<span className="quote-phone-input"><select defaultValue="+852"><option>+852</option><option>+853</option><option>+86</option></select><ChevronDown size={16} /><input placeholder="9123 4567" /></span></label>
             </div>
             <div className="quote-form-grid six">
               <label>工程地區*<select defaultValue=""><option value="">選擇地區</option><option>元朗</option><option>沙田</option></select></label>
