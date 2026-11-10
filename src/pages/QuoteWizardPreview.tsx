@@ -105,13 +105,17 @@ export function QuoteWizardPreview() {
               <label>聯絡電話<span className="quote-phone-input"><select defaultValue="+852"><option>+852</option><option>+853</option><option>+86</option></select><ChevronDown size={16} /><input placeholder="9123 4567" /></span></label>
               <label>WhatsApp電話*<span className="quote-phone-input"><select defaultValue="+852"><option>+852</option><option>+853</option><option>+86</option></select><ChevronDown size={16} /><input placeholder="9123 4567" /></span></label>
             </div>
-            <div className="quote-form-grid six">
-              <label>工程地區*<select defaultValue=""><option value="">選擇地區</option><option>元朗</option><option>沙田</option></select></label>
-              <label>街道<input /></label>
+            <div className="quote-address-grid">
+              <div className="quote-address-pair">
+                <label>工程地區*<select defaultValue=""><option value="">選擇地區</option><option>元朗</option><option>沙田</option></select></label>
+                <label>街道<input /></label>
+              </div>
               <label>屋苑／大廈*<input /></label>
               <label>座數／樓宇名*<input /></label>
-              <label>樓層*<input /></label>
-              <label>單位*<input /></label>
+              <div className="quote-address-pair">
+                <label>樓層*<input /></label>
+                <label>單位*<input /></label>
+              </div>
             </div>
             <label className="quote-form-full">完整地址顯示<input defaultValue="元朗 Demo 工程街 Demo 屋苑 31 座 11 樓 C 室" /></label>
             <div className="quote-form-grid two align-end">

@@ -28,8 +28,8 @@ test("Sales客戶表單只顯示核心欄位，街道及座數可以留空", asy
     false,
   );
   expect(labelText).toContain("街道");
-  expect(labelText).toContain("座數");
-  expect(labelText).toContain("身份證號碼（Demo佔位）");
+  expect(labelText.some((text) => text.startsWith("座數"))).toBe(true);
+  expect(labelText.some((text) => text.startsWith("身份證號碼"))).toBe(true);
   expect(labelText).toContain("緊急聯絡人");
   expect(labelText).toContain("緊急聯絡電話");
   const streetLabel = labelText.find((text) => text.startsWith("街道")) ?? "";

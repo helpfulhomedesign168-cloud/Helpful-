@@ -370,9 +370,33 @@ export function CustomerForm({
       />
     </Field>
   );
+  const phoneField = (
+    key: "phone" | "whatsapp",
+    label: string,
+    required: boolean,
+  ) => (
+    <Field label={label} required={required}>
+      <span className="customer-phone-group">
+        <select
+          aria-label="區號"
+          defaultValue="+852"
+          tabIndex={-1}
+        >
+          <option value="+852">+852</option>
+        </select>
+        <input
+          type="tel"
+          aria-label={label}
+          value={String(value[key] || "")}
+          onChange={(e) => set(key, e.target.value)}
+          autoComplete={key === "phone" ? "tel" : undefined}
+        />
+      </span>
+    </Field>
+  );
   return (
     <>
-      <div className="form-grid three">
+      <div className="customer-detail-grid">
         <Field label="客戶姓名" required>
           <input
             value={value.name}
@@ -380,60 +404,55 @@ export function CustomerForm({
             autoComplete="name"
           />
         </Field>
-        <Field label="聯絡電話" required>
+        <Field label="身份證號碼">
           <input
-            type="tel"
-            value={value.phone}
-            onChange={(e) => set("phone", e.target.value)}
-            autoComplete="tel"
+            value={value.idNumber}
+            onChange={(e) => set("idNumber", e.target.value)}
           />
         </Field>
-        <Field label="WhatsApp電話" required>
-          <input
-            type="tel"
-            value={value.whatsapp}
-            onChange={(e) => set("whatsapp", e.target.value)}
-          />
-        </Field>
+        {phoneField("phone", "聯絡電話", true)}
+        {phoneField("whatsapp", "WhatsApp電話", true)}
       </div>
-      <div className="form-grid three">
-        <Field label="工程地區" required>
-          <select
-            value={value.district}
-            onChange={(e) => set("district", e.target.value)}
-          >
-            <option value="">選擇地區</option>
-            {[
-              "中西區",
-              "灣仔",
-              "東區",
-              "南區",
-              "油尖旺",
-              "深水埗",
-              "九龍城",
-              "黃大仙",
-              "觀塘",
-              "葵青",
-              "荃灣",
-              "屯門",
-              "元朗",
-              "北區",
-              "大埔",
-              "沙田",
-              "西貢",
-              "離島",
-            ].map((district) => (
-              <option key={district}>{district}</option>
-            ))}
-          </select>
-        </Field>
-        {text("street", "街道", false)}
+      <div className="customer-address-grid">
+        <div className="customer-pair">
+          <Field label="工程地區" required>
+            <select
+              value={value.district}
+              onChange={(e) => set("district", e.target.value)}
+            >
+              <option value="">選擇地區</option>
+              {[
+                "中西區",
+                "灣仔",
+                "東區",
+                "南區",
+                "油尖旺",
+                "深水埗",
+                "九龍城",
+                "黃大仙",
+                "觀塘",
+                "葵青",
+                "荃灣",
+                "屯門",
+                "元朗",
+                "北區",
+                "大埔",
+                "沙田",
+                "西貢",
+                "離島",
+              ].map((district) => (
+                <option key={district}>{district}</option>
+              ))}
+            </select>
+          </Field>
+          {text("street", "街道", false)}
+        </div>
         {text("estate", "屋苑／大廈")}
-      </div>
-      <div className="form-grid three">
-        {text("block", "座數", false)}
-        {text("floor", "樓層")}
-        {text("unit", "單位")}
+        {text("block", "座數／樓宇名", false)}
+        <div className="customer-pair">
+          {text("floor", "樓層")}
+          {text("unit", "單位")}
+        </div>
       </div>
       <Field
         label="完整地址"
@@ -446,8 +465,7 @@ export function CustomerForm({
       </Field>
       <div className="expanded-form">
         <div className="form-grid three">
-          {text("idNumber", "身份證號碼（Demo佔位）", false)}
-          <Field label="是否長者">
+            <Field label="是否長者">
             <select
               value={value.isElderly}
               onChange={(e) => set("isElderly", e.target.value)}
