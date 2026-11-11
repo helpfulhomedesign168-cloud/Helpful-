@@ -215,7 +215,7 @@ export function Quotes() {
         }
       />
       <div className="list-panel">
-        <div className="list-toolbar">
+        <div className="list-toolbar quote-list-toolbar">
           <Search
             value={search}
             onChange={setSearch}
@@ -258,7 +258,6 @@ export function Quotes() {
               </select>
             </>
           )}
-          <span className="muted">{shown.length} 張報價</span>
         </div>
         <div className="tabs">
           {[

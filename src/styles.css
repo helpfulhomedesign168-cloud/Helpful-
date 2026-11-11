@@ -10442,3 +10442,27 @@ textarea::placeholder {
 .submitted-order-nature label {
   white-space: nowrap;
 }
+
+/* Quote management filters: consistent dropdowns, no result-count label */
+.quote-list-toolbar {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.quote-list-toolbar .search {
+  flex: 1 1 340px;
+  max-width: 520px;
+  min-width: 240px;
+}
+.quote-list-toolbar > select {
+  flex: 0 0 170px;
+  width: 170px;
+}
+@media (max-width: 900px) {
+  .quote-list-toolbar .search,
+  .quote-list-toolbar > select {
+    flex: 1 1 100%;
+    max-width: none;
+    width: 100%;
+  }
+}
