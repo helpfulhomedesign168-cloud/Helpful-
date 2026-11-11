@@ -11,6 +11,9 @@ interface Notice {
   text: string;
   error: boolean;
 }
+export interface QuoteDraftGuard {
+  saveDraft: () => boolean;
+}
 interface Context {
   engine: Engine;
   actor: Actor;
@@ -18,6 +21,8 @@ interface Context {
   notice: Notice | null;
   dismiss: () => void;
   run: <T>(fn: () => T, message?: string) => T | undefined;
+  quoteDraftGuard: QuoteDraftGuard | null;
+  setQuoteDraftGuard: (guard: QuoteDraftGuard | null) => void;
 }
 const Ctx = createContext<Context | null>(null);
 export function Provider({ children }: { children: React.ReactNode }) {
@@ -30,6 +35,8 @@ export function Provider({ children }: { children: React.ReactNode }) {
   const [notice, setNotice] = useState<Notice | null>(
     engine.storageWarning ? { text: engine.storageWarning, error: true } : null,
   );
+  const [quoteDraftGuard, setQuoteDraftGuard] =
+    useState<QuoteDraftGuard | null>(null);
   function run<T>(fn: () => T, message?: string): T | undefined {
     try {
       const result = fn();
@@ -56,6 +63,8 @@ export function Provider({ children }: { children: React.ReactNode }) {
         notice,
         dismiss: () => setNotice(null),
         run,
+        quoteDraftGuard,
+        setQuoteDraftGuard,
       }}
     >
       {children}

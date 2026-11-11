@@ -40,7 +40,7 @@ function paymentMethodOptions() {
 export function QuoteHandoff() {
   const { id = "" } = useParams();
   const [searchParams] = useSearchParams();
-  const { actor, engine, run } = useApp();
+  const { actor, engine, run, setQuoteDraftGuard } = useApp();
   const nav = useNavigate();
   let quote: ReturnType<typeof engine.getQuote> | undefined;
   try {
@@ -209,6 +209,28 @@ export function QuoteHandoff() {
     );
   };
   const currentStep = quote.submission ? 4 : step;
+  useEffect(() => {
+    if (quote.submission) {
+      setQuoteDraftGuard(null);
+      return;
+    }
+    setQuoteDraftGuard({
+      saveDraft: () =>
+        Boolean(
+          run(
+            () =>
+              engine.markDraftStep(
+                actor,
+                id,
+                currentStep === 4 ? 4 : 3,
+              ),
+            "報價草稿已保存。",
+          ),
+        ),
+    });
+    return () => setQuoteDraftGuard(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, currentStep, quote.submission]);
   return (
     <>
       <PageHead

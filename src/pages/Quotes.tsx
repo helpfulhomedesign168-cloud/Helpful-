@@ -538,7 +538,7 @@ export function QuoteWizardProgress({ step }: { step: number }) {
 }
 
 export function QuoteEditor() {
-  const { actor, engine, run } = useApp();
+  const { actor, engine, run, setQuoteDraftGuard } = useApp();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const nav = useNavigate();
@@ -642,6 +642,43 @@ export function QuoteEditor() {
     (!existing || existing.ownerId === actor.id);
   const canEdit =
     own || clerkEditor || ["admin", "admin_staff"].includes(actor.role);
+  useEffect(() => {
+    if (!wizard) {
+      setQuoteDraftGuard(null);
+      return;
+    }
+    setQuoteDraftGuard({
+      saveDraft: () =>
+        Boolean(
+          run(
+            () =>
+              engine.saveDraft(actor, id, {
+                customer,
+                lines,
+                discount,
+                discountMode,
+                discountValue,
+                reason,
+                draftStep: wizardStep,
+              }),
+            "報價草稿已保存。",
+          ),
+        ),
+    });
+    return () => setQuoteDraftGuard(null);
+    // Re-register against the latest in-progress quote state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    wizard,
+    wizardStep,
+    customer,
+    lines,
+    discount,
+    discountMode,
+    discountValue,
+    reason,
+    id,
+  ]);
   if (!canEdit || (id && !existing)) {
     return (
       <Empty
