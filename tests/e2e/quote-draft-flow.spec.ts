@@ -41,7 +41,7 @@ test("草稿會按Step 1／2／3／4重開並進入正確列表", async ({ page 
     .locator("tbody tr")
     .filter({ hasText: "草稿流程客戶" });
   await expect(draftRow).toBeVisible();
-  await draftRow.getByRole("button", { name: /查看草稿/ }).click();
+  await draftRow.locator("a.source-link").click();
   await expect(page).toHaveURL(/\/quotes\/.+\/edit\?step=1/);
   await expect(page.getByLabel("客戶姓名", { exact: false })).toHaveValue(
     "草稿流程客戶",
@@ -55,7 +55,7 @@ test("草稿會按Step 1／2／3／4重開並進入正確列表", async ({ page 
   await page
     .locator("tbody tr")
     .filter({ hasText: "草稿流程客戶" })
-    .getByRole("button", { name: /查看草稿/ })
+    .locator("a.source-link")
     .click();
   await expect(page).toHaveURL(/\/quotes\/.+\/edit\?step=2/);
   await expect(
@@ -72,7 +72,7 @@ test("草稿會按Step 1／2／3／4重開並進入正確列表", async ({ page 
   await page
     .locator("tbody tr")
     .filter({ hasText: "草稿流程客戶" })
-    .getByRole("button", { name: /查看草稿/ })
+    .locator("a.source-link")
     .click();
   await expect(page).toHaveURL(/\/quotes\/.+\/handoff$/);
   await expect(
@@ -97,7 +97,7 @@ test("草稿會按Step 1／2／3／4重開並進入正確列表", async ({ page 
     .locator("tbody tr")
     .filter({ hasText: "草稿流程客戶" });
   await expect(pendingRow).toBeVisible();
-  await pendingRow.getByRole("button").first().click();
+  await pendingRow.locator("a.source-link").click();
   await expect(page).toHaveURL(/\/quotes\/.+\/handoff\?step=4/);
   await expect(
     page.getByRole("heading", { name: "4. 遞交office", exact: true }),

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Link,
+  Navigate,
   useLocation,
   useNavigate,
   useParams,
@@ -155,22 +156,26 @@ export function Quotes() {
     const e = engine.eligibility(actor, q.id);
     return e.stage === "draft" ? "draft" : "pending";
   }
-  function openQuote(q: Quote) {
+  function quotePath(q: Quote) {
     if (!q.submission && !q.invoiceId) {
       if (q.draftStep === 1 || q.draftStep === 2) {
-        nav(`/quotes/${q.id}/edit?step=${q.draftStep}`);
-        return;
+        return `/quotes/${q.id}/edit?step=${q.draftStep}`;
       }
       if (q.draftStep === 3) {
-        nav(`/quotes/${q.id}/handoff`);
-        return;
+        return `/quotes/${q.id}/handoff`;
       }
       if (q.draftStep === 4) {
-        nav(`/quotes/${q.id}/handoff?step=4`);
-        return;
+        return `/quotes/${q.id}/handoff?step=4`;
+      }
+      const e = engine.eligibility(actor, q.id);
+      if (e.stage === "draft") {
+        return `/quotes/${q.id}/edit?step=1`;
       }
     }
-    nav("/quotes/" + q.id);
+    return `/quotes/${q.id}`;
+  }
+  function openQuote(q: Quote) {
+    nav(quotePath(q));
   }
   const shown = qs
     .filter((q) => bucket(q) === tab)
@@ -310,7 +315,7 @@ export function Quotes() {
                   return (
                     <tr key={q.id}>
                       <td>
-                        <Link className="source-link" to={"/quotes/" + q.id}>
+                        <Link className="source-link" to={quotePath(q)}>
                           {q.number}
                         </Link>
                       </td>
@@ -1797,6 +1802,19 @@ export function QuoteDetail() {
         (a.role === "supervisor" && a.team === q!.team),
     );
   const audit = engine.listAudit(actor, id);
+  if (!q.submission && !q.invoiceId && q.draftStep) {
+    if (q.draftStep === 1 || q.draftStep === 2)
+      return (
+        <Navigate
+          to={`/quotes/${q.id}/edit?step=${q.draftStep}`}
+          replace
+        />
+      );
+    if (q.draftStep === 3)
+      return <Navigate to={`/quotes/${q.id}/handoff`} replace />;
+    if (q.draftStep === 4)
+      return <Navigate to={`/quotes/${q.id}/handoff?step=4`} replace />;
+  }
   return (
     <>
       <PageHead
