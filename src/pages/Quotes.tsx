@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   Plus,
   ArrowRight,
@@ -145,8 +151,26 @@ export function Quotes() {
   function bucket(q: Quote) {
     if (q.archived) return "archived";
     if (q.submission || q.invoiceId) return "submitted";
+    if (q.draftStep && q.draftStep < 4) return "draft";
     const e = engine.eligibility(actor, q.id);
     return e.stage === "draft" ? "draft" : "pending";
+  }
+  function openQuote(q: Quote) {
+    if (!q.submission && !q.invoiceId) {
+      if (q.draftStep === 1 || q.draftStep === 2) {
+        nav(`/quotes/${q.id}/edit?step=${q.draftStep}`);
+        return;
+      }
+      if (q.draftStep === 3) {
+        nav(`/quotes/${q.id}/handoff`);
+        return;
+      }
+      if (q.draftStep === 4) {
+        nav(`/quotes/${q.id}/handoff?step=4`);
+        return;
+      }
+    }
+    nav("/quotes/" + q.id);
   }
   const shown = qs
     .filter((q) => bucket(q) === tab)
@@ -313,7 +337,7 @@ export function Quotes() {
                       <td>
                         <Button
                           variant="ghost"
-                          onClick={() => nav("/quotes/" + q.id)}
+                          onClick={() => openQuote(q)}
                           aria-label={`查看${q.number}`}
                         >
                           <ArrowUpRight size={22} />
@@ -511,8 +535,10 @@ export function QuoteWizardProgress({ step }: { step: number }) {
 export function QuoteEditor() {
   const { actor, engine, run } = useApp();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const nav = useNavigate();
-  const wizard = !id;
+  const resumeStep = searchParams.get("step");
+  const wizard = !id || resumeStep === "1" || resumeStep === "2";
   let existing: Quote | undefined;
   try {
     if (id) existing = engine.getQuote(actor, id);
@@ -548,7 +574,10 @@ export function QuoteEditor() {
       : "custom",
   );
   const [reason, setReason] = useState("");
-  const [wizardStep, setWizardStep] = useState(1);
+  const [wizardStep, setWizardStep] = useState<1 | 2>(
+    resumeStep === "2" ? 2 : 1,
+  );
+  const [exitConfirm, setExitConfirm] = useState(false);
   const [picker, setPicker] = useState(false);
   const [customers, setCustomers] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
@@ -629,6 +658,7 @@ export function QuoteEditor() {
           discountMode,
           discountValue,
           reason,
+          draftStep: wizard ? wizardStep : undefined,
         }),
       destination === "deal"
         ? "已保存。下一步請準備列印正式報價單。"
@@ -640,11 +670,13 @@ export function QuoteEditor() {
       nav(
         clerkEditor
           ? "/quotes/" + q.id
-          : destination === "handoff" && wizard
-            ? "/quotes/" + q.id + "/handoff"
-            : destination === "deal" || destination === "handoff"
-              ? "/quotes/" + q.id
-              : "/quotes/" + q.id + "/edit",
+          : destination === "draft" && wizard
+            ? "/quotes?tab=draft"
+            : destination === "handoff" && wizard
+              ? "/quotes/" + q.id + "/handoff"
+              : destination === "deal" || destination === "handoff"
+                ? "/quotes/" + q.id
+                : "/quotes/" + q.id + "/edit",
       );
   }
   function addCustomWork() {
@@ -802,13 +834,21 @@ export function QuoteEditor() {
   return (
     <>
       <PageHead
-        title={existing ? "修改報價" : "建立報價"}
+        title={wizard ? "建立報價" : "修改報價"}
         actions={
           <>
             <Button
-              onClick={() =>
-                nav(existing ? "/quotes/" + existing.id : "/quotes")
-              }
+              onClick={() => {
+                if (wizard && wizardStep === 1) {
+                  setExitConfirm(true);
+                  return;
+                }
+                if (wizard) {
+                  setWizardStep(1);
+                  return;
+                }
+                nav(existing ? "/quotes/" + existing.id : "/quotes");
+              }}
             >
               返回
             </Button>
@@ -1556,6 +1596,19 @@ export function QuoteEditor() {
               </button>
             ))
           )}
+        </Dialog>
+      )}
+      {exitConfirm && (
+        <Dialog title="儲存草稿？" onClose={() => setExitConfirm(false)}>
+          <p className="dialog-intro">
+            是否先儲存這張報價為草稿，再返回報價管理？
+          </p>
+          <div className="dialog-actions">
+            <Button onClick={() => nav("/quotes")}>不儲存</Button>
+            <Button variant="primary" onClick={() => save("draft")}>
+              儲存草稿
+            </Button>
+          </div>
         </Dialog>
       )}
     </>

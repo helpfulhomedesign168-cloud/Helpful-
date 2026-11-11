@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   ArrowLeft,
   Check,
@@ -35,6 +39,7 @@ function paymentMethodOptions() {
 
 export function QuoteHandoff() {
   const { id = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
   let quote: ReturnType<typeof engine.getQuote> | undefined;
@@ -51,7 +56,9 @@ export function QuoteHandoff() {
   const version = currentVersion(quote);
   const preparation = version.printPreparation;
   const signature = version.signature;
-  const [step, setStep] = useState(signature ? 4 : 3);
+  const [step, setStep] = useState(
+    searchParams.get("step") === "4" || signature ? 4 : 3,
+  );
   const [printDate, setPrintDate] = useState(preparation?.date ?? DEMO_TODAY);
   const [supervisorId, setSupervisorId] = useState(
     preparation?.supervisorId ?? "",
@@ -208,10 +215,30 @@ export function QuoteHandoff() {
         title="建立報價"
         actions={
           <>
-            <Button onClick={() => nav(`/quotes/${id}/edit`)}>
+            <Button
+              onClick={() =>
+                currentStep === 4
+                  ? setStep(3)
+                  : nav(`/quotes/${id}/edit?step=2`)
+              }
+            >
               <ArrowLeft size={18} /> 返回
             </Button>
-            <Button onClick={() => nav(`/quotes/${id}`)}>報價詳情</Button>
+            {currentStep === 4 ? (
+              <Button
+                onClick={() => {
+                  run(
+                    () => engine.markDraftStep(actor, id, 4),
+                    "報價已標記為待提交。",
+                  );
+                  nav("/quotes?tab=pending");
+                }}
+              >
+                待提交
+              </Button>
+            ) : (
+              <Button onClick={() => nav(`/quotes/${id}`)}>報價詳情</Button>
+            )}
           </>
         }
       />
@@ -229,9 +256,13 @@ export function QuoteHandoff() {
             </Button>
             <Button onClick={() => nav(`/quotes/${id}/edit`)}>修改報價</Button>
             <Button
-              onClick={() =>
-                run(() => true, "草稿已儲存。")
-              }
+              onClick={() => {
+                run(
+                  () => engine.markDraftStep(actor, id, 3),
+                  "草稿已儲存。",
+                );
+                nav("/quotes?tab=draft");
+              }}
             >
               儲為草稿
             </Button>
