@@ -34,9 +34,8 @@ test("報價尺寸可切換呎／寸並即時換算", async ({ page }) => {
   await expect(line.getByLabel("闊度", { exact: false })).toHaveValue("8");
   await expect(line.getByLabel("高度", { exact: false })).toHaveValue("1");
 
-  await line.getByRole("button", { name: "選擇產品款式", exact: true }).click();
   await expect(
-    page.getByRole("dialog", { name: "選擇產品款式" }),
-  ).toBeVisible();
+    line.getByRole("button", { name: "選擇產品款式", exact: true }),
+  ).toHaveCount(0);
   expect(errors).toEqual([]);
 });

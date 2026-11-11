@@ -1107,6 +1107,70 @@ export function QuoteEditor() {
                 })}
               </div>
             )}
+            {lines.length > 0 && (
+              <div className="quote-add-bottom">
+                <Button
+                  aria-label="新增工程項目"
+                  onClick={() => setPicker(true)}
+                >
+                  <Plus size={20} />
+                  新增工程
+                </Button>
+              </div>
+            )}
+            {wizard && (
+              <div className="quote-step2-summary">
+                <div className="quote-step2-discount">
+                  <label>
+                    全單折扣
+                    <select
+                      value={discountMode}
+                      onChange={(event) =>
+                        setDiscountMode(
+                          event.target.value as DiscountMode,
+                        )
+                      }
+                    >
+                      <option value="none">原價（不打折）</option>
+                      <option value="rate">百分比折扣</option>
+                      <option value="amount">自訂扣減</option>
+                    </select>
+                  </label>
+                  {discountMode === "amount" && (
+                    <label>
+                      扣減金額（HKD）
+                      <input
+                        type="number"
+                        min="0"
+                        max={pricing.subtotal}
+                        value={discountValue || ""}
+                        onChange={(event) =>
+                          setDiscountValue(Number(event.target.value))
+                        }
+                      />
+                    </label>
+                  )}
+                  {discountMode === "rate" && (
+                    <label>
+                      折扣百分比
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={discountValue || ""}
+                        onChange={(event) =>
+                          setDiscountValue(Number(event.target.value))
+                        }
+                      />
+                    </label>
+                  )}
+                </div>
+                <div className="quote-step2-total">
+                  <span>成交金額</span>
+                  <strong>{money(pricing.total)}</strong>
+                </div>
+              </div>
+            )}
           </Section>
           )}
           {(base?.signature || clerkEditor) && (
@@ -1229,55 +1293,6 @@ export function QuoteEditor() {
         </aside>
         )}
       </div>
-      {wizard && wizardStep === 2 && (
-        <div className="quote-step2-summary">
-          <label>
-            全單折扣
-            <select
-              value={discountMode}
-              onChange={(event) =>
-                setDiscountMode(event.target.value as DiscountMode)
-              }
-            >
-              <option value="none">原價（不打折）</option>
-              <option value="rate">百分比折扣</option>
-              <option value="amount">自訂扣減</option>
-            </select>
-          </label>
-          {discountMode === "amount" && (
-            <label>
-              扣減金額（HKD）
-              <input
-                type="number"
-                min="0"
-                max={pricing.subtotal}
-                value={discountValue || ""}
-                onChange={(event) =>
-                  setDiscountValue(Number(event.target.value))
-                }
-              />
-            </label>
-          )}
-          {discountMode === "rate" && (
-            <label>
-              折扣百分比
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={discountValue || ""}
-                onChange={(event) =>
-                  setDiscountValue(Number(event.target.value))
-                }
-              />
-            </label>
-          )}
-          <div>
-            <span>成交金額</span>
-            <strong>{money(pricing.total)}</strong>
-          </div>
-        </div>
-      )}
       {wizard && (
         <div className="quote-wizard-footer">
           {wizardStep === 2 && (

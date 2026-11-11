@@ -616,10 +616,8 @@ export function QuoteHandoff() {
             )}
           </div>
           <div className="quote-wizard-footer">
-            <Button onClick={() => setStep(3)}>上一步</Button>
-            {quote.submission && (
-              <Button onClick={() => nav(`/quotes/${id}`)}>查看報價</Button>
-            )}
+            <Button onClick={() => nav("/quotes")}>回主頁</Button>
+            <Button onClick={() => nav(`/quotes/${id}`)}>查看報價</Button>
           </div>
         </>
       )}

@@ -5893,6 +5893,7 @@ function createDemoCatalogServices(): ServiceItem[] {
     execution: "contractor",
     costMode: "ratio",
     costBasis: "line",
+    needsProductStyle: false,
     options: [],
     allowPending: false,
     notes: "",
@@ -5937,6 +5938,7 @@ function createAdditionalCatalogServices(): ServiceItem[] {
     execution: "contractor" as const,
     costMode: "ratio" as const,
     costBasis: "line" as const,
+    needsProductStyle: false,
     options: [],
     allowPending: false,
     notes: "",
@@ -6033,6 +6035,7 @@ function createAdditionalCatalogServices(): ServiceItem[] {
     service.scope = scope;
     service.price = price;
     service.measure = measure;
+    service.needsProductStyle = true;
     service.unit = measure === "length" ? "直呎" : "項";
     service.minQty = measure === "length" ? 3 : 0;
     service.increment = measure === "length" ? 0.5 : 0;
@@ -6052,6 +6055,7 @@ function hydrateDemoCatalogServices(services: ServiceItem[]): void {
     if (!service) return;
     service.details ??= defaultItem.details;
     service.scope ??= defaultItem.scope;
+    service.needsProductStyle ??= defaultItem.needsProductStyle;
     service.linkedServiceIds ??= [];
   });
 }
