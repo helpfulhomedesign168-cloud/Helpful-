@@ -10443,6 +10443,44 @@ textarea::placeholder {
   white-space: nowrap;
 }
 
+/* Quote management filters: consistent dropdowns, no result-count label */
+.quote-list-toolbar {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.quote-list-toolbar .search {
+  flex: 1 1 340px;
+  max-width: 520px;
+  min-width: 240px;
+}
+.quote-filter-selects {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-left: auto;
+}
+.quote-filter-selects > select {
+  flex: 0 0 170px;
+  width: 170px;
+}
+@media (max-width: 900px) {
+  .quote-list-toolbar .search {
+    flex: 1 1 100%;
+    max-width: none;
+    width: 100%;
+  }
+  .quote-filter-selects {
+    width: 100%;
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+  .quote-filter-selects > select {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
+
 /* New quotation document */
 .quotation-page {
   background: #e9eff7;
