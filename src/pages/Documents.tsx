@@ -45,8 +45,13 @@ export function Documents() {
       ? `${number}（V${quote.clerkCorrectionCount}）`
       : number;
     const d = inv?.discount ?? v?.discount ?? 1;
+    const quoteDate =
+      v?.printPreparation?.date ||
+      v?.signature?.date ||
+      v?.createdAt.slice(0, 10) ||
+      "—";
     return (
-      <div className="document-page">
+      <div className={`document-page ${quote ? "quotation-page" : ""}`}>
         <div className="document-toolbar">
           <Button onClick={() => nav(-1)}>
             <ArrowLeft size={20} />
@@ -66,7 +71,59 @@ export function Documents() {
             列印／另存PDF
           </Button>
         </div>
-        <article className="document-sheet">
+        <article className={`document-sheet ${quote ? "quotation-sheet" : ""}`}>
+          {quote ? (
+            <>
+              <header className="quotation-head">
+                <div className="quotation-brand">
+                  <img
+                    src="/design-assets/logo.svg"
+                    alt="好幫手家居裝修設計有限公司"
+                  />
+                </div>
+                <div className="quotation-contact">
+                  <span>九龍荔枝角長義街 2-4 號新昌工業大廈 2 樓 202A 室</span>
+                  <span>info@helpfulhomedesign.com.hk</span>
+                  <span>+852 6600 2878 · +852 3615 0180 · 3615 0198</span>
+                </div>
+              </header>
+              <div className="quotation-heading">
+                <div>
+                  <span className="quotation-eyebrow">QUOTATION</span>
+                  <h1>工程報價單</h1>
+                  <p>住宅裝修工程報價</p>
+                </div>
+                <div className="quotation-meta">
+                  <div>
+                    <span>報價單號碼</span>
+                    <strong className="document-number">{displayNumber}</strong>
+                  </div>
+                  <div>
+                    <span>日期</span>
+                    <strong>{quoteDate}</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="quotation-customer">
+                <div>
+                  <span>客戶姓名</span>
+                  <strong>{customer.name || "待填客戶"}</strong>
+                  <p>
+                    {customer.phone}
+                    {customer.whatsapp &&
+                    customer.whatsapp !== customer.phone
+                      ? ` · WhatsApp ${customer.whatsapp}`
+                      : ""}
+                  </p>
+                </div>
+                <div className="wide">
+                  <span>工程地址</span>
+                  <strong>{customer.address || "待填地址"}</strong>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
           <header className="document-letterhead">
             <img src="/company-logo.png" alt="好幫手家居裝修設計有限公司" />
             <div>
@@ -83,13 +140,11 @@ export function Documents() {
               <p>
                 {municipal
                   ? `正單 ${municipal.principalOrderNumber} · 政府8萬資助申請`
-                  : quote?.clerkCorrectionCount && !v?.printPreparation
-                    ? `開單員更正 V${quote.clerkCorrectionCount} · ${v?.createdAt.slice(0, 10)}`
-                    : `版本 ${v?.index || "快照"} · ${
-                        inv?.createdAt.slice(0, 10) ||
-                        v?.printPreparation?.date ||
-                        v?.createdAt.slice(0, 10)
-                      }`}
+                  : `版本 ${v?.index || "快照"} · ${
+                      inv?.createdAt.slice(0, 10) ||
+                      v?.printPreparation?.date ||
+                      v?.createdAt.slice(0, 10)
+                    }`}
               </p>
             </div>
           </header>
@@ -122,6 +177,8 @@ export function Documents() {
               <strong>{customer.address || "待填地址"}</strong>
             </div>
           </div>
+            </>
+          )}
           {municipal ? (
             <>
               <table className="document-table">
@@ -277,6 +334,26 @@ export function Documents() {
               ))}
             </div>
           )}
+          {quote && (
+            <div className="quotation-bank">
+              <div>
+                <span>客戶入帳戶口</span>
+                <strong>HELPFUL HOME DESIGN LIMITED</strong>
+              </div>
+              <div>
+                <span>中國銀行</span>
+                <strong>012 866 2028 1718</strong>
+              </div>
+              <div>
+                <span>匯豐銀行</span>
+                <strong>004 521 363952 838</strong>
+              </div>
+              <div>
+                <span>富邦銀行</span>
+                <strong>128 865 02105259</strong>
+              </div>
+            </div>
+          )}
           {!receipt && !municipal && (
             <div className="document-terms">
               <h3>確認及付款</h3>
@@ -284,20 +361,39 @@ export function Documents() {
                 本報價按列明工程範圍及款式／位置計算；客戶簽署指定版本後，開單員會按成交分類確認收款計劃。
               </p>
               <p>
-                正式公司條款、聯絡及銀行／FPS資料將由公司設定後代入。本報價單不等同收據；收款後將另行發出收據。
+                此工程單經客戶確認簽署後正式生效，表示客戶同意清楚明白報價單所有維修項目內容不能減少。如客戶要求取消工程，所付之訂金將不獲退還。如需更改工程日期，請於工程前兩星期通知，否則公司將有機會收取客人港幣 $1,500 行政費用。
+              </p>
+              <p>
+                本報價單不等同收據；收款後將另行發出收據。
               </p>
             </div>
           )}
-          {!inv && !municipal && (
-            <div className="document-sign">
-              <div>客戶簽署：________________________</div>
-              <div>日期：________________________</div>
+          {quote ? (
+            <div className="document-sign quotation-signature">
+              <div>公司蓋印：____________________</div>
+              <div>客人簽名：____________________</div>
+              <div>日期：____________________</div>
             </div>
+          ) : (
+            !inv &&
+            !municipal && (
+              <div className="document-sign">
+                <div>客戶簽署：________________________</div>
+                <div>日期：________________________</div>
+              </div>
+            )
           )}
-          <footer>
-            <strong>好幫手工程管理系統</strong>
-            <span>好幫手家居裝修設計有限公司</span>
-          </footer>
+          {quote ? (
+            <footer className="quotation-footer">
+              <span>好幫手家居裝修設計有限公司</span>
+              <span>工程報價單 · {displayNumber}</span>
+            </footer>
+          ) : (
+            <footer>
+              <strong>好幫手工程管理系統</strong>
+              <span>好幫手家居裝修設計有限公司</span>
+            </footer>
+          )}
         </article>
       </div>
     );
