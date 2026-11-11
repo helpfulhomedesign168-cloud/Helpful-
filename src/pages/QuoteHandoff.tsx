@@ -237,7 +237,17 @@ export function QuoteHandoff() {
                 待提交
               </Button>
             ) : (
-              <Button onClick={() => nav(`/quotes/${id}`)}>報價詳情</Button>
+              <Button
+                onClick={() => {
+                  run(
+                    () => engine.markDraftStep(actor, id, 3),
+                    "草稿已儲存。",
+                  );
+                  nav("/quotes?tab=draft");
+                }}
+              >
+                儲為草稿
+              </Button>
             )}
           </>
         }

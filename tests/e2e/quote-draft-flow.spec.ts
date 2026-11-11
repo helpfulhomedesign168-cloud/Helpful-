@@ -67,7 +67,13 @@ test("草稿會按Step 1／2／3／4重開並進入正確列表", async ({ page 
   await expect(
     page.getByRole("heading", { name: "3. 列印簽署", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "儲為草稿", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "報價詳情", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "儲為草稿", exact: true })
+    .first()
+    .click();
   await expect(page).toHaveURL(/\/quotes\?tab=draft/);
   await page
     .locator("tbody tr")
