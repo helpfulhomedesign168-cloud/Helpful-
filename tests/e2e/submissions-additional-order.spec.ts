@@ -11,7 +11,7 @@ test("開單員提交報價列表顯示加單及原單號", async ({ page }) => 
   await page.goto("/");
   await switchRole(page, "文文B MM");
   await page.goto("/quotes/quote-pending-office");
-  await page.getByRole("button", { name: "是", exact: true }).click();
+  await page.getByRole("radio", { name: "加單", exact: true }).check();
   await page
     .getByLabel("原本報價單", { exact: true })
     .selectOption("quote-draft-2");
