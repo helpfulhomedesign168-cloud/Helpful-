@@ -24,15 +24,15 @@ test("報價尺寸可切換呎／寸並即時換算", async ({ page }) => {
   const line = page.locator(".line-card");
   const unit = line.getByLabel("單位", { exact: false });
   await expect(unit).toHaveValue("呎");
-  await line.getByLabel("長度", { exact: false }).fill("8");
-  await line.getByLabel("闊度", { exact: false }).fill("1");
+  await line.getByLabel("闊度", { exact: false }).fill("8");
+  await line.getByLabel("高度", { exact: false }).fill("1");
   await unit.selectOption("寸");
-  await expect(line.getByLabel("長度", { exact: false })).toHaveValue("96");
-  await expect(line.getByLabel("闊度", { exact: false })).toHaveValue("12");
+  await expect(line.getByLabel("闊度", { exact: false })).toHaveValue("96");
+  await expect(line.getByLabel("高度", { exact: false })).toHaveValue("12");
   await expect(line.locator(".measurement-conversion")).toContainText("8 × 1");
   await unit.selectOption("呎");
-  await expect(line.getByLabel("長度", { exact: false })).toHaveValue("8");
-  await expect(line.getByLabel("闊度", { exact: false })).toHaveValue("1");
+  await expect(line.getByLabel("闊度", { exact: false })).toHaveValue("8");
+  await expect(line.getByLabel("高度", { exact: false })).toHaveValue("1");
 
   await line.getByRole("button", { name: "選擇產品款式", exact: true }).click();
   await expect(

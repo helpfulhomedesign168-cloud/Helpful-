@@ -80,7 +80,7 @@ test("開單員可開啟完整報價編輯器並建立更正版本", async ({ pa
   ).toBeVisible();
   await page.getByLabel("客戶姓名", { exact: false }).fill("李好波更正");
   const line = page.locator(".line-card").first();
-  const length = line.getByLabel("長度", { exact: false });
+  const length = line.getByLabel("闊度", { exact: false });
   if (await length.count()) await length.fill("9");
   await page
     .getByLabel("修改原因", { exact: false })

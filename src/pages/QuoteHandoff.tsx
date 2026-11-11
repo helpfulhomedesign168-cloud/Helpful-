@@ -67,7 +67,6 @@ export function QuoteHandoff() {
   const [method, setMethod] = useState<Payment["method"]>("cash");
   const [custody, setCustody] = useState<Payment["custody"]>("sales");
   const [paymentDate, setPaymentDate] = useState(DEMO_TODAY);
-  const [reference, setReference] = useState("");
   const [proof, setProof] = useState<Attachment | undefined>();
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -102,22 +101,53 @@ export function QuoteHandoff() {
           version.customer.phone.replace(/\s+/g, ""))
     );
   });
-  const canEdit = quote.ownerId === actor.id;
+  useEffect(() => {
+    if (
+      !quote.isAdditionalOrder &&
+      !preparation &&
+      !quote.submission &&
+      sameCustomerPrevious
+    ) {
+      setAdditionalOrder(true);
+      setParentQuoteId(sameCustomerPrevious.id);
+    }
+    // Only default once for this quote/customer pair.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quote.id, sameCustomerPrevious?.id]);
+  const canEdit =
+    quote.ownerId === actor.id ||
+    actor.role === "admin" ||
+    actor.role === "admin_staff";
   const signedDocument = version.signedDocument;
-  const signed =
-    Boolean(signature) ||
-    version.signedDocumentQuoteNumber === preparation?.quoteNumber &&
-      Boolean(version.signedDocument);
   const paymentDone = payments.length > 0;
   const canSubmit = Boolean(signature) && paymentDone && !quote.submission;
+  const canPreview =
+    Boolean(printDate && supervisorId) &&
+    Boolean(quote.orderCategories?.length) &&
+    (!additionalOrder || Boolean(parentQuoteId));
   const prepare = () => {
+    if (!canPreview) return;
+    if (
+      additionalOrder &&
+      parentQuoteId &&
+      quote.parentQuoteId !== parentQuoteId
+    ) {
+      run(
+        () =>
+          engine.updateQuoteOrderMeta(actor, quote!.id, {
+            isAdditionalOrder: true,
+            parentQuoteId,
+          }),
+        "加單資料已更新。",
+      );
+    }
     const prepared = run(
       () =>
         engine.prepareQuoteForPrint(actor, quote!.id, {
           date: printDate,
           supervisorId,
         }),
-      "已生成正式報價號，可以列印交客人簽署。",
+      "已生成正式報價號，可以預覽報價單。",
     );
     if (prepared) {
       setSupervisorId(
@@ -125,6 +155,23 @@ export function QuoteHandoff() {
           supervisorId,
       );
     }
+  };
+  const archive = () => {
+    if (
+      !window.confirm(
+        "封存後此報價不會再出現在日常待辦，確定封存？",
+      )
+    )
+      return;
+    run(
+      () =>
+        engine.archiveQuote(actor, quote!.id, {
+          reason: "customer_rejected",
+          note: "從報價簽署頁封存",
+        }),
+      "報價已封存。",
+    );
+    nav("/quotes?tab=archived");
   };
   const savePayment = async (file?: File) => {
     if (!file) return;
@@ -149,7 +196,6 @@ export function QuoteHandoff() {
           method,
           custody,
           date: paymentDate,
-          reference,
           proof,
         }),
       "客戶付款已登記。",
@@ -174,19 +220,24 @@ export function QuoteHandoff() {
         <>
           <h2 className="quote-step-title">3. 列印簽署</h2>
           <div className="handoff-actions">
-            {preparation ? (
-              <Button
-                variant="primary"
-                onClick={() => nav(`/documents/quote/${id}`)}
-              >
-                <Printer size={18} /> 列印報價單
-              </Button>
-            ) : (
-              <Button variant="primary" onClick={prepare} disabled={!supervisorId}>
-                <Printer size={18} /> 準備列印報價單
-              </Button>
-            )}
+            <Button
+              variant="primary"
+              disabled={!preparation}
+              onClick={() => nav(`/documents/quote/${id}`)}
+            >
+              <Printer size={18} /> 列印報價單
+            </Button>
             <Button onClick={() => nav(`/quotes/${id}/edit`)}>修改報價</Button>
+            <Button
+              onClick={() =>
+                run(() => true, "草稿已儲存。")
+              }
+            >
+              儲為草稿
+            </Button>
+            <Button variant="danger" onClick={archive}>
+              封存
+            </Button>
           </div>
           <div className="handoff-print-grid">
             <div className="handoff-print-settings">
@@ -340,6 +391,20 @@ export function QuoteHandoff() {
               <p className="handoff-note">
                 請列印此版本交客人簽署，回來上載同一份已簽紙本。
               </p>
+              <Button
+                className="full-width"
+                variant="primary"
+                disabled={!canPreview}
+                onClick={() => {
+                  if (preparation) {
+                    nav(`/documents/quote/${id}`);
+                  } else {
+                    prepare();
+                  }
+                }}
+              >
+                預覽報價單
+              </Button>
             </div>
             <div className="handoff-quote-preview">
               {preparation ? (
@@ -398,12 +463,14 @@ export function QuoteHandoff() {
                   {signedDocument.name}
                 </button>
               ) : (
-                <UploadField
-                  label="上載已簽文件"
-                  onSave={(attachment) =>
-                    engine.uploadDocument(actor, quote.id, attachment)
-                  }
-                />
+                <div className="handoff-upload-box">
+                  <UploadField
+                    label="上載已簽文件"
+                    onSave={(attachment) =>
+                      engine.uploadDocument(actor, quote.id, attachment)
+                    }
+                  />
+                </div>
               )}
             </div>
             {!signature && (
@@ -444,96 +511,84 @@ export function QuoteHandoff() {
               <h3>2. 登記客戶付款</h3>
               {paymentDone && <span className="handoff-done">✓ 已完成</span>}
             </div>
-            {!paymentDone && (
-              <>
-                <div className="handoff-payment-grid">
-                  <Field label="付款金額（HKD）" required>
-                    <input
-                      type="number"
-                      min=".01"
-                      value={amount}
-                      onChange={(event) => setAmount(event.target.value)}
-                    />
-                  </Field>
-                  <Field label="付款方式" required>
-                    <select
-                      value={method}
-                      onChange={(event) =>
-                        setMethod(event.target.value as Payment["method"])
-                      }
-                    >
-                      {paymentMethodOptions().map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="收款／保管位置">
-                    <select
-                      value={custody}
-                      onChange={(event) =>
-                        setCustody(event.target.value as Payment["custody"])
-                      }
-                    >
-                      <option value="sales">Sales保管</option>
-                      <option value="company">公司戶口／公司</option>
-                    </select>
-                  </Field>
-                  <Field label="收款日期" required>
-                    <input
-                      type="date"
-                      max={DEMO_TODAY}
-                      value={paymentDate}
-                      onChange={(event) => setPaymentDate(event.target.value)}
-                    />
-                  </Field>
-                  <Field label="交易／支票參考">
-                    <input
-                      value={reference}
-                      onChange={(event) => setReference(event.target.value)}
-                    />
-                  </Field>
-                  <Field label="付款證明" required>
-                    <label className="handoff-payment-upload">
-                      <Upload size={18} />
-                      <span>
-                        {proof?.name ?? (busy ? "上載中…" : "上載付款記錄")}
-                      </span>
+            <div className="handoff-payment-layout">
+                  <div className="handoff-payment-grid">
+                    <Field label="付款金額（HKD）" required>
                       <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        aria-label="上載付款記錄"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0];
-                          event.target.value = "";
-                          void savePayment(file);
-                        }}
+                        type="number"
+                        min=".01"
+                        value={amount}
+                        disabled={paymentDone}
+                        onChange={(event) => setAmount(event.target.value)}
                       />
-                    </label>
-                  </Field>
-                </div>
-                <div className="handoff-card-action">
-                  <Button
-                    variant="primary"
-                    disabled={!signature || !proof || Number(amount) <= 0 || busy}
-                    onClick={recordPayment}
-                  >
-                    確認客戶付款
-                  </Button>
-                </div>
-              </>
-            )}
-            {paymentDone && (
-              <div className="handoff-payment-summary">
-                {payments.map((payment) => (
-                  <div key={payment.id}>
-                    <strong>{money(payment.amount)}</strong>
-                    <small>{METHOD_NAMES[payment.method]} · {payment.date}</small>
+                    </Field>
+                    <Field label="付款方式" required>
+                      <select
+                        value={method}
+                        disabled={paymentDone}
+                        onChange={(event) =>
+                          setMethod(event.target.value as Payment["method"])
+                        }
+                      >
+                        {paymentMethodOptions().map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="收款／保管位置">
+                      <select
+                        value={custody}
+                        disabled={paymentDone}
+                        onChange={(event) =>
+                          setCustody(event.target.value as Payment["custody"])
+                        }
+                      >
+                        <option value="sales">Sales保管</option>
+                        <option value="company">公司戶口／公司</option>
+                      </select>
+                    </Field>
+                    <Field label="收款日期" required>
+                      <input
+                        type="date"
+                        max={DEMO_TODAY}
+                        value={paymentDate}
+                        disabled={paymentDone}
+                        onChange={(event) => setPaymentDate(event.target.value)}
+                      />
+                    </Field>
                   </div>
-                ))}
-              </div>
-            )}
+                  <label className={`handoff-payment-proof ${paymentDone ? "completed" : ""}`}>
+                    <Upload size={22} />
+                    <span>
+                      {proof?.name ?? (busy ? "上載中…" : "上載付款記錄")}
+                    </span>
+                    {!proof && <small>支援圖片或 PDF</small>}
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      aria-label="上載付款記錄"
+                      disabled={paymentDone}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        void savePayment(file);
+                      }}
+                    />
+                  </label>
+                </div>
+                {!paymentDone && (
+                  <div className="handoff-card-action">
+                    <Button
+                      variant="primary"
+                      disabled={!signature || !proof || Number(amount) <= 0 || busy}
+                      onClick={recordPayment}
+                    >
+                      確認客戶付款
+                    </Button>
+                  </div>
+                )}
           </div>
           <div className="handoff-card handoff-office-card">
             <div className="handoff-card-head">

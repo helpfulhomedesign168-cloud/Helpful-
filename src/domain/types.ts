@@ -129,6 +129,8 @@ export interface ServiceItem {
   materialCost?: number;
   labourCost?: number;
   costBasis?: "unit" | "line";
+  /** 這項工程是否需要 Sales 選擇產品款式。預設 true（舊資料兼容）。 */
+  needsProductStyle?: boolean;
   options: string[];
   allowPending: boolean;
   notes: string;

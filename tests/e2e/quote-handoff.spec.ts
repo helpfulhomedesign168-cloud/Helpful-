@@ -26,8 +26,8 @@ test("Sales完成正式Step 3列印簽署及Step 4交Office", async ({ page }) =
     .first()
     .click();
   const line = page.locator(".line-card").first();
-  await line.getByLabel("長度", { exact: false }).fill("10");
-  await line.getByLabel("闊度", { exact: false }).fill("2");
+  await line.getByLabel("闊度", { exact: false }).fill("10");
+  await line.getByLabel("高度", { exact: false }).fill("2");
   await page
     .getByRole("button", { name: /下一步：列印簽署/ })
     .click();
@@ -38,9 +38,11 @@ test("Sales完成正式Step 3列印簽署及Step 4交Office", async ({ page }) =
   await expect(page.getByRole("radio", { name: "新訂單", exact: true })).toBeVisible();
   await expect(page.getByRole("radio", { name: "加單", exact: true })).toBeVisible();
   await page.getByLabel("當日主管", { exact: false }).selectOption({ index: 1 });
-  await page
-    .getByRole("button", { name: "準備列印報價單", exact: true })
-    .click();
+  const preview = page.getByRole("button", { name: "預覽報價單", exact: true });
+  await expect(preview).toBeDisabled();
+  await page.getByRole("button", { name: "自費", exact: true }).click();
+  await expect(preview).toBeEnabled();
+  await preview.click();
   await expect(page.getByText("正式報價號", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "下一步", exact: true }).click();
   await expect(

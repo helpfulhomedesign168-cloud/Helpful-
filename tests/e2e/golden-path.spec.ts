@@ -57,8 +57,8 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   const line = page.locator(".line-card");
   await expect(line.getByLabel("施工位置", { exact: false })).toHaveCount(0);
   await expect(line.getByLabel("尺寸單位", { exact: false })).toHaveCount(0);
-  await line.getByLabel("長度", { exact: false }).fill("100");
-  await line.getByLabel("闊度", { exact: false }).fill("1");
+  await line.getByLabel("闊度", { exact: false }).fill("100");
+  await line.getByLabel("高度", { exact: false }).fill("1");
   await page
     .getByRole("button", { name: /下一步：列印簽署/ })
     .click();

@@ -927,7 +927,7 @@ export function QuoteEditor() {
                           <>
                             <Field
                               label={
-                                s.measure === "area" ? "長度" : "長度／尺數"
+                                s.measure === "area" ? "闊度" : "長度／尺數"
                               }
                               required
                             >
@@ -942,7 +942,7 @@ export function QuoteEditor() {
                               />
                             </Field>
                             {s.measure === "area" && (
-                              <Field label="闊度" required>
+                              <Field label="高度" required>
                                 <input
                                   type="number"
                                   min="0"
@@ -1010,13 +1010,14 @@ export function QuoteEditor() {
                       {s.measure === "area" || s.measure === "length" ? (
                         <div className="measurement-conversion">
                           {s.measure === "area"
-                            ? `輸入 ${l.length || 0} × ${l.width || 0} ${l.dimensionUnit} = ${roundDimension(feetNumber(l.length, l.dimensionUnit))} × ${roundDimension(feetNumber(l.width, l.dimensionUnit))} ${s.unit}`
+                            ? `闊度 ${l.length || 0} × 高度 ${l.width || 0} ${l.dimensionUnit} = ${roundDimension(feetNumber(l.length, l.dimensionUnit))} × ${roundDimension(feetNumber(l.width, l.dimensionUnit))} ${s.unit}`
                             : `輸入 ${l.length || 0} ${l.dimensionUnit} = ${roundDimension(feetNumber(l.length, l.dimensionUnit))} ${s.unit}`}
                           {a?.billedQty
                             ? ` · 計費 ${a.billedQty} ${s.unit}`
                             : ""}
                         </div>
                       ) : null}
+                      {s.needsProductStyle !== false && (
                       <div className="quote-product-style">
                         <span className="field-label">產品款式</span>
                         {l.productStyle ? (
@@ -1060,6 +1061,7 @@ export function QuoteEditor() {
                           </Button>
                         )}
                       </div>
+                      )}
                       <details className="line-notes">
                         <summary>現場要求及注意事項（選填）</summary>
                         <textarea
@@ -1119,7 +1121,7 @@ export function QuoteEditor() {
             </Section>
           )}
         </div>
-        {(!wizard || wizardStep === 2) && (
+        {!wizard && (
         <aside className="quote-summary">
           <h2>報價摘要</h2>
           <div className="summary-row">
@@ -1227,6 +1229,55 @@ export function QuoteEditor() {
         </aside>
         )}
       </div>
+      {wizard && wizardStep === 2 && (
+        <div className="quote-step2-summary">
+          <label>
+            全單折扣
+            <select
+              value={discountMode}
+              onChange={(event) =>
+                setDiscountMode(event.target.value as DiscountMode)
+              }
+            >
+              <option value="none">原價（不打折）</option>
+              <option value="rate">百分比折扣</option>
+              <option value="amount">自訂扣減</option>
+            </select>
+          </label>
+          {discountMode === "amount" && (
+            <label>
+              扣減金額（HKD）
+              <input
+                type="number"
+                min="0"
+                max={pricing.subtotal}
+                value={discountValue || ""}
+                onChange={(event) =>
+                  setDiscountValue(Number(event.target.value))
+                }
+              />
+            </label>
+          )}
+          {discountMode === "rate" && (
+            <label>
+              折扣百分比
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={discountValue || ""}
+                onChange={(event) =>
+                  setDiscountValue(Number(event.target.value))
+                }
+              />
+            </label>
+          )}
+          <div>
+            <span>成交金額</span>
+            <strong>{money(pricing.total)}</strong>
+          </div>
+        </div>
+      )}
       {wizard && (
         <div className="quote-wizard-footer">
           {wizardStep === 2 && (

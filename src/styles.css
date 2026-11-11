@@ -10065,3 +10065,111 @@ textarea::placeholder {
   min-height: 40px;
   margin-top: 4px;
 }
+
+/* Step 2 bottom summary replaces the right summary card in wizard */
+.quote-wizard-layout.wizard-step-2 {
+  grid-template-columns: minmax(0, 1fr);
+}
+.quote-step2-summary {
+  display: grid;
+  grid-template-columns: 230px 230px 1fr;
+  gap: 18px;
+  align-items: end;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 4px 4px;
+  border-top: 1px solid #dbe3ee;
+}
+.quote-step2-summary label {
+  display: grid;
+  gap: 6px;
+  color: #4b5565;
+  font-size: 13px;
+}
+.quote-step2-summary input,
+.quote-step2-summary select {
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 1px solid #cfd8e4;
+  border-radius: 5px;
+  background: #fff;
+}
+.quote-step2-summary > div {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+.quote-step2-summary > div span {
+  color: #8d96a4;
+  font-size: 12px;
+}
+.quote-step2-summary > div strong {
+  color: var(--orange);
+  font-size: 24px;
+}
+.service-style-option {
+  margin: 0 0 16px;
+}
+@media (max-width: 900px) {
+  .quote-step2-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.handoff-upload-box {
+  display: grid;
+  min-height: 128px;
+  align-content: center;
+  justify-items: center;
+  padding: 16px;
+  border: 1px solid #d9e1eb;
+  border-radius: 6px;
+  background: #f7f9fc;
+}
+.handoff-payment-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 22px;
+  padding: 16px 0;
+  align-items: stretch;
+}
+.handoff-payment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.handoff-payment-proof {
+  display: grid;
+  height: 156px;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  border: 1px solid #cfd8e4;
+  border-radius: 6px;
+  background: #f7f9fc;
+  color: #596579;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+}
+.handoff-payment-proof small {
+  color: #8d96a4;
+  font-size: 11px;
+}
+.handoff-payment-proof input {
+  display: none;
+}
+@media (max-width: 900px) {
+  .handoff-payment-layout {
+    grid-template-columns: 1fr;
+  }
+  .handoff-payment-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.handoff-payment-proof.completed {
+  border-color: #b9d8c2;
+  background: #f4fbf6;
+  color: #178a3b;
+}

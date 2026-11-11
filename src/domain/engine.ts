@@ -557,7 +557,7 @@ function validEngineering(
       return;
     }
     if (item.measure === "area" && !(line.length > 0 && line.width > 0))
-      problems.push(`第 ${index + 1} 項須填長及闊`);
+      problems.push(`第 ${index + 1} 項須填闊度及高度`);
     if (item.measure === "length" && !(line.length > 0))
       problems.push(`第 ${index + 1} 項須填長度`);
     if (item.measure === "quantity" && !(line.quantity > 0))
