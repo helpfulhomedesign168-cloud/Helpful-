@@ -57,6 +57,12 @@ export function QuoteHandoff() {
     preparation?.supervisorId ?? "",
   );
   const [confirmSigned, setConfirmSigned] = useState(false);
+  const [additionalOrder, setAdditionalOrder] = useState(
+    Boolean(quote.isAdditionalOrder),
+  );
+  const [parentQuoteId, setParentQuoteId] = useState(
+    quote.parentQuoteId ?? "",
+  );
   const [amount, setAmount] = useState("1500");
   const [method, setMethod] = useState<Payment["method"]>("cash");
   const [custody, setCustody] = useState<Payment["custody"]>("sales");
@@ -80,6 +86,22 @@ export function QuoteHandoff() {
       .listPayments(actor)
       .filter((payment) => payment.quoteId === quote!.id);
   } catch {}
+  const ownPreviousQuotes = engine
+    .listQuotes(actor)
+    .filter(
+      (candidate) =>
+        candidate.ownerId === quote!.ownerId && candidate.id !== quote!.id,
+    )
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const sameCustomerPrevious = ownPreviousQuotes.find((candidate) => {
+    const customer = currentVersion(candidate).customer;
+    return (
+      (version.customer.id && customer.id === version.customer.id) ||
+      (version.customer.phone &&
+        customer.phone.replace(/\s+/g, "") ===
+          version.customer.phone.replace(/\s+/g, ""))
+    );
+  });
   const canEdit = quote.ownerId === actor.id;
   const signedDocument = version.signedDocument;
   const signed =
@@ -224,6 +246,81 @@ export function QuoteHandoff() {
                     },
                   )}
                 </div>
+              </div>
+              <div className="handoff-nature">
+                <strong>訂單性質</strong>
+                <label>
+                  <input
+                    type="radio"
+                    name="order-nature"
+                    checked={!additionalOrder}
+                    disabled={Boolean(preparation) || !canEdit}
+                    onChange={() => {
+                      setAdditionalOrder(false);
+                      setParentQuoteId("");
+                      run(
+                        () =>
+                          engine.updateQuoteOrderMeta(actor, quote!.id, {
+                            isAdditionalOrder: false,
+                          }),
+                        "已設為新訂單。",
+                      );
+                    }}
+                  />
+                  新訂單
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="order-nature"
+                    checked={additionalOrder}
+                    disabled={Boolean(preparation) || !canEdit}
+                    onChange={() => {
+                      setAdditionalOrder(true);
+                      if (sameCustomerPrevious) {
+                        setParentQuoteId(sameCustomerPrevious.id);
+                        run(
+                          () =>
+                            engine.updateQuoteOrderMeta(actor, quote!.id, {
+                              isAdditionalOrder: true,
+                              parentQuoteId: sameCustomerPrevious.id,
+                            }),
+                          `已自動配對同客戶舊報價 ${sameCustomerPrevious.number}。`,
+                        );
+                      }
+                    }}
+                  />
+                  加單
+                </label>
+                {additionalOrder && (
+                  <select
+                    aria-label="原本報價單"
+                    value={parentQuoteId}
+                    disabled={Boolean(preparation) || !canEdit}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setParentQuoteId(value);
+                      if (!value) return;
+                      run(
+                        () =>
+                          engine.updateQuoteOrderMeta(actor, quote!.id, {
+                            isAdditionalOrder: true,
+                            parentQuoteId: value,
+                          }),
+                        "加單資料已更新。",
+                      );
+                    }}
+                  >
+                    <option value="">選擇自己之前的報價單</option>
+                    {ownPreviousQuotes.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.number} ·{" "}
+                        {currentVersion(candidate).customer.name} ·{" "}
+                        {candidate.createdAt.slice(0, 10)}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               {preparation && (
                 <div className="handoff-prepared">

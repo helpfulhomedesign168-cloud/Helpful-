@@ -35,6 +35,8 @@ test("Sales完成正式Step 3列印簽署及Step 4交Office", async ({ page }) =
   await expect(
     page.getByRole("heading", { name: "3. 列印簽署", exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("radio", { name: "新訂單", exact: true })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "加單", exact: true })).toBeVisible();
   await page.getByLabel("當日主管", { exact: false }).selectOption({ index: 1 });
   await page
     .getByRole("button", { name: "準備列印報價單", exact: true })

@@ -60,8 +60,12 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   await line.getByLabel("長度", { exact: false }).fill("100");
   await line.getByLabel("闊度", { exact: false }).fill("1");
   await page
-    .getByRole("button", { name: "前往預覽及成交", exact: true })
+    .getByRole("button", { name: /下一步：列印簽署/ })
     .click();
+  await expect(
+    page.getByRole("heading", { name: "3. 列印簽署", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "報價詳情", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "UI測試新客戶的報價", exact: true }),
   ).toBeVisible();

@@ -458,58 +458,25 @@ export function CustomerForm({
           {address || "請先填寫上方地址資料"}
         </output>
       </Field>
-      <div className="expanded-form">
-        <div className="form-grid three">
-            <Field label="是否長者">
-            <select
-              value={value.isElderly}
-              onChange={(e) => set("isElderly", e.target.value)}
-            >
-              <option value="">選擇</option>
-              <option value="yes">是</option>
-              <option value="no">否</option>
-            </select>
-          </Field>
-          <Field label="客戶來源">
-            <select
-              value={value.source}
-              onChange={(e) => set("source", e.target.value)}
-            >
-              <option value="">選擇來源</option>
-              {["Facebook", "街站", "朋友介紹", "舊客", "其他"].map(
-                (source) => (
-                  <option key={source}>{source}</option>
-                ),
-              )}
-            </select>
-          </Field>
-          {text("email", "電郵", false)}
-          {text("emergencyName", "緊急聯絡人", false)}
-          {text("emergencyPhone", "緊急聯絡電話", false)}
-          {text("managementPhone", "管理處電話", false)}
-        </div>
-        <div className="form-grid two">
-          {text("parking", "停車／上落貨資料", false)}
-          {text("precautions", "現場特別注意事項", false)}
-          <Field label="Sales備註">
-            <textarea
-              value={value.notes}
-              onChange={(e) => set("notes", e.target.value)}
-            />
-          </Field>
-          <Field label="客戶附件">
-            <UploadField
-              attachment={value.attachment}
-              label="上載客戶文件"
-              onSave={(attachment) =>
-                onChange({ ...value, attachment, address })
-              }
-              onClear={() =>
-                onChange({ ...value, attachment: undefined, address })
-              }
-            />
-          </Field>
-        </div>
+      <div className="form-grid two">
+        <Field label="Sales備註">
+          <textarea
+            value={value.notes}
+            onChange={(e) => set("notes", e.target.value)}
+          />
+        </Field>
+        <Field label="客戶附件">
+          <UploadField
+            attachment={value.attachment}
+            label="上載客戶文件"
+            onSave={(attachment) =>
+              onChange({ ...value, attachment, address })
+            }
+            onClear={() =>
+              onChange({ ...value, attachment: undefined, address })
+            }
+          />
+        </Field>
       </div>
     </>
   );
@@ -901,10 +868,29 @@ export function QuoteEditor() {
                 {lines.map((l, i) => {
                   const s = l.itemSnapshot,
                     a = pricing.lineAmounts.find((a) => a.id === l.id);
+                  const firstInCategory =
+                    i === 0 ||
+                    lines[i - 1].itemSnapshot.category !== s.category;
+                  const lastInCategory =
+                    i === lines.length - 1 ||
+                    lines[i + 1].itemSnapshot.category !== s.category;
+                  const categoryTotal = lines
+                    .filter((line) => line.itemSnapshot.category === s.category)
+                    .reduce(
+                      (total, line) =>
+                        total +
+                        (pricing.lineAmounts.find(
+                          (amount) => amount.id === line.id,
+                        )?.preDiscount ?? 0),
+                      0,
+                    );
                   return (
+                    <React.Fragment key={l.id}>
+                    {firstInCategory && (
+                      <div className="quote-category-head">{s.category}</div>
+                    )}
                     <article
                       className={`line-card ${l.pricePending ? "pending-price" : ""}`}
-                      key={l.id}
                     >
                       <div className="line-head">
                         <span className="line-index">
@@ -1108,6 +1094,13 @@ export function QuoteEditor() {
                         </button>
                       )}
                     </article>
+                    {lastInCategory && (
+                      <div className="quote-category-subtotal">
+                        <span>工程小計</span>
+                        <strong>{money(categoryTotal)}</strong>
+                      </div>
+                    )}
+                    </React.Fragment>
                   );
                 })}
               </div>
@@ -1221,7 +1214,7 @@ export function QuoteEditor() {
             >
               儲存更正
             </Button>
-          ) : (
+          ) : !wizard ? (
             <Button
               className="full-width"
               variant="primary"
@@ -1230,7 +1223,7 @@ export function QuoteEditor() {
             >
               前往預覽及成交 <ArrowRight size={20} />
             </Button>
-          )}
+          ) : null}
         </aside>
         )}
       </div>
