@@ -6,9 +6,9 @@ test("報價單使用新 quotation 版面", async ({ page }) => {
   await page.locator(".role-option").filter({ hasText: "文文B MM" }).first().click();
   await page.goto("/documents/quote/quote-pending-office");
   await expect(page.locator(".quotation-sheet")).toBeVisible();
-  await expect(page.getByText("QUOTATION", { exact: true })).toBeVisible();
+  await expect(page.getByText("Quotation", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "工程報價單", exact: true }),
+    page.getByRole("heading", { name: "報價單", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".quotation-sheet .document-table")).toContainText(
     "PD門",

@@ -50,6 +50,11 @@ export function Documents() {
       v?.signature?.date ||
       v?.createdAt.slice(0, 10) ||
       "—";
+    const [quoteYear, quoteMonth, quoteDay] = quoteDate.split("-");
+    const quoteDateDisplay =
+      quoteYear && quoteMonth && quoteDay
+        ? `${quoteDay} / ${quoteMonth} / ${quoteYear}`
+        : quoteDate;
     return (
       <div className={`document-page ${quote ? "quotation-page" : ""}`}>
         <div className={`document-toolbar ${quote ? "quote-toolbar" : ""}`}>
@@ -91,37 +96,23 @@ export function Documents() {
                   <span>+852 6600 2878 · +852 3615 0180 · 3615 0198</span>
                 </div>
               </header>
-              <div className="quotation-heading">
-                <div>
-                  <span className="quotation-eyebrow">QUOTATION</span>
-                  <h1>工程報價單</h1>
-                  <p>住宅裝修工程報價</p>
-                </div>
-                <div className="quotation-meta">
-                  <div>
-                    <span>報價單號碼</span>
-                    <strong className="document-number">{displayNumber}</strong>
-                  </div>
-                  <div>
-                    <span>日期</span>
-                    <strong>{quoteDate}</strong>
-                  </div>
-                </div>
+              <div className="quotation-title">
+                <h1>報價單</h1>
+                <span>Quotation</span>
               </div>
-              <div className="quotation-customer">
+              <div className="quotation-meta-line">
+                <div>No. <strong className="document-number">{displayNumber}</strong></div>
+                <div>日期：<strong>{quoteDateDisplay}</strong></div>
+              </div>
+              <div className="quotation-customer-lines">
                 <div>
-                  <span>客戶姓名</span>
+                  <span>客戶姓名：</span>
                   <strong>{customer.name || "待填客戶"}</strong>
-                  <p>
-                    {customer.phone}
-                    {customer.whatsapp &&
-                    customer.whatsapp !== customer.phone
-                      ? ` · WhatsApp ${customer.whatsapp}`
-                      : ""}
-                  </p>
+                  <span className="quotation-phone-label">聯絡電話：</span>
+                  <strong>{customer.phone}</strong>
                 </div>
-                <div className="wide">
-                  <span>工程地址</span>
+                <div>
+                  <span>客戶地址：</span>
                   <strong>{customer.address || "待填地址"}</strong>
                 </div>
               </div>
@@ -263,8 +254,8 @@ export function Documents() {
                 <tr>
                   <th>#</th>
                   <th>工程項目</th>
-                  <th>實際範圍</th>
-                  <th className="numeric">單價</th>
+                  <th>{quote ? "數量" : "實際範圍"}</th>
+                  <th className="numeric">{quote ? "價格" : "單價"}</th>
                   <th className="numeric">金額</th>
                 </tr>
               </thead>
