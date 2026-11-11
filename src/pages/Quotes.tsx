@@ -221,43 +221,45 @@ export function Quotes() {
             onChange={setSearch}
             placeholder="搜尋報價編號、客戶或電話"
           />
-          <select
-            aria-label="報價月份"
-            value={monthFilter}
-            onChange={(event) => setMonthFilter(event.target.value)}
-          >
-            <option value="all">全部月份</option>
-            {quoteMonths.map((month) => (
-              <option key={month} value={month}>
-                {month.replace("-", "年")}月
-              </option>
-            ))}
-          </select>
-          {canFilterOwner && (
-            <>
-              <select
-                aria-label="報價Team"
-                value={teamFilter}
-                onChange={(event) => setTeamFilter(event.target.value)}
-              >
-                <option value="all">全部 Team</option>
-                <option value="A">Team A</option>
-                <option value="B">Team B</option>
-              </select>
-              <select
-                aria-label="報價Sales"
-                value={salesFilter}
-                onChange={(event) => setSalesFilter(event.target.value)}
-              >
-                <option value="all">全部 Sales</option>
-                {ownerOptions.map((owner) => (
-                  <option key={owner.id} value={owner.id}>
-                    {owner.name}
-                  </option>
-                ))}
-              </select>
-            </>
-          )}
+          <div className="quote-filter-selects">
+            <select
+              aria-label="報價月份"
+              value={monthFilter}
+              onChange={(event) => setMonthFilter(event.target.value)}
+            >
+              <option value="all">全部月份</option>
+              {quoteMonths.map((month) => (
+                <option key={month} value={month}>
+                  {month.replace("-", "年")}月
+                </option>
+              ))}
+            </select>
+            {canFilterOwner && (
+              <>
+                <select
+                  aria-label="報價Team"
+                  value={teamFilter}
+                  onChange={(event) => setTeamFilter(event.target.value)}
+                >
+                  <option value="all">全部 Team</option>
+                  <option value="A">Team A</option>
+                  <option value="B">Team B</option>
+                </select>
+                <select
+                  aria-label="報價Sales"
+                  value={salesFilter}
+                  onChange={(event) => setSalesFilter(event.target.value)}
+                >
+                  <option value="all">全部 Sales</option>
+                  {ownerOptions.map((owner) => (
+                    <option key={owner.id} value={owner.id}>
+                      {owner.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+          </div>
         </div>
         <div className="tabs">
           {[
