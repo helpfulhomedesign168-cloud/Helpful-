@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   Plus,
   ArrowRight,
@@ -145,8 +152,30 @@ export function Quotes() {
   function bucket(q: Quote) {
     if (q.archived) return "archived";
     if (q.submission || q.invoiceId) return "submitted";
+    if (q.draftStep && q.draftStep < 4) return "draft";
     const e = engine.eligibility(actor, q.id);
     return e.stage === "draft" ? "draft" : "pending";
+  }
+  function quotePath(q: Quote) {
+    if (!q.submission && !q.invoiceId) {
+      if (q.draftStep === 1 || q.draftStep === 2) {
+        return `/quotes/${q.id}/edit?step=${q.draftStep}`;
+      }
+      if (q.draftStep === 3) {
+        return `/quotes/${q.id}/handoff`;
+      }
+      if (q.draftStep === 4) {
+        return `/quotes/${q.id}/handoff?step=4`;
+      }
+      const e = engine.eligibility(actor, q.id);
+      if (e.stage === "draft") {
+        return `/quotes/${q.id}/edit?step=1`;
+      }
+    }
+    return `/quotes/${q.id}`;
+  }
+  function openQuote(q: Quote) {
+    nav(quotePath(q));
   }
   const shown = qs
     .filter((q) => bucket(q) === tab)
@@ -286,7 +315,7 @@ export function Quotes() {
                   return (
                     <tr key={q.id}>
                       <td>
-                        <Link className="source-link" to={"/quotes/" + q.id}>
+                        <Link className="source-link" to={quotePath(q)}>
                           {q.number}
                         </Link>
                       </td>
@@ -313,7 +342,7 @@ export function Quotes() {
                       <td>
                         <Button
                           variant="ghost"
-                          onClick={() => nav("/quotes/" + q.id)}
+                          onClick={() => openQuote(q)}
                           aria-label={`查看${q.number}`}
                         >
                           <ArrowUpRight size={22} />
@@ -458,66 +487,63 @@ export function CustomerForm({
           {address || "請先填寫上方地址資料"}
         </output>
       </Field>
-      <div className="expanded-form">
-        <div className="form-grid three">
-            <Field label="是否長者">
-            <select
-              value={value.isElderly}
-              onChange={(e) => set("isElderly", e.target.value)}
-            >
-              <option value="">選擇</option>
-              <option value="yes">是</option>
-              <option value="no">否</option>
-            </select>
-          </Field>
-          <Field label="客戶來源">
-            <select
-              value={value.source}
-              onChange={(e) => set("source", e.target.value)}
-            >
-              <option value="">選擇來源</option>
-              {["Facebook", "街站", "朋友介紹", "舊客", "其他"].map(
-                (source) => (
-                  <option key={source}>{source}</option>
-                ),
-              )}
-            </select>
-          </Field>
-          {text("email", "電郵", false)}
-          {text("emergencyName", "緊急聯絡人", false)}
-          {text("emergencyPhone", "緊急聯絡電話", false)}
-          {text("managementPhone", "管理處電話", false)}
-        </div>
-        <div className="form-grid two">
-          {text("parking", "停車／上落貨資料", false)}
-          {text("precautions", "現場特別注意事項", false)}
-          <Field label="Sales備註">
-            <textarea
-              value={value.notes}
-              onChange={(e) => set("notes", e.target.value)}
-            />
-          </Field>
-          <Field label="客戶附件">
-            <UploadField
-              attachment={value.attachment}
-              label="上載客戶文件"
-              onSave={(attachment) =>
-                onChange({ ...value, attachment, address })
-              }
-              onClear={() =>
-                onChange({ ...value, attachment: undefined, address })
-              }
-            />
-          </Field>
-        </div>
+      <div className="form-grid two">
+        <Field label="Sales備註">
+          <textarea
+            value={value.notes}
+            onChange={(e) => set("notes", e.target.value)}
+          />
+        </Field>
+        <Field label="客戶附件">
+          <UploadField
+            attachment={value.attachment}
+            label="上載客戶文件"
+            onSave={(attachment) =>
+              onChange({ ...value, attachment, address })
+            }
+            onClear={() =>
+              onChange({ ...value, attachment: undefined, address })
+            }
+          />
+        </Field>
       </div>
     </>
   );
 }
+const QUOTE_WIZARD_STEPS = [
+  ["1", "客戶資料"],
+  ["2", "工程項目"],
+  ["3", "列印簽署"],
+  ["4", "遞交office"],
+];
+
+export function QuoteWizardProgress({ step }: { step: number }) {
+  return (
+    <div className="quote-wizard-progress">
+      {QUOTE_WIZARD_STEPS.map(([number, label], index) => {
+        const done = step > index + 1;
+        const active = step === index + 1;
+        return (
+          <div
+            key={number}
+            className={`quote-wizard-step ${done ? "done" : ""} ${active ? "active" : ""}`}
+          >
+            <span>{done ? <Check size={26} /> : number}</span>
+            <strong>{label}</strong>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function QuoteEditor() {
-  const { actor, engine, run } = useApp();
+  const { actor, engine, run, setQuoteDraftGuard } = useApp();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const nav = useNavigate();
+  const resumeStep = searchParams.get("step");
+  const wizard = !id || resumeStep === "1" || resumeStep === "2";
   let existing: Quote | undefined;
   try {
     if (id) existing = engine.getQuote(actor, id);
@@ -553,6 +579,10 @@ export function QuoteEditor() {
       : "custom",
   );
   const [reason, setReason] = useState("");
+  const [wizardStep, setWizardStep] = useState<1 | 2>(
+    resumeStep === "2" ? 2 : 1,
+  );
+  const [exitConfirm, setExitConfirm] = useState(false);
   const [picker, setPicker] = useState(false);
   const [customers, setCustomers] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
@@ -612,6 +642,43 @@ export function QuoteEditor() {
     (!existing || existing.ownerId === actor.id);
   const canEdit =
     own || clerkEditor || ["admin", "admin_staff"].includes(actor.role);
+  useEffect(() => {
+    if (!wizard) {
+      setQuoteDraftGuard(null);
+      return;
+    }
+    setQuoteDraftGuard({
+      saveDraft: () =>
+        Boolean(
+          run(
+            () =>
+              engine.saveDraft(actor, id, {
+                customer,
+                lines,
+                discount,
+                discountMode,
+                discountValue,
+                reason,
+                draftStep: wizardStep,
+              }),
+            "報價草稿已保存。",
+          ),
+        ),
+    });
+    return () => setQuoteDraftGuard(null);
+    // Re-register against the latest in-progress quote state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    wizard,
+    wizardStep,
+    customer,
+    lines,
+    discount,
+    discountMode,
+    discountValue,
+    reason,
+    id,
+  ]);
   if (!canEdit || (id && !existing)) {
     return (
       <Empty
@@ -623,7 +690,7 @@ export function QuoteEditor() {
   const pendingCount = lines.filter((line) => line.pricePending).length;
   const onlyCustom =
     lines.length > 0 && lines.every((line) => line.customWork);
-  function save(destination: "draft" | "deal") {
+  function save(destination: "draft" | "deal" | "handoff") {
     const q = run(
       () =>
         engine.saveDraft(actor, id, {
@@ -633,6 +700,7 @@ export function QuoteEditor() {
           discountMode,
           discountValue,
           reason,
+          draftStep: wizard ? wizardStep : undefined,
         }),
       destination === "deal"
         ? "已保存。下一步請準備列印正式報價單。"
@@ -644,9 +712,13 @@ export function QuoteEditor() {
       nav(
         clerkEditor
           ? "/quotes/" + q.id
-          : destination === "deal"
-            ? "/quotes/" + q.id
-            : "/quotes/" + q.id + "/edit",
+          : destination === "draft" && wizard
+            ? "/quotes?tab=draft"
+            : destination === "handoff" && wizard
+              ? "/quotes/" + q.id + "/handoff"
+              : destination === "deal" || destination === "handoff"
+                ? "/quotes/" + q.id
+                : "/quotes/" + q.id + "/edit",
       );
   }
   function addCustomWork() {
@@ -804,13 +876,21 @@ export function QuoteEditor() {
   return (
     <>
       <PageHead
-        title={existing ? "修改報價" : "建立報價"}
+        title={wizard ? "建立報價" : "修改報價"}
         actions={
           <>
             <Button
-              onClick={() =>
-                nav(existing ? "/quotes/" + existing.id : "/quotes")
-              }
+              onClick={() => {
+                if (wizard && wizardStep === 1) {
+                  setExitConfirm(true);
+                  return;
+                }
+                if (wizard) {
+                  setWizardStep(1);
+                  return;
+                }
+                nav(existing ? "/quotes/" + existing.id : "/quotes");
+              }}
             >
               返回
             </Button>
@@ -821,14 +901,18 @@ export function QuoteEditor() {
           </>
         }
       />
+      {wizard && <QuoteWizardProgress step={wizardStep} />}
       {clerkEditor && (
         <p className="inline-warning">
           開單員更正模式：儲存後會建立新版本，項目及價錢會更新；原版本保留，
           需要重新準備列印、客戶簽署及提交Office。
         </p>
       )}
-      <div className="editor-layout">
+      <div
+        className={`editor-layout ${wizard ? `quote-wizard-layout wizard-step-${wizardStep}` : ""}`}
+      >
         <div className="editor-main">
+          {(!wizard || wizardStep === 1) && (
           <Section
             number="01"
             title="客戶資料"
@@ -838,6 +922,8 @@ export function QuoteEditor() {
           >
             <CustomerForm value={customer} onChange={setCustomer} />
           </Section>
+          )}
+          {(!wizard || wizardStep === 2) && (
           <Section
             number="02"
             title="工程項目"
@@ -864,10 +950,29 @@ export function QuoteEditor() {
                 {lines.map((l, i) => {
                   const s = l.itemSnapshot,
                     a = pricing.lineAmounts.find((a) => a.id === l.id);
+                  const firstInCategory =
+                    i === 0 ||
+                    lines[i - 1].itemSnapshot.category !== s.category;
+                  const lastInCategory =
+                    i === lines.length - 1 ||
+                    lines[i + 1].itemSnapshot.category !== s.category;
+                  const categoryTotal = lines
+                    .filter((line) => line.itemSnapshot.category === s.category)
+                    .reduce(
+                      (total, line) =>
+                        total +
+                        (pricing.lineAmounts.find(
+                          (amount) => amount.id === line.id,
+                        )?.preDiscount ?? 0),
+                      0,
+                    );
                   return (
+                    <React.Fragment key={l.id}>
+                    {firstInCategory && (
+                      <div className="quote-category-head">{s.category}</div>
+                    )}
                     <article
                       className={`line-card ${l.pricePending ? "pending-price" : ""}`}
-                      key={l.id}
                     >
                       <div className="line-head">
                         <span className="line-index">
@@ -904,7 +1009,7 @@ export function QuoteEditor() {
                           <>
                             <Field
                               label={
-                                s.measure === "area" ? "長度" : "長度／尺數"
+                                s.measure === "area" ? "闊度" : "長度／尺數"
                               }
                               required
                             >
@@ -919,7 +1024,7 @@ export function QuoteEditor() {
                               />
                             </Field>
                             {s.measure === "area" && (
-                              <Field label="闊度" required>
+                              <Field label="高度" required>
                                 <input
                                   type="number"
                                   min="0"
@@ -987,13 +1092,14 @@ export function QuoteEditor() {
                       {s.measure === "area" || s.measure === "length" ? (
                         <div className="measurement-conversion">
                           {s.measure === "area"
-                            ? `輸入 ${l.length || 0} × ${l.width || 0} ${l.dimensionUnit} = ${roundDimension(feetNumber(l.length, l.dimensionUnit))} × ${roundDimension(feetNumber(l.width, l.dimensionUnit))} ${s.unit}`
+                            ? `闊度 ${l.length || 0} × 高度 ${l.width || 0} ${l.dimensionUnit} = ${roundDimension(feetNumber(l.length, l.dimensionUnit))} × ${roundDimension(feetNumber(l.width, l.dimensionUnit))} ${s.unit}`
                             : `輸入 ${l.length || 0} ${l.dimensionUnit} = ${roundDimension(feetNumber(l.length, l.dimensionUnit))} ${s.unit}`}
                           {a?.billedQty
                             ? ` · 計費 ${a.billedQty} ${s.unit}`
                             : ""}
                         </div>
                       ) : null}
+                      {s.needsProductStyle !== false && (
                       <div className="quote-product-style">
                         <span className="field-label">產品款式</span>
                         {l.productStyle ? (
@@ -1037,6 +1143,7 @@ export function QuoteEditor() {
                           </Button>
                         )}
                       </div>
+                      )}
                       <details className="line-notes">
                         <summary>現場要求及注意事項（選填）</summary>
                         <textarea
@@ -1071,11 +1178,83 @@ export function QuoteEditor() {
                         </button>
                       )}
                     </article>
+                    {lastInCategory && (
+                      <div className="quote-category-subtotal">
+                        <span>工程小計</span>
+                        <strong>{money(categoryTotal)}</strong>
+                      </div>
+                    )}
+                    </React.Fragment>
                   );
                 })}
               </div>
             )}
+            {lines.length > 0 && (
+              <div className="quote-add-bottom">
+                <Button
+                  aria-label="新增工程項目"
+                  onClick={() => setPicker(true)}
+                >
+                  <Plus size={20} />
+                  新增工程
+                </Button>
+              </div>
+            )}
+            {wizard && (
+              <div className="quote-step2-summary">
+                <div className="quote-step2-discount">
+                  <label>
+                    全單折扣
+                    <select
+                      value={discountMode}
+                      onChange={(event) =>
+                        setDiscountMode(
+                          event.target.value as DiscountMode,
+                        )
+                      }
+                    >
+                      <option value="none">原價（不打折）</option>
+                      <option value="rate">百分比折扣</option>
+                      <option value="amount">自訂扣減</option>
+                    </select>
+                  </label>
+                  {discountMode === "amount" && (
+                    <label>
+                      扣減金額（HKD）
+                      <input
+                        type="number"
+                        min="0"
+                        max={pricing.subtotal}
+                        value={discountValue || ""}
+                        onChange={(event) =>
+                          setDiscountValue(Number(event.target.value))
+                        }
+                      />
+                    </label>
+                  )}
+                  {discountMode === "rate" && (
+                    <label>
+                      折扣百分比
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={discountValue || ""}
+                        onChange={(event) =>
+                          setDiscountValue(Number(event.target.value))
+                        }
+                      />
+                    </label>
+                  )}
+                </div>
+                <div className="quote-step2-total">
+                  <span>成交金額</span>
+                  <strong>{money(pricing.total)}</strong>
+                </div>
+              </div>
+            )}
           </Section>
+          )}
           {(base?.signature || clerkEditor) && (
             <Section title="版本修改原因">
               <Field label="修改原因" required>
@@ -1088,6 +1267,7 @@ export function QuoteEditor() {
             </Section>
           )}
         </div>
+        {!wizard && (
         <aside className="quote-summary">
           <h2>報價摘要</h2>
           <div className="summary-row">
@@ -1182,7 +1362,7 @@ export function QuoteEditor() {
             >
               儲存更正
             </Button>
-          ) : (
+          ) : !wizard ? (
             <Button
               className="full-width"
               variant="primary"
@@ -1191,9 +1371,30 @@ export function QuoteEditor() {
             >
               前往預覽及成交 <ArrowRight size={20} />
             </Button>
-          )}
+          ) : null}
         </aside>
+        )}
       </div>
+      {wizard && (
+        <div className="quote-wizard-footer">
+          {wizardStep === 2 && (
+            <Button onClick={() => setWizardStep(1)}>上一步</Button>
+          )}
+          {wizardStep === 1 ? (
+            <Button variant="primary" onClick={() => setWizardStep(2)}>
+              下一步 <ArrowRight size={18} />
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              disabled={pendingCount > 0 || onlyCustom}
+              onClick={() => save("handoff")}
+            >
+              下一步：列印簽署 <ArrowRight size={18} />
+            </Button>
+          )}
+        </div>
+      )}
       {styleLineIndex !== null && (
         <Dialog
           wide
@@ -1439,6 +1640,19 @@ export function QuoteEditor() {
           )}
         </Dialog>
       )}
+      {exitConfirm && (
+        <Dialog title="儲存草稿？" onClose={() => setExitConfirm(false)}>
+          <p className="dialog-intro">
+            是否先儲存這張報價為草稿，再返回報價管理？
+          </p>
+          <div className="dialog-actions">
+            <Button onClick={() => nav("/quotes")}>不儲存</Button>
+            <Button variant="primary" onClick={() => save("draft")}>
+              儲存草稿
+            </Button>
+          </div>
+        </Dialog>
+      )}
     </>
   );
 }
@@ -1625,6 +1839,19 @@ export function QuoteDetail() {
         (a.role === "supervisor" && a.team === q!.team),
     );
   const audit = engine.listAudit(actor, id);
+  if (!q.submission && !q.invoiceId && q.draftStep) {
+    if (q.draftStep === 1 || q.draftStep === 2)
+      return (
+        <Navigate
+          to={`/quotes/${q.id}/edit?step=${q.draftStep}`}
+          replace
+        />
+      );
+    if (q.draftStep === 3)
+      return <Navigate to={`/quotes/${q.id}/handoff`} replace />;
+    if (q.draftStep === 4)
+      return <Navigate to={`/quotes/${q.id}/handoff?step=4`} replace />;
+  }
   return (
     <>
       <PageHead

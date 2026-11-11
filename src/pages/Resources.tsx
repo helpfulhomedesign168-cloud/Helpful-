@@ -78,6 +78,7 @@ export function Services() {
       execution: "contractor",
       costMode: "ratio",
       costBasis: "line",
+      needsProductStyle: true,
       options: [],
       allowPending: false,
       notes: "",
@@ -278,6 +279,16 @@ export function Services() {
               onChange={(event) => set({ details: event.target.value })}
             />
           </Field>
+          <label className="checkbox-label service-style-option">
+            <input
+              type="checkbox"
+              checked={editing.needsProductStyle !== false}
+              onChange={(event) =>
+                set({ needsProductStyle: event.target.checked })
+              }
+            />
+            需要選擇產品款式
+          </label>
           <div className="measure-section">
             <div className="measure-head">
               <strong>計算方式</strong>

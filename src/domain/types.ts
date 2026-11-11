@@ -129,6 +129,8 @@ export interface ServiceItem {
   materialCost?: number;
   labourCost?: number;
   costBasis?: "unit" | "line";
+  /** 這項工程是否需要 Sales 選擇產品款式。預設 true（舊資料兼容）。 */
+  needsProductStyle?: boolean;
   options: string[];
   allowPending: boolean;
   notes: string;
@@ -233,6 +235,8 @@ export interface Quote {
   /** Sales標記此報價是否加單，並可指向自己之前的報價。 */
   isAdditionalOrder?: boolean;
   parentQuoteId?: string;
+  /** 草稿最後停留的 wizard step；1-3 在草稿列表，4 在待提交列表。 */
+  draftStep?: 1 | 2 | 3 | 4;
   /** 開單員完整更正次數；顯示為 (V1)、(V2)… */
   clerkCorrectionCount?: number;
   invoiceId?: string;
@@ -899,6 +903,7 @@ export interface DraftInput {
   discountMode?: DiscountMode;
   discountValue?: number;
   reason?: string;
+  draftStep?: 1 | 2 | 3 | 4;
 }
 export interface PaymentInput {
   amount: number;

@@ -1,5 +1,10 @@
 import React, { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import {
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import {
   Bell,
   Plus,
@@ -58,8 +63,17 @@ export const roleHome = (role: string) =>
           ? "/services"
           : "/quotes";
 export function Shell() {
-  const { actor, engine, setActor, run } = useApp();
+  const {
+    actor,
+    engine,
+    setActor,
+    run,
+    quoteDraftGuard,
+    setQuoteDraftGuard,
+  } = useApp();
   const nav = useNavigate();
+  const location = useLocation();
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [roles, setRoles] = useState(false);
   const [notifications, setNotifications] = useState(false);
   const [mobile, setMobile] = useState(false);
@@ -160,7 +174,16 @@ export function Shell() {
           <span />
           <span />
         </button>
-        <NavLink to={roleHome(actor.role)} className="app-brand">
+        <NavLink
+          to={roleHome(actor.role)}
+          className="app-brand"
+          onClick={(event) => {
+            const target = roleHome(actor.role);
+            if (!quoteDraftGuard || target === location.pathname) return;
+            event.preventDefault();
+            setPendingPath(target);
+          }}
+        >
           <img
             src="/design-assets/logo.svg"
             alt="好幫手家居裝修設計有限公司"
@@ -214,7 +237,13 @@ export function Shell() {
                 key={path as string}
                 end
                 to={path as string}
-                onClick={() => setMobile(false)}
+                onClick={(event) => {
+                  setMobile(false);
+                  const target = path as string;
+                  if (!quoteDraftGuard || target === location.pathname) return;
+                  event.preventDefault();
+                  setPendingPath(target);
+                }}
                 className={({ isActive }) =>
                   "nav-item " + (isActive ? "active" : "")
                 }
@@ -261,6 +290,41 @@ export function Shell() {
           <span>測試資料僅保存在這個瀏覽器，不作正式單據。</span>
         </footer>
       </div>
+      {pendingPath && quoteDraftGuard && (
+        <Dialog
+          title="儲存草稿？"
+          onClose={() => setPendingPath(null)}
+        >
+          <p className="dialog-intro">
+            你正在建立報價。離開前是否先儲存為草稿？
+          </p>
+          <div className="dialog-actions">
+            <Button onClick={() => setPendingPath(null)}>取消</Button>
+            <Button
+              onClick={() => {
+                const target = pendingPath;
+                setPendingPath(null);
+                setQuoteDraftGuard(null);
+                nav(target);
+              }}
+            >
+              不儲存
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                if (!quoteDraftGuard.saveDraft()) return;
+                const target = pendingPath;
+                setPendingPath(null);
+                setQuoteDraftGuard(null);
+                nav(target);
+              }}
+            >
+              儲存草稿
+            </Button>
+          </div>
+        </Dialog>
+      )}
       {roles && (
         <Dialog title="切換測試角色" onClose={() => setRoles(false)}>
           <p className="muted">切換角色後，保留同一張單的最新進度。</p>

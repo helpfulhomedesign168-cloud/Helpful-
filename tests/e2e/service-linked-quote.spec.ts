@@ -30,6 +30,7 @@ test("有連貫工程的項目在Sales報價會詢問是否加入", async ({ pag
   await page.getByRole("button", { name: "建立報價", exact: true }).click();
   await page.getByRole("button", { name: "選擇現有客戶", exact: true }).click();
   await page.locator(".customer-option").filter({ hasText: "陳小強" }).first().click();
+  await page.getByRole("button", { name: "下一步", exact: true }).click();
   await page.getByRole("button", { name: "選擇工程", exact: true }).click();
   await page.locator(".service-option").filter({ hasText: "E2E 連貫主項" }).click();
   const line = page.locator(".line-card").filter({ hasText: "E2E 連貫主項" });

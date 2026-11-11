@@ -557,7 +557,7 @@ function validEngineering(
       return;
     }
     if (item.measure === "area" && !(line.length > 0 && line.width > 0))
-      problems.push(`第 ${index + 1} 項須填長及闊`);
+      problems.push(`第 ${index + 1} 項須填闊度及高度`);
     if (item.measure === "length" && !(line.length > 0))
       problems.push(`第 ${index + 1} 項須填長度`);
     if (item.measure === "quantity" && !(line.quantity > 0))
@@ -4501,6 +4501,7 @@ export class Engine {
           createdAt: NOW,
           updatedAt: NOW,
           archived: false,
+          draftStep: input.draftStep ?? 1,
         };
         state.quotes.push(created);
         this.audit(state, {
@@ -4581,6 +4582,7 @@ export class Engine {
         version.discountValue = selectedDiscount.value;
         if (input.reason?.trim()) version.reason = input.reason.trim();
       }
+      if (input.draftStep) quote.draftStep = input.draftStep;
       quote.updatedAt = NOW;
       this.audit(state, {
         quoteId: quote.id,
@@ -4677,6 +4679,35 @@ export class Engine {
       output = deepCopy(quote);
     });
     return this.isAdmin(actor) ? output : sanitiseQuote(output, false);
+  }
+  markDraftStep(
+    actorInput: Actor,
+    quoteId: string,
+    draftStep: 1 | 2 | 3 | 4,
+  ): Quote {
+    const actor = this.actor(actorInput);
+    let output!: Quote;
+    this.mutate((state) => {
+      const quote = this.findQuote(quoteId, state);
+      if (!this.canWriteQuote(actor, quote) && !this.isAdmin(actor))
+        fail("你沒有修改此報價草稿的權限。");
+      if (quote.archived) fail("已封存報價不可修改。");
+      if (quote.invoiceId) fail("已轉 Invoice 的來源不可修改。");
+      quote.draftStep = draftStep;
+      if (
+        draftStep === 3 &&
+        !currentVersion(quote).printPreparation &&
+        !currentVersion(quote).signature
+      ) {
+        quote.orderCategories = [];
+        delete quote.officeCategory;
+        quote.isAdditionalOrder = false;
+        delete quote.parentQuoteId;
+      }
+      quote.updatedAt = NOW;
+      output = deepCopy(quote);
+    });
+    return output;
   }
   uploadDocument(
     actorInput: Actor,
@@ -5893,6 +5924,7 @@ function createDemoCatalogServices(): ServiceItem[] {
     execution: "contractor",
     costMode: "ratio",
     costBasis: "line",
+    needsProductStyle: false,
     options: [],
     allowPending: false,
     notes: "",
@@ -5937,6 +5969,7 @@ function createAdditionalCatalogServices(): ServiceItem[] {
     execution: "contractor" as const,
     costMode: "ratio" as const,
     costBasis: "line" as const,
+    needsProductStyle: false,
     options: [],
     allowPending: false,
     notes: "",
@@ -6033,6 +6066,7 @@ function createAdditionalCatalogServices(): ServiceItem[] {
     service.scope = scope;
     service.price = price;
     service.measure = measure;
+    service.needsProductStyle = true;
     service.unit = measure === "length" ? "直呎" : "項";
     service.minQty = measure === "length" ? 3 : 0;
     service.increment = measure === "length" ? 0.5 : 0;
@@ -6052,6 +6086,7 @@ function hydrateDemoCatalogServices(services: ServiceItem[]): void {
     if (!service) return;
     service.details ??= defaultItem.details;
     service.scope ??= defaultItem.scope;
+    service.needsProductStyle ??= defaultItem.needsProductStyle;
     service.linkedServiceIds ??= [];
   });
 }

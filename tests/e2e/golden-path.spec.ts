@@ -44,6 +44,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   await page.getByLabel(/^聯絡電話/).fill("91238800");
   await page.getByLabel("WhatsApp電話", { exact: false }).fill("91238800");
   await page.getByLabel("工程地區", { exact: false }).selectOption("黃大仙");
+  await page.getByRole("button", { name: "下一步", exact: true }).click();
   await page.getByRole("button", { name: "新增工程", exact: true }).click();
   await page
     .getByRole("dialog")
@@ -56,39 +57,20 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   const line = page.locator(".line-card");
   await expect(line.getByLabel("施工位置", { exact: false })).toHaveCount(0);
   await expect(line.getByLabel("尺寸單位", { exact: false })).toHaveCount(0);
-  await line.getByLabel("長度", { exact: false }).fill("100");
-  await line.getByLabel("闊度", { exact: false }).fill("1");
+  await line.getByLabel("闊度", { exact: false }).fill("100");
+  await line.getByLabel("高度", { exact: false }).fill("1");
   await page
-    .getByRole("button", { name: "前往預覽及成交", exact: true })
+    .getByRole("button", { name: /下一步：列印簽署/ })
     .click();
   await expect(
-    page.getByRole("heading", { name: "UI測試新客戶的報價", exact: true }),
+    page.getByRole("heading", { name: "3. 列印簽署", exact: true }),
   ).toBeVisible();
+  await page.getByLabel("當日主管", { exact: false }).selectOption({ index: 1 });
+  await page.getByRole("button", { name: "自費", exact: true }).click();
+  await page.getByRole("button", { name: "預覽報價單", exact: true }).click();
+  await page.getByRole("button", { name: "下一步", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "封存報價", exact: true }),
-  ).toBeVisible();
-  await page
-    .locator(".page-head")
-    .getByRole("button", { name: "準備列印報價單", exact: true })
-    .click();
-  const printDialog = page.getByRole("dialog", { name: "準備列印正式報價單" });
-  const supervisorSelect = printDialog.getByRole("combobox", {
-    name: "當日主管",
-    exact: true,
-  });
-  await expect(
-    supervisorSelect.getByRole("option", { name: /Don/ }),
-  ).toHaveCount(1);
-  await supervisorSelect.selectOption({ label: "Don A DN（測試碼）" });
-  await printDialog
-    .getByRole("button", { name: "確認並開啟報價單", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "工程報價單", exact: true }),
-  ).toBeVisible();
-  await page.goBack();
-  await expect(
-    page.getByRole("heading", { name: "UI測試新客戶的報價", exact: true }),
+    page.getByRole("heading", { name: "4. 遞交office", exact: true }),
   ).toBeVisible();
   const qNumber = await page.evaluate(() => {
     const state = JSON.parse(localStorage.getItem("homeflow-state-v1")!);
@@ -103,9 +85,8 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   });
   let row: Locator;
   await expect(qNumber).toMatch(/^QDNMM2610\d{4}$/);
-  await expect(
-    page.getByRole("button", { name: "登記付款", exact: true }),
-  ).toBeDisabled();
+  const payConfirm = page.getByRole("button", { name: "確認客戶付款", exact: true });
+  await expect(payConfirm).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "提交Office", exact: true }),
   ).toBeDisabled();
@@ -115,16 +96,15 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
     .getByLabel("我確認客戶已簽署上述正式報價版本", { exact: true })
     .check();
   await page.getByRole("button", { name: "確認客戶已簽", exact: true }).click();
-  await expect(page.getByText("客戶已簽版本 1", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "登記付款", exact: true }).click();
-  let pay = page.getByRole("dialog");
-  await pay.getByLabel("付款金額", { exact: false }).fill("1500");
-  await file(pay, "上載付款證明", "首訂證明.svg");
-  await pay.getByRole("button", { name: "儲存付款記錄", exact: true }).click();
-  await expect(pay).toBeHidden();
-  await page.getByRole("button", { name: "自費", exact: true }).click();
-  await page.getByRole("button", { name: "提交Office", exact: true }).click();
-  await expect(page.getByText("已提交Office", { exact: true })).toBeVisible();
+  await file(page, "上載付款記錄", "首訂證明.svg");
+  await expect(payConfirm).toBeEnabled();
+  await payConfirm.click();
+  const office = page.getByRole("button", { name: "提交Office", exact: true });
+  await expect(office).toBeEnabled();
+  await office.click();
+  await expect(
+    page.locator(".handoff-card").filter({ hasText: "3. 交Office跟進" }),
+  ).toContainText("✓ 已完成");
   await expect(
     page.getByRole("button", { name: "封存報價", exact: true }),
   ).toHaveCount(0);

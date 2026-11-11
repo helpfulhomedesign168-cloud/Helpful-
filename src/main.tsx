@@ -3,7 +3,9 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Provider, useApp } from "./context";
 import { Shell, roleHome } from "./components/Shell";
-import { QuoteEditor, QuoteDetail, Quotes } from "./pages/Quotes";
+import { QuoteEditor, Quotes } from "./pages/Quotes";
+import { QuoteView } from "./pages/SubmittedQuote";
+import { QuoteHandoff } from "./pages/QuoteHandoff";
 import { SalesSchedule } from "./pages/SalesSchedule";
 import {
   Finance,
@@ -101,6 +103,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               }
             />
             <Route
+              path="/quotes/:id/handoff"
+              element={
+                <Guard roles={[...sales, "admin", "admin_staff"]}>
+                  <QuoteHandoff />
+                </Guard>
+              }
+            />
+            <Route
               path="/quotes/:id/edit"
               element={
                 <Guard roles={[...sales, "clerk", "finance_supervisor", "admin", "admin_staff"]}>
@@ -112,7 +122,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/quotes/:id"
               element={
                 <Guard roles={[...sales, "admin", "admin_staff", "finance"]}>
-                  <QuoteDetail />
+                  <QuoteView />
                 </Guard>
               }
             />
