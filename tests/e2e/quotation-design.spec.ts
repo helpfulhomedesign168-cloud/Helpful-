@@ -15,4 +15,10 @@ test("報價單使用新 quotation 版面", async ({ page }) => {
   );
   await expect(page.getByText("客戶入帳戶口", { exact: true })).toBeVisible();
   await expect(page.getByText("公司蓋印", { exact: false })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "返回", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "列印／另存PDF", exact: true }),
+  ).toHaveCount(0);
 });

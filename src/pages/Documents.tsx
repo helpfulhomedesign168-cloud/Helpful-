@@ -52,11 +52,13 @@ export function Documents() {
       "—";
     return (
       <div className={`document-page ${quote ? "quotation-page" : ""}`}>
-        <div className="document-toolbar">
-          <Button onClick={() => nav(-1)}>
-            <ArrowLeft size={20} />
-            返回
-          </Button>
+        <div className={`document-toolbar ${quote ? "quote-toolbar" : ""}`}>
+          {!quote && (
+            <Button onClick={() => nav(-1)}>
+              <ArrowLeft size={20} />
+              返回
+            </Button>
+          )}
           <span>
             {municipal
               ? "市政單預覽"
@@ -66,10 +68,12 @@ export function Documents() {
                   ? "Invoice預覽"
                   : "報價單預覽"}
           </span>
-          <Button variant="primary" onClick={() => window.print()}>
-            <Printer size={20} />
-            列印／另存PDF
-          </Button>
+          {!quote && (
+            <Button variant="primary" onClick={() => window.print()}>
+              <Printer size={20} />
+              列印／另存PDF
+            </Button>
+          )}
         </div>
         <article className={`document-sheet ${quote ? "quotation-sheet" : ""}`}>
           {quote ? (
