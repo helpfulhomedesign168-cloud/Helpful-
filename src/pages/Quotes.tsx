@@ -129,9 +129,13 @@ export function Quotes() {
   const nav = useNavigate();
   const location = useLocation();
   const [search, setSearch] = useState("");
+  const requestedTab = new URLSearchParams(location.search).get("tab");
   const [tab, setTab] = useState(
-    new URLSearchParams(location.search).get("tab") || "pending",
+    requestedTab === "pending"
+      ? "draft"
+      : requestedTab || "submitted",
   );
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
   const [salesFilter, setSalesFilter] = useState("all");
@@ -157,9 +161,7 @@ export function Quotes() {
   function bucket(q: Quote) {
     if (q.archived) return "archived";
     if (q.submission || q.invoiceId) return "submitted";
-    if (q.draftStep) return "draft";
-    const e = engine.eligibility(actor, q.id);
-    return e.stage === "draft" ? "draft" : "pending";
+    return "draft";
   }
   function quotePath(q: Quote) {
     if (!q.submission && !q.invoiceId) {
@@ -182,10 +184,19 @@ export function Quotes() {
   function openQuote(q: Quote) {
     nav(quotePath(q));
   }
+  function quoteCategories(q: Quote): string[] {
+    return q.orderCategories?.length
+      ? q.orderCategories
+      : q.officeCategory
+        ? [q.officeCategory]
+        : [];
+  }
   const shown = qs
     .filter((q) => bucket(q) === tab)
     .filter(
       (q) =>
+        (categoryFilter === "all" ||
+          quoteCategories(q).includes(categoryFilter as never)) &&
         (monthFilter === "all" ||
           currentVersion(q).createdAt.startsWith(monthFilter)) &&
         (teamFilter === "all" || q.team === teamFilter) &&
@@ -203,7 +214,7 @@ export function Quotes() {
     });
   const pager = usePagination(
     shown,
-    `${tab}|${search}|${monthFilter}|${teamFilter}|${salesFilter}|${sortOrder}`,
+    `${tab}|${search}|${categoryFilter}|${monthFilter}|${teamFilter}|${salesFilter}|${sortOrder}`,
   );
   return (
     <>
@@ -233,6 +244,16 @@ export function Quotes() {
             placeholder="搜尋報價編號、客戶或電話"
           />
           <div className="quote-filter-selects">
+            <select
+              aria-label="報價類別"
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+            >
+              <option value="all">全部分類</option>
+              <option value="self-pay">自費</option>
+              <option value="grant-80k">8萬資助</option>
+              <option value="group-buy">團購</option>
+            </select>
             <select
               aria-label="報價月份"
               value={monthFilter}
@@ -284,7 +305,6 @@ export function Quotes() {
         </div>
         <div className="tabs">
           {[
-            ["pending", "待提交"],
             ["submitted", "已提交"],
             ["draft", "草稿"],
             ["archived", "封存"],
@@ -328,6 +348,7 @@ export function Quotes() {
                   {tab === "submitted" && (
                     <th className="numeric">訂金比率</th>
                   )}
+                  <th>類別</th>
                   <th>目前進度</th>
                 </tr>
               </thead>
@@ -409,6 +430,32 @@ export function Quotes() {
                           {depositRatio}%
                         </td>
                       )}
+                      <td>
+                        {(() => {
+                          const categories = quoteCategories(q);
+                          if (!categories.length)
+                            return <span className="category-empty">—</span>;
+                          const color: Record<string, string> = {
+                            "self-pay": "green",
+                            "grant-80k": "orange",
+                            "group-buy": "blue",
+                          };
+                          return (
+                            <span className="category-chips">
+                              {categories.map((category) => (
+                                <span
+                                  key={category}
+                                  className={`category-chip ${color[category] ?? "neutral"}`}
+                                >
+                                  {INVOICE_CATEGORY_NAMES[
+                                    category as keyof typeof INVOICE_CATEGORY_NAMES
+                                  ] ?? category}
+                                </span>
+                              ))}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td>
                         <Badge strong={e.stage === "issued"}>
                           {tab === "submitted" ? submittedProgress : e.label}

@@ -11048,3 +11048,13 @@ textarea::placeholder {
   color: #313642;
   font-variant-numeric: tabular-nums;
 }
+
+.category-empty {
+  color: #9aa4b2;
+}
+.category-chips .category-chip {
+  min-height: 25px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+}
