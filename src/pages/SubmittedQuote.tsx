@@ -253,11 +253,11 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
         <aside className="submitted-summary">
           <h3>報價摘要</h3>
           <div className="submitted-summary-row">
-            <span>首簽日期（佣金）</span>
+            <span>首簽日期</span>
             <strong>{firstSignatureDate}</strong>
           </div>
           <div className="submitted-summary-row">
-            <span>首簽主管（佣金）</span>
+            <span>首簽主管</span>
             <strong>{firstSupervisor?.name ?? "—"}</strong>
           </div>
           {version.signature &&
