@@ -37,6 +37,15 @@ test("Sales完成正式Step 3列印簽署及Step 4交Office", async ({ page }) =
   ).toBeVisible();
   await expect(page.getByRole("radio", { name: "新訂單", exact: true })).toBeVisible();
   await expect(page.getByRole("radio", { name: "加單", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "上一步", exact: true }).click();
+  await expect(page).toHaveURL(/\/quotes\/.+\/edit\?step=2/);
+  await expect(
+    page.getByRole("button", { name: "新增工程", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /下一步：列印簽署/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "3. 列印簽署", exact: true }),
+  ).toBeVisible();
   await page.getByLabel("當日主管", { exact: false }).selectOption({ index: 1 });
   const preview = page.getByRole("button", { name: "預覽報價單", exact: true });
   await expect(preview).toBeDisabled();

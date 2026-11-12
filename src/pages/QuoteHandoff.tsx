@@ -486,7 +486,9 @@ export function QuoteHandoff() {
             </div>
           </div>
           <div className="quote-wizard-footer">
-            <Button onClick={() => nav(`/quotes/${id}/edit`)}>上一步</Button>
+            <Button onClick={() => nav(`/quotes/${id}/edit?step=2`)}>
+              上一步
+            </Button>
             <Button
               variant="primary"
               disabled={!preparation}
