@@ -156,6 +156,7 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
     !quote.archived &&
     (quote.ownerId === actor.id ||
       ["admin", "admin_staff"].includes(actor.role));
+  const isClerkViewer = ["clerk", "finance_supervisor"].includes(actor.role);
   const canChangeOrder =
     !quote.archived &&
     (quote.ownerId === actor.id ||
@@ -409,6 +410,22 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
               attachment={version.signedDocument}
               label="已簽文件"
             />
+          ) : isClerkViewer ? (
+            <div className="submitted-notify-sale">
+              <p>原已簽文件已失效，請通知 Sales 重新列印及安排客人簽署。</p>
+              <Button
+                variant="primary"
+                disabled={Boolean(quote.resignNotifiedAt)}
+                onClick={() =>
+                  run(
+                    () => engine.notifySalesForResign(actor, quote.id),
+                    "已通知 Sales 重新安排簽署。",
+                  )
+                }
+              >
+                {quote.resignNotifiedAt ? "已通知Sale" : "通知Sale"}
+              </Button>
+            </div>
           ) : (
             <UploadField
               label="上載已簽文件"
@@ -418,7 +435,7 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
             />
           )}
         </div>
-        {!version.signature && (
+        {!version.signature && !isClerkViewer && (
           <>
             {quote.orderRevision && (
               <p className="submitted-resign-note">

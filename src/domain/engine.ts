@@ -4535,7 +4535,13 @@ export class Engine {
           createdAt: NOW,
           reason: input.reason.trim(),
         };
+        if (version.printPreparation) {
+          nextVersion.printPreparation = deepCopy(version.printPreparation);
+        }
         quote.versions.push(nextVersion);
+        quote.orderChangedByClerk = true;
+        quote.orderRevision = true;
+        delete quote.resignNotifiedAt;
         quote.clerkCorrectionCount = (quote.clerkCorrectionCount ?? 0) + 1;
         // Actual payments remain with the source; the corrected version keeps
         // them so accounting does not lose money already received.
@@ -4571,6 +4577,8 @@ export class Engine {
         }
         quote.versions.push(nextVersion);
         quote.orderRevision = true;
+        quote.orderChangedByClerk = false;
+        delete quote.resignNotifiedAt;
         if (quote.submission) {
           quote.submission.versionId = nextVersion.id;
         }
@@ -4747,6 +4755,39 @@ export class Engine {
         delete quote.parentQuoteId;
       }
       quote.updatedAt = NOW;
+      output = deepCopy(quote);
+    });
+    return output;
+  }
+  notifySalesForResign(actorInput: Actor, quoteId: string): Quote {
+    const actor = this.actor(actorInput);
+    let output!: Quote;
+    this.mutate((state) => {
+      const quote = this.findQuote(quoteId, state);
+      if (!this.isClerk(actor) && !this.isAdmin(actor))
+        fail("只有開單員或Super Admin可以通知Sales重新簽署。");
+      const version = currentVersion(quote);
+      if (version.signature)
+        fail("此版本已完成簽署，不需要重新簽署通知。");
+      if (quote.resignNotifiedAt) {
+        output = deepCopy(quote);
+        return;
+      }
+      quote.resignNotifiedAt = NOW;
+      state.notifications.push({
+        id: uid("notification"),
+        actorId: quote.ownerId,
+        quoteId: quote.id,
+        message: `報價單 ${quote.number} 已有改動，需要客人再簽署。`,
+        read: false,
+        createdAt: NOW,
+      });
+      this.audit(state, {
+        quoteId: quote.id,
+        actorId: actor.id,
+        action: "sales_resign_notified",
+        detail: "通知Sales重新列印及安排客人簽署",
+      });
       output = deepCopy(quote);
     });
     return output;
