@@ -11,7 +11,12 @@ test("已提交列表有排序、訂金比率、進度及整行入口", async ({
   await expect(firstRow).toContainText("%");
   await expect(firstRow).toContainText("工程未進行，待收足50%訂");
   await expect(firstRow.getByRole("button")).toHaveCount(0);
-  await expect(page.locator("tbody").getByText(/^INV-/)).toHaveCount(0);
+  const rows = page.locator("tbody tr");
+  await expect(rows.nth(1)).toContainText("50%");
+  await expect(rows.nth(2)).toContainText("100%");
+  await expect(rows.nth(1)).toContainText("SHMM");
+  await expect(rows.nth(2)).toContainText("SHMM");
+  await expect(firstRow).not.toContainText("SHMM");
   const number = (await firstRow.locator("a.source-link").innerText()).trim();
   await firstRow.locator("td").nth(2).click();
   await expect(page).toHaveURL(/\/quotes\/quote-/);

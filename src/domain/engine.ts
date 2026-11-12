@@ -5882,6 +5882,33 @@ function appendDemoEngineeringOrders(seed: AppState): void {
     seed.quotes.push(quote);
     seed.invoices.push(invoice);
     seed.orders.push(order);
+    if (index === 26 || index === 27) {
+      const percentage = index === 26 ? 100 : 50;
+      const quoteTotal = calculatePricing(
+        lines,
+        1,
+        seed.services,
+        true,
+      ).total;
+      seed.payments.push({
+        id: `payment-demo-${number.toLowerCase()}`,
+        quoteId,
+        versionId,
+        invoiceId,
+        amount: Math.round(quoteTotal * (percentage / 100) * 100) / 100,
+        method: "transfer",
+        date: createdAt.slice(0, 10),
+        custody: "company",
+        reference: `Demo-${percentage}%`,
+        notes: `Demo ${percentage}% 訂金`,
+        status: "valid",
+        validatedBy: "finance",
+        validDate: createdAt.slice(0, 10),
+        cleared: true,
+        createdAt,
+        actorId: "sales-mm",
+      });
+    }
   };
   for (let index = 0; index < 30; index += 1)
     makeDemo(index, `D2600${String(200 + index)}`, 12, "cs");

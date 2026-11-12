@@ -345,11 +345,11 @@ export function Quotes() {
                     (e.firstDue > 0 && p.total > 0
                       ? Math.round((e.firstDue / p.total) * 100)
                       : 0);
-                  const depositRatio =
-                    plannedDeposit ||
-                    (p.total > 0
+                  const actualDeposit =
+                    p.total > 0
                       ? Math.min(100, Math.round((paid / p.total) * 100))
-                      : 0);
+                      : 0;
+                  const depositRatio = actualDeposit || plannedDeposit;
                   const submittedProgress =
                     depositRatio === 0
                       ? "已交Office，待收首期"
