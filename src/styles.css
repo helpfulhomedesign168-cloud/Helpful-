@@ -11025,3 +11025,53 @@ textarea::placeholder {
   font-size: 20px;
   vertical-align: baseline;
 }
+
+.quote-clickable-row {
+  cursor: pointer;
+}
+.quote-clickable-row:hover td,
+.quote-clickable-row:focus-visible td {
+  background: #f5f8fc;
+}
+.quote-clickable-row:focus-visible {
+  outline: 2px solid #88baff;
+  outline-offset: -2px;
+}
+.quote-invoice-number {
+  display: block;
+  margin-top: 4px;
+  color: #8ca3bf;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+.deposit-ratio {
+  color: #313642;
+  font-variant-numeric: tabular-nums;
+}
+
+.category-empty {
+  color: #9aa4b2;
+}
+.category-chips .category-chip {
+  min-height: 25px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.submitted-grant {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #d8e1ec;
+}
+.submitted-grant h4 {
+  margin: 0 0 12px;
+  color: #17253b;
+  font-size: 15px;
+}
+.submitted-grant .field {
+  margin-bottom: 12px;
+}
+.submitted-grant .btn {
+  margin-top: 4px;
+}

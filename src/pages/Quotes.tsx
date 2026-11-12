@@ -129,13 +129,22 @@ export function Quotes() {
   const nav = useNavigate();
   const location = useLocation();
   const [search, setSearch] = useState("");
+  const requestedTab = new URLSearchParams(location.search).get("tab");
   const [tab, setTab] = useState(
-    new URLSearchParams(location.search).get("tab") || "pending",
+    requestedTab === "pending"
+      ? "draft"
+      : requestedTab || "submitted",
   );
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
   const [salesFilter, setSalesFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const qs = engine.listQuotes(actor);
+  let invoices: ReturnType<typeof engine.listInvoices> = [];
+  try {
+    invoices = engine.listInvoices(actor);
+  } catch {}
   const canFilterOwner = ["admin", "admin_staff", "head"].includes(
     actor.role,
   );
@@ -152,9 +161,7 @@ export function Quotes() {
   function bucket(q: Quote) {
     if (q.archived) return "archived";
     if (q.submission || q.invoiceId) return "submitted";
-    if (q.draftStep && q.draftStep < 4) return "draft";
-    const e = engine.eligibility(actor, q.id);
-    return e.stage === "draft" ? "draft" : "pending";
+    return "draft";
   }
   function quotePath(q: Quote) {
     if (!q.submission && !q.invoiceId) {
@@ -177,10 +184,19 @@ export function Quotes() {
   function openQuote(q: Quote) {
     nav(quotePath(q));
   }
+  function quoteCategories(q: Quote): string[] {
+    return q.orderCategories?.length
+      ? q.orderCategories
+      : q.officeCategory
+        ? [q.officeCategory]
+        : [];
+  }
   const shown = qs
     .filter((q) => bucket(q) === tab)
     .filter(
       (q) =>
+        (categoryFilter === "all" ||
+          quoteCategories(q).includes(categoryFilter as never)) &&
         (monthFilter === "all" ||
           currentVersion(q).createdAt.startsWith(monthFilter)) &&
         (teamFilter === "all" || q.team === teamFilter) &&
@@ -189,10 +205,16 @@ export function Quotes() {
           .toLowerCase()
           .includes(search.toLowerCase()),
     )
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    .sort((a, b) => {
+      const first = currentVersion(a).createdAt;
+      const second = currentVersion(b).createdAt;
+      return sortOrder === "newest"
+        ? second.localeCompare(first)
+        : first.localeCompare(second);
+    });
   const pager = usePagination(
     shown,
-    `${tab}|${search}|${monthFilter}|${teamFilter}|${salesFilter}`,
+    `${tab}|${search}|${categoryFilter}|${monthFilter}|${teamFilter}|${salesFilter}|${sortOrder}`,
   );
   return (
     <>
@@ -223,6 +245,16 @@ export function Quotes() {
           />
           <div className="quote-filter-selects">
             <select
+              aria-label="報價類別"
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+            >
+              <option value="all">全部分類</option>
+              <option value="self-pay">自費</option>
+              <option value="grant-80k">8萬資助</option>
+              <option value="group-buy">團購</option>
+            </select>
+            <select
               aria-label="報價月份"
               value={monthFilter}
               onChange={(event) => setMonthFilter(event.target.value)}
@@ -233,6 +265,16 @@ export function Quotes() {
                   {month.replace("-", "年")}月
                 </option>
               ))}
+            </select>
+            <select
+              aria-label="報價排序"
+              value={sortOrder}
+              onChange={(event) =>
+                setSortOrder(event.target.value as "newest" | "oldest")
+              }
+            >
+              <option value="newest">最前至最後</option>
+              <option value="oldest">最後至最前</option>
             </select>
             {canFilterOwner && (
               <>
@@ -263,7 +305,6 @@ export function Quotes() {
         </div>
         <div className="tabs">
           {[
-            ["pending", "待提交"],
             ["submitted", "已提交"],
             ["draft", "草稿"],
             ["archived", "封存"],
@@ -299,13 +340,16 @@ export function Quotes() {
             <table>
               <thead>
                 <tr>
-                  <th>報價／版本</th>
+                  <th>{tab === "submitted" ? "報價單／發票" : "報價／版本"}</th>
                   <th>日期</th>
                   <th>客戶／工程地區</th>
                   {canFilterOwner && <th>Sales</th>}
                   <th className="numeric">成交金額</th>
+                  {tab === "submitted" && (
+                    <th className="numeric">訂金比率</th>
+                  )}
+                  <th>類別</th>
                   <th>目前進度</th>
-                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -313,12 +357,63 @@ export function Quotes() {
                   const v = currentVersion(q),
                     p = engine.pricing(actor, q.id),
                     e = engine.eligibility(actor, q.id);
+                  const invoice = invoices.find(
+                    (item) => item.quoteId === q.id,
+                  );
+                  const paid = e.validPaid + e.pendingPaid;
+                  const plannedDeposit =
+                    invoice?.paymentPlan?.[0]?.percentage ??
+                    (e.firstDue > 0 && p.total > 0
+                      ? Math.round((e.firstDue / p.total) * 100)
+                      : 0);
+                  const actualDeposit =
+                    p.total > 0
+                      ? Math.min(100, Math.round((paid / p.total) * 100))
+                      : 0;
+                  const depositRatio = actualDeposit || plannedDeposit;
+                  const hasGrant = quoteCategories(q).includes("grant-80k");
+                  const awaitingGrant =
+                    hasGrant &&
+                    (!q.grantApplicationNumber?.trim() ||
+                      !(q.grantApprovedAmount && q.grantApprovedAmount > 0));
+                  const approvedGrant = hasGrant && !awaitingGrant;
+                  const submittedProgress = awaitingGrant
+                    ? "待政府批核"
+                    : depositRatio === 0 && !approvedGrant
+                      ? "已交Office，待收首期"
+                      : depositRatio < 50
+                        ? "工程未進行，待收足50%訂"
+                        : depositRatio >= 100
+                          ? "工程進行中，待完工"
+                          : "工程進行中，待收第二期訂金";
                   return (
-                    <tr key={q.id}>
+                    <tr
+                      key={q.id}
+                      className="quote-clickable-row"
+                      tabIndex={0}
+                      onClick={() => openQuote(q)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openQuote(q);
+                        }
+                      }}
+                    >
                       <td>
-                        <Link className="source-link" to={quotePath(q)}>
+                        <Link
+                          className="source-link"
+                          to={quotePath(q)}
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           {q.number}
                         </Link>
+                        {tab === "submitted" &&
+                          invoice &&
+                          depositRatio >= 50 && (
+                            <small className="quote-invoice-number">
+                              {invoice.number}
+                            </small>
+                          )}
                       </td>
                       <td>{v.createdAt.slice(0, 10)}</td>
                       <td>
@@ -337,17 +432,41 @@ export function Quotes() {
                         </td>
                       )}
                       <td className="numeric money">{money(p.total)}</td>
+                      {tab === "submitted" && (
+                        <td className="numeric deposit-ratio">
+                          {depositRatio}%
+                        </td>
+                      )}
                       <td>
-                        <Badge strong={e.stage === "issued"}>{e.label}</Badge>
+                        {(() => {
+                          const categories = quoteCategories(q);
+                          if (!categories.length)
+                            return <span className="category-empty">—</span>;
+                          const color: Record<string, string> = {
+                            "self-pay": "green",
+                            "grant-80k": "orange",
+                            "group-buy": "blue",
+                          };
+                          return (
+                            <span className="category-chips">
+                              {categories.map((category) => (
+                                <span
+                                  key={category}
+                                  className={`category-chip ${color[category] ?? "neutral"}`}
+                                >
+                                  {INVOICE_CATEGORY_NAMES[
+                                    category as keyof typeof INVOICE_CATEGORY_NAMES
+                                  ] ?? category}
+                                </span>
+                              ))}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td>
-                        <Button
-                          variant="ghost"
-                          onClick={() => openQuote(q)}
-                          aria-label={`查看${q.number}`}
-                        >
-                          <ArrowUpRight size={22} />
-                        </Button>
+                        <Badge strong={e.stage === "issued"}>
+                          {tab === "submitted" ? submittedProgress : e.label}
+                        </Badge>
                       </td>
                     </tr>
                   );

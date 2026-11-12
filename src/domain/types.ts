@@ -235,6 +235,10 @@ export interface Quote {
   /** Sales標記此報價是否加單，並可指向自己之前的報價。 */
   isAdditionalOrder?: boolean;
   parentQuoteId?: string;
+  /** 8萬資助批核結果；未填代表仍待政府批核。 */
+  grantApplicationNumber?: string;
+  grantApprovedAmount?: number;
+  grantApprovedAt?: string;
   /** 草稿最後停留的 wizard step；1-3 在草稿列表，4 在待提交列表。 */
   draftStep?: 1 | 2 | 3 | 4;
   /** 開單員完整更正次數；顯示為 (V1)、(V2)… */
