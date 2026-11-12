@@ -355,7 +355,9 @@ export function Quotes() {
                       ? "已交Office，待收首期"
                       : depositRatio < 50
                         ? "工程未進行，待收足50%訂"
-                        : "工程進行中，待收第二期訂金";
+                        : depositRatio >= 100
+                          ? "工程進行中，待完工"
+                          : "工程進行中，待收第二期訂金";
                   return (
                     <tr
                       key={q.id}

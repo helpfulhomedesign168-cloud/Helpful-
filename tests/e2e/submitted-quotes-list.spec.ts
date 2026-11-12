@@ -14,6 +14,7 @@ test("已提交列表有排序、訂金比率、進度及整行入口", async ({
   const rows = page.locator("tbody tr");
   await expect(rows.nth(1)).toContainText("50%");
   await expect(rows.nth(2)).toContainText("100%");
+  await expect(rows.nth(2)).toContainText("工程進行中，待完工");
   await expect(rows.nth(1)).toContainText("SHMM");
   await expect(rows.nth(2)).toContainText("SHMM");
   await expect(firstRow).not.toContainText("SHMM");
