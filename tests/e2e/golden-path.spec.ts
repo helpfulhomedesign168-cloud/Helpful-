@@ -272,7 +272,7 @@ test("兩Sales範圍隔離與Pad／手機入口不溢出", async ({ page }) => {
     page.getByRole("heading", { name: "建立報價", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "儲存草稿", exact: true }),
+    page.getByRole("button", { name: "儲為草稿", exact: true }),
   ).toBeVisible();
   expect(
     await page.evaluate(
