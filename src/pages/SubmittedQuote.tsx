@@ -111,10 +111,42 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
     Boolean(quote.isAdditionalOrder),
   );
   const [parentQuoteId, setParentQuoteId] = useState(quote.parentQuoteId ?? "");
+  const [grantNumber, setGrantNumber] = useState(
+    quote.grantApplicationNumber ?? "",
+  );
+  const [grantAmount, setGrantAmount] = useState(
+    quote.grantApprovedAmount ? String(quote.grantApprovedAmount) : "",
+  );
   useEffect(() => {
     setAdditionalOrder(Boolean(quote.isAdditionalOrder));
     setParentQuoteId(quote.parentQuoteId ?? "");
-  }, [quote.id, quote.isAdditionalOrder, quote.parentQuoteId]);
+    setGrantNumber(quote.grantApplicationNumber ?? "");
+    setGrantAmount(
+      quote.grantApprovedAmount ? String(quote.grantApprovedAmount) : "",
+    );
+  }, [
+    quote.id,
+    quote.isAdditionalOrder,
+    quote.parentQuoteId,
+    quote.grantApplicationNumber,
+    quote.grantApprovedAmount,
+  ]);
+  const categories = (
+    quote.orderCategories?.length
+      ? quote.orderCategories
+      : quote.officeCategory
+        ? [quote.officeCategory]
+        : []
+  ) as InvoiceCategory[];
+  const hasGrant = categories.includes("grant-80k");
+  const canEditGrant =
+    !quote.archived &&
+    (quote.ownerId === actor.id ||
+      ["admin", "admin_staff"].includes(actor.role));
+  const canSaveGrant =
+    canEditGrant &&
+    Boolean(grantNumber.trim()) &&
+    Number(grantAmount) > 0;
   const canEditOrderMeta =
     quote.ownerId === actor.id &&
     !quote.archived &&
@@ -166,6 +198,11 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
             <Button onClick={() => nav(roleListPath(actor.role))}>
               返回列表
             </Button>
+            {canEditGrant && (
+              <Button onClick={() => nav(`/quotes/${quote.id}/edit`)}>
+                更改訂單
+              </Button>
+            )}
             <Button
               variant="primary"
               onClick={() => nav(`/documents/quote/${quote.id}`)}
@@ -268,6 +305,45 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
             <div><span>全單折扣</span><strong>{version.discount < 1 ? `${Math.round(version.discount * 100)}折` : "原價"}</strong></div>
             <div className="grand"><span>成交金額</span><strong>{money(pricing.total)}</strong></div>
           </div>
+          {hasGrant && (
+            <div className="submitted-grant">
+              <h4>批核結果</h4>
+              <Field label="資助申請編號">
+                <input
+                  aria-label="資助申請編號"
+                  value={grantNumber}
+                  disabled={!canEditGrant}
+                  onChange={(event) => setGrantNumber(event.target.value)}
+                />
+              </Field>
+              <Field label="政府批核金額（HKD）">
+                <input
+                  aria-label="政府批核金額"
+                  type="number"
+                  min=".01"
+                  value={grantAmount}
+                  disabled={!canEditGrant}
+                  onChange={(event) => setGrantAmount(event.target.value)}
+                />
+              </Field>
+              <Button
+                variant="primary"
+                disabled={!canSaveGrant}
+                onClick={() =>
+                  run(
+                    () =>
+                      engine.recordGrantApproval(actor, quote.id, {
+                        applicationNumber: grantNumber,
+                        approvedAmount: Number(grantAmount),
+                      }),
+                    "8萬資助批核結果已儲存。",
+                  )
+                }
+              >
+                儲存
+              </Button>
+            </div>
+          )}
         </aside>
         <div className="submitted-document">
           <iframe title="正式報價單" src={`/documents/quote/${quote.id}`} />

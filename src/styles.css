@@ -11058,3 +11058,20 @@ textarea::placeholder {
   border-radius: 999px;
   font-size: 11px;
 }
+
+.submitted-grant {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #d8e1ec;
+}
+.submitted-grant h4 {
+  margin: 0 0 12px;
+  color: #17253b;
+  font-size: 15px;
+}
+.submitted-grant .field {
+  margin-bottom: 12px;
+}
+.submitted-grant .btn {
+  margin-top: 4px;
+}

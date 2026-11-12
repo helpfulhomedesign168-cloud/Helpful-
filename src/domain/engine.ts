@@ -4709,6 +4709,39 @@ export class Engine {
     });
     return output;
   }
+  recordGrantApproval(
+    actorInput: Actor,
+    quoteId: string,
+    input: { applicationNumber: string; approvedAmount: number },
+  ): Quote {
+    const actor = this.actor(actorInput);
+    let output!: Quote;
+    this.mutate((state) => {
+      const quote = this.findQuote(quoteId, state);
+      if (
+        !this.canWriteQuote(actor, quote) &&
+        !this.isAdmin(actor)
+      )
+        fail("你沒有修改此報價批核結果的權限。");
+      if (quote.archived) fail("已封存報價不可修改。");
+      const applicationNumber = input.applicationNumber?.trim();
+      if (!applicationNumber) fail("請填寫資助申請編號。");
+      if (!(input.approvedAmount > 0))
+        fail("請填寫有效的政府批核金額。");
+      quote.grantApplicationNumber = applicationNumber;
+      quote.grantApprovedAmount = input.approvedAmount;
+      quote.grantApprovedAt = NOW;
+      quote.updatedAt = NOW;
+      this.audit(state, {
+        quoteId,
+        actorId: actor.id,
+        action: "grant_approval_recorded",
+        detail: `8萬資助批核：${applicationNumber} · HK$${input.approvedAmount.toLocaleString("en-HK")}`,
+      });
+      output = deepCopy(quote);
+    });
+    return this.isAdmin(actor) ? output : sanitiseQuote(output, false);
+  }
   uploadDocument(
     actorInput: Actor,
     quoteId: string,

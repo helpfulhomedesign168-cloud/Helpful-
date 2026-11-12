@@ -371,8 +371,15 @@ export function Quotes() {
                       ? Math.min(100, Math.round((paid / p.total) * 100))
                       : 0;
                   const depositRatio = actualDeposit || plannedDeposit;
-                  const submittedProgress =
-                    depositRatio === 0
+                  const hasGrant = quoteCategories(q).includes("grant-80k");
+                  const awaitingGrant =
+                    hasGrant &&
+                    (!q.grantApplicationNumber?.trim() ||
+                      !(q.grantApprovedAmount && q.grantApprovedAmount > 0));
+                  const approvedGrant = hasGrant && !awaitingGrant;
+                  const submittedProgress = awaitingGrant
+                    ? "待政府批核"
+                    : depositRatio === 0 && !approvedGrant
                       ? "已交Office，待收首期"
                       : depositRatio < 50
                         ? "工程未進行，待收足50%訂"
