@@ -2,7 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FileText, Printer, Upload } from "lucide-react";
 import { QuoteDetail as LegacyQuoteDetail } from "./Quotes";
-import { Button, Empty, Field, PageHead } from "../components/ui";
+import {
+  Button,
+  Dialog,
+  Empty,
+  Field,
+  PageHead,
+  UploadField,
+} from "../components/ui";
 import {
   getAttachmentBlob,
   saveAttachment,
@@ -107,6 +114,8 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
   const [paymentDate, setPaymentDate] = useState(DEMO_TODAY);
   const [proof, setProof] = useState<Attachment>();
   const [busy, setBusy] = useState(false);
+  const [confirmSigned, setConfirmSigned] = useState(false);
+  const [grantWarning, setGrantWarning] = useState(false);
   const [additionalOrder, setAdditionalOrder] = useState(
     Boolean(quote.isAdditionalOrder),
   );
@@ -139,6 +148,10 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
         : []
   ) as InvoiceCategory[];
   const hasGrant = categories.includes("grant-80k");
+  const canEditCategories =
+    !quote.archived &&
+    (quote.ownerId === actor.id ||
+      ["admin", "admin_staff"].includes(actor.role));
   const canEditGrant =
     !quote.archived &&
     (quote.ownerId === actor.id ||
@@ -199,7 +212,7 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
               返回列表
             </Button>
             {canEditGrant && (
-              <Button onClick={() => nav(`/quotes/${quote.id}/edit`)}>
+              <Button onClick={() => nav(`/quotes/${quote.id}/edit?order=1`)}>
                 更改訂單
               </Button>
             )}
@@ -226,15 +239,36 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
           <div className="submitted-summary-block">
             <span>訂單分類</span>
             <div className="submitted-chips">
-              {((quote.orderCategories?.length
-                ? quote.orderCategories
-                : quote.officeCategory
-                  ? [quote.officeCategory]
-                  : []) as InvoiceCategory[]).map((category) => (
-                <span key={category}>{INVOICE_CATEGORY_NAMES[category]}</span>
-              ))}
-              {!quote.orderCategories?.length && !quote.officeCategory && (
-                <span>未分類</span>
+              {(Object.keys(INVOICE_CATEGORY_NAMES) as InvoiceCategory[]).map(
+                (category) => {
+                  const active = categories.includes(category);
+                  return (
+                    <button
+                      type="button"
+                      key={category}
+                      className={active ? "selected" : ""}
+                      disabled={!canEditCategories}
+                      onClick={() => {
+                        if (category === "grant-80k" && active) {
+                          setGrantWarning(true);
+                          return;
+                        }
+                        const next = active
+                          ? categories.filter((item) => item !== category)
+                          : [...categories, category];
+                        run(
+                          () =>
+                            engine.updateQuoteOrderMeta(actor, quote.id, {
+                              orderCategories: next,
+                            }),
+                          "訂單分類已更新。",
+                        );
+                      }}
+                    >
+                      {INVOICE_CATEGORY_NAMES[category]}
+                    </button>
+                  );
+                },
               )}
             </div>
           </div>
@@ -352,7 +386,9 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
       <section className="submitted-card">
         <div className="submitted-card-head">
           <h3>1. 客戶簽署</h3>
-          <span className="submitted-complete">✓ 已完成</span>
+          {version.signature && (
+            <span className="submitted-complete">✓ 已完成</span>
+          )}
         </div>
         <div className="submitted-sign-grid">
           <div>
@@ -362,8 +398,56 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
             <p>簽署日期：<strong>{version.signature?.date ?? preparation?.date ?? "—"}</strong></p>
             <p>當日主管：<strong>{supervisor?.name ?? "—"}</strong></p>
           </div>
-          <AttachmentBox attachment={version.signedDocument} label="已簽文件" />
+          {version.signedDocument ? (
+            <AttachmentBox
+              attachment={version.signedDocument}
+              label="已簽文件"
+            />
+          ) : (
+            <UploadField
+              label="上載已簽文件"
+              onSave={(attachment) =>
+                engine.uploadDocument(actor, quote.id, attachment)
+              }
+            />
+          )}
         </div>
+        {!version.signature && (
+          <>
+            {quote.orderRevision && (
+              <p className="submitted-resign-note">
+                由於報價單已修改，要重新列印、簽署及上載。
+              </p>
+            )}
+            <label className="submitted-confirm-sign">
+              <input
+                type="checkbox"
+                checked={confirmSigned}
+                onChange={(event) => setConfirmSigned(event.target.checked)}
+              />
+              我確認客戶已簽署上述正式報價版本
+            </label>
+            <div className="submitted-sign-action">
+              <Button
+                variant="primary"
+                disabled={!version.signedDocument || !confirmSigned}
+                onClick={() =>
+                  run(
+                    () =>
+                      engine.recordSignature(actor, quote.id, {
+                        date: preparation?.date ?? DEMO_TODAY,
+                        supervisorId: preparation?.supervisorId ?? "",
+                        confirmed: confirmSigned,
+                      }),
+                    "客戶簽署已重新確認。",
+                  )
+                }
+              >
+                確認客戶已簽
+              </Button>
+            </div>
+          </>
+        )}
       </section>
       {payments.map((payment, index) => (
         <section className="submitted-card" key={payment.id}>
@@ -448,6 +532,21 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
           {audit.length === 0 && <p>未有處理紀錄。</p>}
         </div>
       </section>
+      {grantWarning && (
+        <Dialog
+          title="不能移除 8萬資助"
+          onClose={() => setGrantWarning(false)}
+        >
+          <p className="dialog-intro">
+            此訂單已包含 8萬資助，不能移除。其他分類仍可更改。
+          </p>
+          <div className="dialog-actions">
+            <Button variant="primary" onClick={() => setGrantWarning(false)}>
+              確定
+            </Button>
+          </div>
+        </Dialog>
+      )}
     </>
   );
 }

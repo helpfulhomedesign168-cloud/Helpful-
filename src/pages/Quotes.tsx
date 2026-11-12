@@ -663,7 +663,8 @@ export function QuoteEditor() {
   const [searchParams] = useSearchParams();
   const nav = useNavigate();
   const resumeStep = searchParams.get("step");
-  const wizard = !id || resumeStep === "1" || resumeStep === "2";
+  const orderEdit = searchParams.get("order") === "1";
+  const wizard = !id || orderEdit || resumeStep === "1" || resumeStep === "2";
   let existing: Quote | undefined;
   try {
     if (id) existing = engine.getQuote(actor, id);
@@ -700,7 +701,7 @@ export function QuoteEditor() {
   );
   const [reason, setReason] = useState("");
   const [wizardStep, setWizardStep] = useState<1 | 2>(
-    resumeStep === "2" ? 2 : 1,
+    orderEdit || resumeStep === "2" ? 2 : 1,
   );
   const [exitConfirm, setExitConfirm] = useState(false);
   const [picker, setPicker] = useState(false);
@@ -840,6 +841,22 @@ export function QuoteEditor() {
                 ? "/quotes/" + q.id
                 : "/quotes/" + q.id + "/edit",
       );
+  }
+  function saveOrder() {
+    const q = run(
+      () =>
+        engine.saveDraft(actor, id, {
+          customer,
+          lines,
+          discount,
+          discountMode,
+          discountValue,
+          reason: "更改訂單",
+          changeOrder: true,
+        }),
+      "訂單已更新；請重新列印及上載已簽文件。",
+    );
+    if (q) nav(`/quotes/${q.id}`);
   }
   function addCustomWork() {
     const name = customWork.trim();
@@ -996,11 +1013,15 @@ export function QuoteEditor() {
   return (
     <>
       <PageHead
-        title={wizard ? "建立報價" : "修改報價"}
+        title={orderEdit ? "修改報價" : wizard ? "建立報價" : "修改報價"}
         actions={
           <>
             <Button
               onClick={() => {
+                if (orderEdit) {
+                  nav(`/quotes/${id}`);
+                  return;
+                }
                 if (wizard && wizardStep === 1) {
                   setExitConfirm(true);
                   return;
@@ -1014,23 +1035,29 @@ export function QuoteEditor() {
             >
               返回
             </Button>
-            <Button
-              variant={clerkEditor ? "primary" : "secondary"}
-              onClick={() => save("draft")}
-            >
-              {clerkEditor ? (
-                <>
-                  <Check size={20} />
-                  儲存更正
-                </>
-              ) : (
-                "儲為草稿"
-              )}
-            </Button>
+            {orderEdit ? (
+              <Button variant="primary" onClick={saveOrder}>
+                儲存修改
+              </Button>
+            ) : (
+              <Button
+                variant={clerkEditor ? "primary" : "secondary"}
+                onClick={() => save("draft")}
+              >
+                {clerkEditor ? (
+                  <>
+                    <Check size={20} />
+                    儲存更正
+                  </>
+                ) : (
+                  "儲為草稿"
+                )}
+              </Button>
+            )}
           </>
         }
       />
-      {wizard && <QuoteWizardProgress step={wizardStep} />}
+      {wizard && !orderEdit && <QuoteWizardProgress step={wizardStep} />}
       {clerkEditor && (
         <p className="inline-warning">
           開單員更正模式：儲存後會建立新版本，項目及價錢會更新；原版本保留，
@@ -1384,7 +1411,7 @@ export function QuoteEditor() {
             )}
           </Section>
           )}
-          {(base?.signature || clerkEditor) && (
+          {(base?.signature || clerkEditor) && !orderEdit && (
             <Section title="版本修改原因">
               <Field label="修改原因" required>
                 <textarea
@@ -1504,7 +1531,7 @@ export function QuoteEditor() {
         </aside>
         )}
       </div>
-      {wizard && (
+      {wizard && !orderEdit && (
         <div className="quote-wizard-footer">
           {wizardStep === 2 && (
             <Button onClick={() => setWizardStep(1)}>上一步</Button>
