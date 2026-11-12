@@ -157,7 +157,7 @@ export function Quotes() {
   function bucket(q: Quote) {
     if (q.archived) return "archived";
     if (q.submission || q.invoiceId) return "submitted";
-    if (q.draftStep && q.draftStep < 4) return "draft";
+    if (q.draftStep) return "draft";
     const e = engine.eligibility(actor, q.id);
     return e.stage === "draft" ? "draft" : "pending";
   }

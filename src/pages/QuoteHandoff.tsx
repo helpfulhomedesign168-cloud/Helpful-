@@ -251,12 +251,12 @@ export function QuoteHandoff() {
                 onClick={() => {
                   run(
                     () => engine.markDraftStep(actor, id, 4),
-                    "報價已標記為待提交。",
+                    "草稿已儲存。",
                   );
-                  nav("/quotes?tab=pending");
+                  nav("/quotes?tab=draft");
                 }}
               >
-                待提交
+                儲存草稿
               </Button>
             ) : (
               <Button

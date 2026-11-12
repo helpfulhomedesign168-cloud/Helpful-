@@ -97,13 +97,13 @@ test("草稿會按Step 1／2／3／4重開並進入正確列表", async ({ page 
   await expect(
     page.getByRole("heading", { name: "4. 遞交office", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "待提交", exact: true }).click();
-  await expect(page).toHaveURL(/\/quotes\?tab=pending/);
-  const pendingRow = page
+  await page.getByRole("button", { name: "儲存草稿", exact: true }).click();
+  await expect(page).toHaveURL(/\/quotes\?tab=draft/);
+  const draftStep4Row = page
     .locator("tbody tr")
     .filter({ hasText: "草稿流程客戶" });
-  await expect(pendingRow).toBeVisible();
-  await pendingRow.locator("a.source-link").click();
+  await expect(draftStep4Row).toBeVisible();
+  await draftStep4Row.locator("a.source-link").click();
   await expect(page).toHaveURL(/\/quotes\/.+\/handoff\?step=4/);
   await expect(
     page.getByRole("heading", { name: "4. 遞交office", exact: true }),
