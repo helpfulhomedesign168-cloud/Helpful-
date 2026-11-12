@@ -105,6 +105,23 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
   const supervisor = engine
     .listActors()
     .find((candidate) => candidate.id === preparation?.supervisorId);
+  const firstSignedVersion = quote.versions.find(
+    (candidate) => Boolean(candidate.signature),
+  );
+  const firstSignatureDate =
+    quote.commissionAttribution?.signedDate ??
+    firstSignedVersion?.signature?.date ??
+    version.signature?.date ??
+    preparation?.date ??
+    "—";
+  const firstSupervisorId =
+    quote.commissionAttribution?.supervisorId ??
+    firstSignedVersion?.signature?.supervisorId ??
+    version.signature?.supervisorId ??
+    preparation?.supervisorId;
+  const firstSupervisor = engine
+    .listActors()
+    .find((candidate) => candidate.id === firstSupervisorId);
   const totalPaid = payments
     .filter((payment) => payment.status !== "rejected")
     .reduce((sum, payment) => sum + payment.amount, 0);
@@ -236,13 +253,20 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
         <aside className="submitted-summary">
           <h3>報價摘要</h3>
           <div className="submitted-summary-row">
-            <span>簽署日期</span>
-            <strong>{version.signature?.date ?? preparation?.date ?? "—"}</strong>
+            <span>首簽日期</span>
+            <strong>{firstSignatureDate}</strong>
           </div>
           <div className="submitted-summary-row">
-            <span>當日主管</span>
-            <strong>{supervisor?.name ?? "—"}</strong>
+            <span>首簽主管</span>
+            <strong>{firstSupervisor?.name ?? "—"}</strong>
           </div>
+          {version.signature &&
+            version.signature.date !== firstSignatureDate && (
+              <div className="submitted-summary-row">
+                <span>最新重簽日期</span>
+                <strong>{version.signature.date}</strong>
+              </div>
+            )}
           <div className="submitted-summary-block">
             <span>訂單分類</span>
             <div className="submitted-chips">
@@ -402,8 +426,23 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
             <p>客戶姓名：<strong>{version.customer.name}</strong></p>
             <p>聯絡電話：<strong>{version.customer.phone}</strong></p>
             <p>客戶地址：<strong>{version.customer.address}</strong></p>
-            <p>簽署日期：<strong>{version.signature?.date ?? preparation?.date ?? "—"}</strong></p>
-            <p>當日主管：<strong>{supervisor?.name ?? "—"}</strong></p>
+            <p>首簽日期：<strong>{firstSignatureDate}</strong></p>
+            <p>首簽主管：<strong>{firstSupervisor?.name ?? "—"}</strong></p>
+            {version.signature &&
+              version.signature.date !== firstSignatureDate && (
+                <p>
+                  最新重簽：<strong>{version.signature.date}</strong>
+                  {" · "}
+                  <strong>
+                    {engine
+                      .listActors()
+                      .find(
+                        (candidate) =>
+                          candidate.id === version.signature?.supervisorId,
+                      )?.name ?? "—"}
+                  </strong>
+                </p>
+              )}
           </div>
           {version.signedDocument ? (
             <AttachmentBox

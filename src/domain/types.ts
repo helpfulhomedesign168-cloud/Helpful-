@@ -241,6 +241,16 @@ export interface Quote {
   grantApprovedAt?: string;
   /** 更改訂單後，目前版本需要重新列印及簽署。 */
   orderRevision?: boolean;
+  /** 首次簽署的佣金歸屬；改單／重簽都不可覆寫。 */
+  commissionAttribution?: {
+    signedDate: string;
+    supervisorId: string;
+    salesId: string;
+    versionId: string;
+    quoteNumber: string;
+    total: number;
+    discount: number;
+  };
   orderChangedByClerk?: boolean;
   resignNotifiedAt?: string;
   /** 草稿最後停留的 wizard step；1-3 在草稿列表，4 在待提交列表。 */
