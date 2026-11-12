@@ -529,6 +529,9 @@ export function Submissions() {
   >("all");
   const [teamFilter, setTeamFilter] = useState<"all" | "A" | "B">("all");
   const [salesFilter, setSalesFilter] = useState("all");
+  const [orderFilter, setOrderFilter] = useState<
+    "all" | "new" | "additional"
+  >("all");
   const [activePayment, setActivePayment] = useState<Payment | null>(null);
   const parentSummaryOf = (quote: Quote) =>
     quote.parentQuoteId
@@ -546,6 +549,10 @@ export function Submissions() {
         return (
           (categoryFilter === "all" ||
             categories.includes(categoryFilter)) &&
+          (orderFilter === "all" ||
+            (orderFilter === "additional"
+              ? Boolean(quote.isAdditionalOrder)
+              : !quote.isAdditionalOrder)) &&
           (teamFilter === "all" || quote.team === teamFilter) &&
           (salesFilter === "all" || quote.ownerId === salesFilter) &&
           `${quote.number} ${currentVersion(quote).customer.name} ${currentVersion(quote).customer.address} ${parentSummaryOf(quote)?.number ?? ""}`.includes(
@@ -561,7 +568,7 @@ export function Submissions() {
   );
   const pager = usePagination(
     sortedSources,
-    `${search}|${categoryFilter}|${teamFilter}|${salesFilter}`,
+    `${search}|${categoryFilter}|${orderFilter}|${teamFilter}|${salesFilter}`,
   );
   const payments = engine.listPayments(actor);
   const salesActors = engine
@@ -599,6 +606,19 @@ export function Submissions() {
               )}
             </select>
             <select
+              aria-label="單類"
+              value={orderFilter}
+              onChange={(event) =>
+                setOrderFilter(
+                  event.target.value as "all" | "new" | "additional",
+                )
+              }
+            >
+              <option value="all">全部單類</option>
+              <option value="new">新訂單</option>
+              <option value="additional">後加單</option>
+            </select>
+            <select
               aria-label="來源Team"
               value={teamFilter}
               onChange={(e) =>
@@ -622,10 +642,6 @@ export function Submissions() {
               ))}
             </select>
           </div>
-        </div>
-        <div className="submission-legend">
-          <span className="normal-dot">正單</span>
-          <span className="additional-dot">加單</span>
         </div>
         {sources.length === 0 ? (
           <Empty

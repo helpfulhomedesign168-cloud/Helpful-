@@ -11132,8 +11132,8 @@ textarea::placeholder {
   padding: 23px 25px;
 }
 .submission-toolbar .search {
-  flex: 1 1 340px;
-  max-width: 520px;
+  flex: 1 1 300px;
+  max-width: 340px;
   min-width: 240px;
   width: auto;
 }
@@ -11142,8 +11142,8 @@ textarea::placeholder {
   gap: 14px;
 }
 .submission-filters select {
-  flex: 0 0 170px;
-  width: 170px;
+  flex: 0 0 160px;
+  width: 160px;
   min-width: 0;
 }
 .submission-table {

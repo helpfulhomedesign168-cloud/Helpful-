@@ -18,6 +18,7 @@ test("開單員提交報價列表顯示加單及原單號", async ({ page }) => 
 
   await switchRole(page, "開單員");
   await page.goto("/submissions");
+  await page.getByLabel("單類").selectOption("additional");
   const row = page
     .locator(".submission-table tbody tr")
     .filter({ hasText: "李好波" });
