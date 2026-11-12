@@ -209,6 +209,8 @@ export function QuoteHandoff() {
     );
   };
   const currentStep = quote.submission ? 4 : step;
+  const step4Complete =
+    Boolean(signature) && paymentDone && Boolean(quote.submission);
   useEffect(() => {
     if (quote.submission) {
       setQuoteDraftGuard(null);
@@ -681,8 +683,16 @@ export function QuoteHandoff() {
             )}
           </div>
           <div className="quote-wizard-footer">
-            <Button onClick={() => nav("/quotes")}>回主頁</Button>
-            <Button onClick={() => nav(`/quotes/${id}`)}>查看報價</Button>
+            {step4Complete ? (
+              <>
+                <Button onClick={() => nav("/quotes")}>回主頁</Button>
+                <Button onClick={() => nav(`/quotes/${id}`)}>
+                  查看報價
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setStep(3)}>上一步</Button>
+            )}
           </div>
         </>
       )}

@@ -57,6 +57,12 @@ test("Sales完成正式Step 3列印簽署及Step 4交Office", async ({ page }) =
   await expect(
     page.getByRole("heading", { name: "4. 遞交office", exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "上一步", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "回主頁", exact: true }),
+  ).toHaveCount(0);
   await page.getByLabel("上載已簽文件").setInputFiles({
     name: "signed.pdf",
     mimeType: "application/pdf",
@@ -81,5 +87,16 @@ test("Sales完成正式Step 3列印簽署及Step 4交Office", async ({ page }) =
   const office = page.getByRole("button", { name: "提交Office", exact: true });
   await expect(office).toBeEnabled();
   await office.click();
-  await expect(page.locator(".handoff-card").filter({ hasText: "3. 交Office跟進" })).toContainText("✓ 已完成");
+  await expect(
+    page.locator(".handoff-card").filter({ hasText: "3. 交Office跟進" }),
+  ).toContainText("✓ 已完成");
+  await expect(
+    page.getByRole("button", { name: "回主頁", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "查看報價", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "上一步", exact: true }),
+  ).toHaveCount(0);
 });
