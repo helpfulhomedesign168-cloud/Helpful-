@@ -73,27 +73,35 @@ test("開單員可開啟完整報價編輯器並建立更正版本", async ({ pa
   await page.goto("/");
   await switchRole(page, "開單員");
   await page.goto("/submissions");
-  await page.getByRole("button", { name: /編輯QSHMM26100004報價單/ }).click();
-  await expect(page).toHaveURL(/\/quotes\/quote-pending-office\/edit$/);
+  await page
+    .locator(".submission-table tbody tr")
+    .filter({ hasText: "QSHMM26100004" })
+    .click();
+  await expect(page).toHaveURL(/\/quotes\/quote-pending-office$/);
+  await page.getByRole("button", { name: "更改訂單", exact: true }).click();
+  await expect(page).toHaveURL(/\/quotes\/quote-pending-office\/edit\?order=1$/);
   await expect(
-    page.getByText("開單員更正模式", { exact: false }),
+    page.getByRole("heading", { name: "修改報價", exact: true }),
   ).toBeVisible();
-  await page.getByLabel("客戶姓名", { exact: false }).fill("李好波更正");
+  await expect(
+    page.getByRole("button", { name: "儲存修改", exact: true }),
+  ).toBeVisible();
   const line = page.locator(".line-card").first();
   const length = line.getByLabel("闊度", { exact: false });
   if (await length.count()) await length.fill("9");
-  await page
-    .getByLabel("修改原因", { exact: false })
-    .fill("開單員更正測試");
-  await page.getByRole("button", { name: "儲存更正", exact: true }).first().click();
+  await page.getByRole("button", { name: "儲存修改", exact: true }).click();
+  await expect(page).toHaveURL(/\/quotes\/quote-pending-office$/);
+  await page.getByRole("button", { name: "返回列表", exact: true }).click();
   await expect(page).toHaveURL(/\/submissions$/);
   const correctedRow = page
     .locator(".submission-table tbody tr")
-    .filter({ hasText: "李好波更正" });
+    .filter({ hasText: "李好波" });
   await expect(correctedRow).toBeVisible();
   await expect(correctedRow).toContainText("(V1)");
-  await correctedRow
-    .getByRole("button", { name: /列印QSHMM26100004報價單/ })
+  await correctedRow.click();
+  await expect(page).toHaveURL(/\/quotes\/quote-pending-office$/);
+  await page
+    .getByRole("button", { name: "列印報價單", exact: true })
     .click();
   await expect(page).toHaveURL(/\/documents\/quote\//);
   await expect(page.locator(".document-number")).toContainText(

@@ -11123,3 +11123,78 @@ textarea::placeholder {
   color: #8d96a4;
   opacity: 1;
 }
+
+/* Submission list aligned with Sales quote list */
+.submission-toolbar {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 23px 25px;
+}
+.submission-toolbar .search {
+  flex: 1 1 300px;
+  max-width: 340px;
+  min-width: 240px;
+  width: auto;
+}
+.submission-filters {
+  margin-left: auto;
+  gap: 14px;
+}
+.submission-filters select {
+  flex: 0 0 160px;
+  width: 160px;
+  min-width: 0;
+}
+.submission-table {
+  table-layout: fixed;
+  min-width: 1100px;
+}
+.submission-table th:nth-child(1),
+.submission-table td:nth-child(1) { width: 17%; }
+.submission-table th:nth-child(2),
+.submission-table td:nth-child(2) { width: 10%; }
+.submission-table th:nth-child(3),
+.submission-table td:nth-child(3) { width: 18%; }
+.submission-table th:nth-child(4),
+.submission-table td:nth-child(4) { width: 12%; }
+.submission-table th:nth-child(5),
+.submission-table td:nth-child(5) { width: 13%; }
+.submission-table th:nth-child(6),
+.submission-table td:nth-child(6) { width: 13%; }
+.submission-table th:nth-child(7),
+.submission-table td:nth-child(7) { width: 17%; }
+.submission-table td:last-child .btn {
+  width: auto;
+  min-width: 140px;
+  max-width: 100%;
+  padding-left: 18px;
+  padding-right: 18px;
+  white-space: nowrap;
+}
+.submission-clickable-row {
+  cursor: pointer;
+}
+.submission-clickable-row:hover td,
+.submission-clickable-row:focus-visible td {
+  background: #f5f8fc;
+}
+.submission-clickable-row:focus-visible {
+  outline: 2px solid #88baff;
+  outline-offset: -2px;
+}
+@media (max-width: 900px) {
+  .submission-toolbar .search {
+    flex: 1 1 100%;
+    max-width: none;
+    width: 100%;
+  }
+  .submission-filters {
+    width: 100%;
+    margin-left: 0;
+  }
+  .submission-filters select {
+    flex: 1 1 0;
+    width: auto;
+  }
+}

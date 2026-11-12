@@ -156,6 +156,12 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
     !quote.archived &&
     (quote.ownerId === actor.id ||
       ["admin", "admin_staff"].includes(actor.role));
+  const canChangeOrder =
+    !quote.archived &&
+    (quote.ownerId === actor.id ||
+      ["clerk", "finance_supervisor", "admin", "admin_staff"].includes(
+        actor.role,
+      ));
   const canSaveGrant =
     canEditGrant &&
     Boolean(grantNumber.trim()) &&
@@ -211,7 +217,7 @@ export function SubmittedQuoteView({ quote }: { quote: Quote }) {
             <Button onClick={() => nav(roleListPath(actor.role))}>
               返回列表
             </Button>
-            {canEditGrant && (
+            {canChangeOrder && (
               <Button onClick={() => nav(`/quotes/${quote.id}/edit?order=1`)}>
                 更改訂單
               </Button>

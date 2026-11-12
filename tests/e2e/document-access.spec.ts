@@ -34,7 +34,7 @@ test("CS可讀已發工程部的Invoice與工程；開單員不可再直入工�
   expect(errors).toEqual([]);
 });
 
-test("報價詳情返回列表會回到目前Sales或會計工作區；開單員直入原Q會被導回提交報價", async ({
+test("報價詳情返回列表會回到目前Sales或會計工作區；開單員可查看原Q", async ({
   page,
 }) => {
   await page.goto("/");
@@ -45,7 +45,10 @@ test("報價詳情返回列表會回到目前Sales或會計工作區；開單員
 
   await switchRole(page, "開單員");
   await page.goto("/quotes/quote-pending-office");
-  await expect(page).toHaveURL(/\/submissions$/);
+  await expect(page).toHaveURL(/\/quotes\/quote-pending-office$/);
+  await expect(
+    page.getByRole("button", { name: "更改訂單", exact: true }),
+  ).toBeVisible();
 
   await switchRole(page, "文文B MM");
   await page.goto("/quotes/quote-draft-2");
