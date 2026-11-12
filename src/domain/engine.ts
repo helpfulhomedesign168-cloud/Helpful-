@@ -819,6 +819,28 @@ export class Engine {
         )
           quote.officeCategory = "grant-80k";
         retainHighestSequence(migrated.quoteSequences, quote.number);
+        if (!quote.commissionAttribution) {
+          const signedVersion = quote.versions.find(
+            (version) => Boolean(version.signature),
+          );
+          if (signedVersion?.signature) {
+            quote.commissionAttribution = {
+              signedDate: signedVersion.signature.date,
+              supervisorId: signedVersion.signature.supervisorId,
+              salesId: quote.ownerId,
+              versionId: signedVersion.id,
+              quoteNumber:
+                signedVersion.printPreparation?.quoteNumber ?? quote.number,
+              total: calculatePricing(
+                signedVersion.lines,
+                signedVersion.discount,
+                migrated.services,
+                true,
+              ).total,
+              discount: signedVersion.discount,
+            };
+          }
+        }
         quote.versions.forEach((version) => {
           migrateCustomer(version.customer);
           if (version.signature && !version.printPreparation) {
@@ -2066,6 +2088,7 @@ export class Engine {
           Object.hasOwn(INVOICE_CATEGORY_NAMES, category),
         );
         if (
+          quote.orderRevision &&
           ((quote.orderCategories ?? []).includes("grant-80k") ||
             quote.officeCategory === "grant-80k") &&
           !valid.includes("grant-80k")
@@ -2693,14 +2716,16 @@ export class Engine {
     const actor = this.actor(actorInput);
     const entries: PerformanceEntry[] = [];
     this.state.quotes.forEach((quote) => {
-      const version = currentVersion(quote);
+      const attribution = quote.commissionAttribution;
+      const version =
+        (attribution
+          ? quote.versions.find(
+              (item) => item.id === attribution.versionId,
+            )
+          : quote.versions.find((item) => Boolean(item.signature))) ??
+        currentVersion(quote);
       const signature = version.signature;
-      if (
-        !signature ||
-        !quote.submission ||
-        quote.submission.versionId !== version.id
-      )
-        return;
+      if (!signature) return;
       const raw = this.pricingRaw(quote);
       const invoice = quote.invoiceId
         ? this.state.invoices.find((item) => item.id === quote.invoiceId)
@@ -2711,9 +2736,11 @@ export class Engine {
           invoice.category ?? "self-pay",
           invoice.netTotal,
         ))[0].amount;
-      const payments = this.paymentsFor(quote.id, version.id).filter(
+      const payments = this.state.payments.filter(
         (payment) =>
-          payment.status === "valid" && payment.invoiceId === invoice.id,
+          payment.quoteId === quote.id &&
+          payment.status === "valid" &&
+          payment.invoiceId === invoice.id,
       );
       const cumulative = payments
         .sort((a, b) => a.validDate!.localeCompare(b.validDate!))
@@ -2731,10 +2758,10 @@ export class Engine {
         }
       }
       if (!qualificationDate.startsWith(month)) return;
-      const low = factor(version.discount).lt(0.95);
+      const low = factor(attribution?.discount ?? version.discount).lt(0.95);
       const owner = this.state.actors.find((a) => a.id === quote.ownerId);
       const supervisor = this.state.actors.find(
-        (a) => a.id === signature.supervisorId,
+        (a) => a.id === (attribution?.supervisorId ?? signature.supervisorId),
       );
       if (!owner || !supervisor) return;
       let rate = 0;
@@ -2749,9 +2776,11 @@ export class Engine {
         quoteId: quote.id,
         number: quote.number,
         customerName: version.customer.name,
-        total: raw.total,
+        total: attribution?.total ?? raw.total,
         rate,
-        commission: moneyValue(D(raw.total).mul(rate)),
+        commission: moneyValue(
+          D(attribution?.total ?? raw.total).mul(rate),
+        ),
         date: qualificationDate,
       });
     });
@@ -4944,6 +4973,23 @@ export class Engine {
         actorId: actor.id,
         createdAt: NOW,
       };
+      if (!quote.commissionAttribution) {
+        quote.commissionAttribution = {
+          signedDate: input.date,
+          supervisorId: supervisor.id,
+          salesId: quote.ownerId,
+          versionId: version.id,
+          quoteNumber:
+            version.printPreparation?.quoteNumber ?? quote.number,
+          total: calculatePricing(
+            version.lines,
+            version.discount,
+            state.services,
+            true,
+          ).total,
+          discount: version.discount,
+        };
+      }
       quote.orderRevision = false;
       version.calculation = frozen(
         calculatePricing(version.lines, version.discount, state.services, true),

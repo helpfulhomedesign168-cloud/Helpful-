@@ -13,6 +13,13 @@ test("開單員改單後通知Sale重新簽署", async ({ page }) => {
   await page.getByRole("button", { name: "更改訂單", exact: true }).click();
   await page.getByRole("button", { name: "儲存修改", exact: true }).click();
   await expect(page).toHaveURL(/\/quotes\/quote-pending-office$/);
+  const signCard = page
+    .locator(".submitted-card")
+    .filter({ hasText: "1. 客戶簽署" });
+  await expect(signCard).toContainText("首簽日期：");
+  await expect(signCard).toContainText("首簽主管：");
+  await expect(signCard).toContainText("2026-10-20");
+  await expect(signCard).toContainText("世雄B SH");
   const notify = page.getByRole("button", { name: "通知Sale", exact: true });
   await expect(notify).toBeVisible();
   await notify.click();
@@ -31,5 +38,5 @@ test("開單員改單後通知Sale重新簽署", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: /上載已簽文件/ }),
   ).toBeVisible();
-  await expect(page.getByText("簽署日期：", { exact: false })).toBeVisible();
+  await expect(page.getByText("首簽日期：", { exact: false })).toBeVisible();
 });
