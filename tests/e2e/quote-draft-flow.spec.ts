@@ -50,7 +50,7 @@ test("草稿會按Step 1／2／3／4重開並進入正確列表", async ({ page 
   // Step 2 save draft resumes Step 2.
   await page.getByRole("button", { name: "下一步", exact: true }).click();
   await addKitchenDemolition(page);
-  await page.getByRole("button", { name: "儲存草稿", exact: true }).click();
+  await page.getByRole("button", { name: "儲為草稿", exact: true }).click();
   await expect(page).toHaveURL(/\/quotes\?tab=draft/);
   await page
     .locator("tbody tr")

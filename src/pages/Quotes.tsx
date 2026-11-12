@@ -895,9 +895,18 @@ export function QuoteEditor() {
             >
               返回
             </Button>
-            <Button variant="primary" onClick={() => save("draft")}>
-              <Check size={20} />
-              {clerkEditor ? "儲存更正" : "儲存草稿"}
+            <Button
+              variant={clerkEditor ? "primary" : "secondary"}
+              onClick={() => save("draft")}
+            >
+              {clerkEditor ? (
+                <>
+                  <Check size={20} />
+                  儲存更正
+                </>
+              ) : (
+                "儲為草稿"
+              )}
             </Button>
           </>
         }
