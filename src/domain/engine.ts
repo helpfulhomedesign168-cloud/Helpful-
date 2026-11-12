@@ -2059,11 +2059,18 @@ export class Engine {
       if (!this.canWriteQuote(actor, quote) && !this.isAdmin(actor))
         fail("你沒有修改此報價訂單資料的權限。");
       if (quote.archived) fail("已封存報價不可修改訂單資料。");
-      if (quote.invoiceId) fail("已轉 Invoice 的來源不可修改訂單資料。");
+      if (quote.invoiceId && !this.isAdmin(actor))
+        fail("已轉 Invoice 的來源不可修改訂單資料。");
       if (input.orderCategories !== undefined) {
         const valid = input.orderCategories.filter((category) =>
           Object.hasOwn(INVOICE_CATEGORY_NAMES, category),
         );
+        if (
+          ((quote.orderCategories ?? []).includes("grant-80k") ||
+            quote.officeCategory === "grant-80k") &&
+          !valid.includes("grant-80k")
+        )
+          fail("8萬資助不能移除。");
         quote.orderCategories = [...new Set(valid)];
         // Sales now owns classification. The first selected category drives
         // the single invoice/payment-plan category; all selections are kept.
@@ -4403,7 +4410,7 @@ export class Engine {
       )
         fail("你沒有儲存此報價草稿的權限。");
       if (quote?.archived) fail("已封存報價不可修改。");
-      if (quote?.invoiceId)
+      if (quote?.invoiceId && !input.changeOrder)
         fail("已轉 Invoice 的來源不可修改，請使用工程變更流程。");
       const services = new Map(state.services.map((item) => [item.id, item]));
       const rebuilt = input.lines.map((line, index) => {
@@ -4543,6 +4550,41 @@ export class Engine {
           actorId: actor.id,
           action: "clerk_quote_corrected",
           detail: `開單員建立更正版本 ${nextVersion.index}：${input.reason.trim()}`,
+        });
+        output = deepCopy(quote);
+        return;
+      }
+      if (input.changeOrder) {
+        const nextVersion: QuoteVersion = {
+          id: uid("version"),
+          index: version.index + 1,
+          customer,
+          lines: rebuilt,
+          discount: selectedDiscount.discount,
+          discountMode: selectedDiscount.mode,
+          discountValue: selectedDiscount.value,
+          createdAt: NOW,
+          reason: "更改訂單",
+        };
+        if (version.printPreparation) {
+          nextVersion.printPreparation = deepCopy(version.printPreparation);
+        }
+        quote.versions.push(nextVersion);
+        quote.orderRevision = true;
+        if (quote.submission) {
+          quote.submission.versionId = nextVersion.id;
+        }
+        state.payments
+          .filter((payment) => payment.quoteId === quote.id)
+          .forEach((payment) => {
+            payment.versionId = nextVersion.id;
+          });
+        quote.updatedAt = NOW;
+        this.audit(state, {
+          quoteId: quote.id,
+          actorId: actor.id,
+          action: "quote_order_changed",
+          detail: `更改訂單，建立版本 ${nextVersion.index}，需要重新列印及簽署`,
         });
         output = deepCopy(quote);
         return;
@@ -4753,7 +4795,8 @@ export class Engine {
       if (!this.canWriteQuote(actor, quote))
         fail("你沒有上載此報價文件的權限。");
       if (quote.archived) fail("已封存報價不可上載文件。");
-      if (quote.invoiceId) fail("已轉 Invoice 的來源不可改動。");
+      if (quote.invoiceId && !quote.orderRevision)
+        fail("已轉 Invoice 的來源不可改動。");
       if (!attachment?.id || !attachment.name)
         fail("請選擇有效的已簽報價文件。");
       const version = currentVersion(quote);
@@ -4802,7 +4845,8 @@ export class Engine {
       if (!this.canWriteQuote(actor, quote))
         fail("你沒有確認此報價簽署的權限。");
       if (quote.archived) fail("已封存報價不可確認簽署。");
-      if (quote.invoiceId) fail("已轉 Invoice 的來源不可再記錄簽署。");
+      if (quote.invoiceId && !quote.orderRevision)
+        fail("已轉 Invoice 的來源不可再記錄簽署。");
       const version = currentVersion(quote);
       if (!input.confirmed) fail("必須明確確認客戶已簽署指定版本。");
       if (!validPastDate(input.date))
@@ -4859,6 +4903,7 @@ export class Engine {
         actorId: actor.id,
         createdAt: NOW,
       };
+      quote.orderRevision = false;
       version.calculation = frozen(
         calculatePricing(version.lines, version.discount, state.services, true),
       );

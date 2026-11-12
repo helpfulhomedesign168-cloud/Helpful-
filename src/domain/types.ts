@@ -239,6 +239,8 @@ export interface Quote {
   grantApplicationNumber?: string;
   grantApprovedAmount?: number;
   grantApprovedAt?: string;
+  /** 更改訂單後，目前版本需要重新列印及簽署。 */
+  orderRevision?: boolean;
   /** 草稿最後停留的 wizard step；1-3 在草稿列表，4 在待提交列表。 */
   draftStep?: 1 | 2 | 3 | 4;
   /** 開單員完整更正次數；顯示為 (V1)、(V2)… */
@@ -908,6 +910,7 @@ export interface DraftInput {
   discountValue?: number;
   reason?: string;
   draftStep?: 1 | 2 | 3 | 4;
+  changeOrder?: boolean;
 }
 export interface PaymentInput {
   amount: number;
