@@ -135,7 +135,12 @@ export function Quotes() {
   const [monthFilter, setMonthFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
   const [salesFilter, setSalesFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const qs = engine.listQuotes(actor);
+  let invoices: ReturnType<typeof engine.listInvoices> = [];
+  try {
+    invoices = engine.listInvoices(actor);
+  } catch {}
   const canFilterOwner = ["admin", "admin_staff", "head"].includes(
     actor.role,
   );
@@ -189,10 +194,16 @@ export function Quotes() {
           .toLowerCase()
           .includes(search.toLowerCase()),
     )
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    .sort((a, b) => {
+      const first = currentVersion(a).createdAt;
+      const second = currentVersion(b).createdAt;
+      return sortOrder === "newest"
+        ? second.localeCompare(first)
+        : first.localeCompare(second);
+    });
   const pager = usePagination(
     shown,
-    `${tab}|${search}|${monthFilter}|${teamFilter}|${salesFilter}`,
+    `${tab}|${search}|${monthFilter}|${teamFilter}|${salesFilter}|${sortOrder}`,
   );
   return (
     <>
@@ -233,6 +244,16 @@ export function Quotes() {
                   {month.replace("-", "年")}月
                 </option>
               ))}
+            </select>
+            <select
+              aria-label="報價排序"
+              value={sortOrder}
+              onChange={(event) =>
+                setSortOrder(event.target.value as "newest" | "oldest")
+              }
+            >
+              <option value="newest">最前至最後</option>
+              <option value="oldest">最後至最前</option>
             </select>
             {canFilterOwner && (
               <>
@@ -299,13 +320,15 @@ export function Quotes() {
             <table>
               <thead>
                 <tr>
-                  <th>報價／版本</th>
+                  <th>{tab === "submitted" ? "報價單／發票" : "報價／版本"}</th>
                   <th>日期</th>
                   <th>客戶／工程地區</th>
                   {canFilterOwner && <th>Sales</th>}
                   <th className="numeric">成交金額</th>
+                  {tab === "submitted" && (
+                    <th className="numeric">訂金比率</th>
+                  )}
                   <th>目前進度</th>
-                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -313,12 +336,54 @@ export function Quotes() {
                   const v = currentVersion(q),
                     p = engine.pricing(actor, q.id),
                     e = engine.eligibility(actor, q.id);
+                  const invoice = invoices.find(
+                    (item) => item.quoteId === q.id,
+                  );
+                  const paid = e.validPaid + e.pendingPaid;
+                  const plannedDeposit =
+                    invoice?.paymentPlan?.[0]?.percentage ??
+                    (e.firstDue > 0 && p.total > 0
+                      ? Math.round((e.firstDue / p.total) * 100)
+                      : 0);
+                  const depositRatio =
+                    plannedDeposit ||
+                    (p.total > 0
+                      ? Math.min(100, Math.round((paid / p.total) * 100))
+                      : 0);
+                  const submittedProgress =
+                    depositRatio === 0
+                      ? "已交Office，待收首期"
+                      : depositRatio < 50
+                        ? "工程未進行，待收足50%訂"
+                        : "工程進行中，待收第二期訂金";
                   return (
-                    <tr key={q.id}>
+                    <tr
+                      key={q.id}
+                      className="quote-clickable-row"
+                      tabIndex={0}
+                      onClick={() => openQuote(q)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openQuote(q);
+                        }
+                      }}
+                    >
                       <td>
-                        <Link className="source-link" to={quotePath(q)}>
+                        <Link
+                          className="source-link"
+                          to={quotePath(q)}
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           {q.number}
                         </Link>
+                        {tab === "submitted" &&
+                          invoice &&
+                          depositRatio >= 50 && (
+                            <small className="quote-invoice-number">
+                              {invoice.number}
+                            </small>
+                          )}
                       </td>
                       <td>{v.createdAt.slice(0, 10)}</td>
                       <td>
@@ -337,17 +402,15 @@ export function Quotes() {
                         </td>
                       )}
                       <td className="numeric money">{money(p.total)}</td>
+                      {tab === "submitted" && (
+                        <td className="numeric deposit-ratio">
+                          {depositRatio}%
+                        </td>
+                      )}
                       <td>
-                        <Badge strong={e.stage === "issued"}>{e.label}</Badge>
-                      </td>
-                      <td>
-                        <Button
-                          variant="ghost"
-                          onClick={() => openQuote(q)}
-                          aria-label={`查看${q.number}`}
-                        >
-                          <ArrowUpRight size={22} />
-                        </Button>
+                        <Badge strong={e.stage === "issued"}>
+                          {tab === "submitted" ? submittedProgress : e.label}
+                        </Badge>
                       </td>
                     </tr>
                   );

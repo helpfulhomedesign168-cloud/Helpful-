@@ -11025,3 +11025,26 @@ textarea::placeholder {
   font-size: 20px;
   vertical-align: baseline;
 }
+
+.quote-clickable-row {
+  cursor: pointer;
+}
+.quote-clickable-row:hover td,
+.quote-clickable-row:focus-visible td {
+  background: #f5f8fc;
+}
+.quote-clickable-row:focus-visible {
+  outline: 2px solid #88baff;
+  outline-offset: -2px;
+}
+.quote-invoice-number {
+  display: block;
+  margin-top: 4px;
+  color: #8ca3bf;
+  font-size: 12px;
+  letter-spacing: 0.3px;
+}
+.deposit-ratio {
+  color: #313642;
+  font-variant-numeric: tabular-nums;
+}
