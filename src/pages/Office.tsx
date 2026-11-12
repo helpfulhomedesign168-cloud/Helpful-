@@ -689,7 +689,9 @@ export function Submissions() {
                                 variant="ghost"
                                 aria-label={`編輯${quote.number}報價單`}
                                 onClick={() =>
-                                  nav("/quotes/" + quote.id + "/edit")
+                                  nav(
+                                    "/quotes/" + quote.id + "/edit?order=1",
+                                  )
                                 }
                               >
                                 <PenLine size={16} />
