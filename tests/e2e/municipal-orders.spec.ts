@@ -98,8 +98,10 @@ test("開單員可開啟完整報價編輯器並建立更正版本", async ({ pa
     .filter({ hasText: "李好波" });
   await expect(correctedRow).toBeVisible();
   await expect(correctedRow).toContainText("(V1)");
-  await correctedRow
-    .getByRole("button", { name: /列印QSHMM26100004報價單/ })
+  await correctedRow.click();
+  await expect(page).toHaveURL(/\/quotes\/quote-pending-office$/);
+  await page
+    .getByRole("button", { name: "列印報價單", exact: true })
     .click();
   await expect(page).toHaveURL(/\/documents\/quote\//);
   await expect(page.locator(".document-number")).toContainText(

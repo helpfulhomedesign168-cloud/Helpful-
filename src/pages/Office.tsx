@@ -689,18 +689,6 @@ export function Submissions() {
                         >
                           <div className="submission-quote-heading">
                             <strong>{quote.number}</strong>
-                            {Boolean(quote.clerkCorrectionCount) && (
-                              <Button
-                                variant="ghost"
-                                aria-label={`列印${quote.number}報價單`}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  nav("/documents/quote/" + quote.id);
-                                }}
-                              >
-                                <Printer size={16} />
-                              </Button>
-                            )}
                           </div>
                           {Boolean(quote.clerkCorrectionCount) && (
                             <small className="quote-version-marker">
