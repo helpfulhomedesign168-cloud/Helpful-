@@ -89,7 +89,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/quotes"
               element={
-                <Guard roles={[...sales, "admin", "admin_staff", "finance"]}>
+                <Guard roles={[...sales, "clerk", "finance_supervisor", "admin", "admin_staff", "finance"]}>
                   <Quotes />
                 </Guard>
               }
@@ -121,7 +121,16 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/quotes/:id"
               element={
-                <Guard roles={[...sales, "admin", "admin_staff", "finance"]}>
+                <Guard
+                  roles={[
+                    ...sales,
+                    "clerk",
+                    "finance_supervisor",
+                    "admin",
+                    "admin_staff",
+                    "finance",
+                  ]}
+                >
                   <QuoteView />
                 </Guard>
               }

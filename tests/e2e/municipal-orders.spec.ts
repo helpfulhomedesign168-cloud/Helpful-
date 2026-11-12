@@ -73,7 +73,12 @@ test("開單員可開啟完整報價編輯器並建立更正版本", async ({ pa
   await page.goto("/");
   await switchRole(page, "開單員");
   await page.goto("/submissions");
-  await page.getByRole("button", { name: /編輯QSHMM26100004報價單/ }).click();
+  await page
+    .locator(".submission-table tbody tr")
+    .filter({ hasText: "QSHMM26100004" })
+    .click();
+  await expect(page).toHaveURL(/\/quotes\/quote-pending-office$/);
+  await page.getByRole("button", { name: "更改訂單", exact: true }).click();
   await expect(page).toHaveURL(/\/quotes\/quote-pending-office\/edit\?order=1$/);
   await expect(
     page.getByRole("heading", { name: "修改報價", exact: true }),
@@ -85,6 +90,8 @@ test("開單員可開啟完整報價編輯器並建立更正版本", async ({ pa
   const length = line.getByLabel("闊度", { exact: false });
   if (await length.count()) await length.fill("9");
   await page.getByRole("button", { name: "儲存修改", exact: true }).click();
+  await expect(page).toHaveURL(/\/quotes\/quote-pending-office$/);
+  await page.getByRole("button", { name: "返回列表", exact: true }).click();
   await expect(page).toHaveURL(/\/submissions$/);
   const correctedRow = page
     .locator(".submission-table tbody tr")

@@ -637,8 +637,8 @@ export function Submissions() {
             <table className="submission-table">
               <thead>
                 <tr>
-                  <th scope="col">日期</th>
                   <th scope="col">報價單</th>
+                  <th scope="col">日期</th>
                   <th scope="col">客戶／地區</th>
                   <th scope="col">Sales</th>
                   <th scope="col" className="numeric">成交額</th>
@@ -669,13 +669,18 @@ export function Submissions() {
                     if (invoice) nav("/invoices/" + invoice.id);
                   };
                   return (
-                    <tr key={quote.id}>
-                      <td>
-                        {(quote.submission?.createdAt ?? quote.updatedAt).slice(
-                          0,
-                          10,
-                        )}
-                      </td>
+                    <tr
+                      key={quote.id}
+                      className="submission-clickable-row"
+                      tabIndex={0}
+                      onClick={() => nav(`/quotes/${quote.id}`)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          nav(`/quotes/${quote.id}`);
+                        }
+                      }}
+                    >
                       <td>
                         <div
                           className={`submission-quote-cell ${
@@ -684,26 +689,14 @@ export function Submissions() {
                         >
                           <div className="submission-quote-heading">
                             <strong>{quote.number}</strong>
-                            {!quote.invoiceId && (
-                              <Button
-                                variant="ghost"
-                                aria-label={`編輯${quote.number}報價單`}
-                                onClick={() =>
-                                  nav(
-                                    "/quotes/" + quote.id + "/edit?order=1",
-                                  )
-                                }
-                              >
-                                <PenLine size={16} />
-                              </Button>
-                            )}
                             {Boolean(quote.clerkCorrectionCount) && (
                               <Button
                                 variant="ghost"
                                 aria-label={`列印${quote.number}報價單`}
-                                onClick={() =>
-                                  nav("/documents/quote/" + quote.id)
-                                }
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  nav("/documents/quote/" + quote.id);
+                                }}
                               >
                                 <Printer size={16} />
                               </Button>
@@ -720,6 +713,12 @@ export function Submissions() {
                             </small>
                           )}
                         </div>
+                      </td>
+                      <td>
+                        {(quote.submission?.createdAt ?? quote.updatedAt).slice(
+                          0,
+                          10,
+                        )}
                       </td>
                       <td>
                         <strong>{version.customer.name}</strong>
@@ -750,14 +749,20 @@ export function Submissions() {
                         {pending.length > 0 ? (
                           <Button
                             variant="primary"
-                            onClick={() => setActivePayment(pending[0])}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActivePayment(pending[0]);
+                            }}
                           >
                             核對收款
                           </Button>
                         ) : eligibility.canIssue ? (
                           <Button
                             variant="primary"
-                            onClick={openInvoice}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openInvoice();
+                            }}
                           >
                             已核對並開單 <ArrowRight size={18} />
                           </Button>

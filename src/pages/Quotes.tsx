@@ -856,8 +856,7 @@ export function QuoteEditor() {
         }),
       "訂單已更新；請重新列印及上載已簽文件。",
     );
-    if (q)
-      nav(clerkEditor ? "/submissions" : `/quotes/${q.id}`);
+    if (q) nav(`/quotes/${q.id}`);
   }
   function addCustomWork() {
     const name = customWork.trim();
@@ -1020,7 +1019,7 @@ export function QuoteEditor() {
             <Button
               onClick={() => {
                 if (orderEdit) {
-                  nav(clerkEditor ? "/submissions" : `/quotes/${id}`);
+                  nav(`/quotes/${id}`);
                   return;
                 }
                 if (wizard && wizardStep === 1) {
