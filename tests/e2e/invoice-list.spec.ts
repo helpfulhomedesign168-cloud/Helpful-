@@ -16,6 +16,7 @@ test("單據管理顯示收款status bar、單類filter及已發工程部狀態"
   ).toBeVisible();
   const statusFilter = page.getByLabel("Invoice狀態", { exact: true });
   const orderFilter = page.getByLabel("單類", { exact: true });
+  const dateSort = page.getByLabel("排序", { exact: true });
   const teamFilter = page.getByLabel("Invoice Team", { exact: true });
   const salesFilter = page.getByLabel("Invoice Sales", { exact: true });
   await expect(statusFilter).toBeVisible();
@@ -24,6 +25,12 @@ test("單據管理顯示收款status bar、單類filter及已發工程部狀態"
     "全部單類",
     "新訂單",
     "後加單",
+  ]);
+  await expect(dateSort).toBeVisible();
+  await expect(dateSort).toHaveValue("newest");
+  await expect(dateSort.locator("option")).toHaveText([
+    "最新至最舊",
+    "最舊至最新",
   ]);
   await expect(teamFilter).toBeVisible();
   await expect(salesFilter).toBeVisible();
@@ -51,8 +58,14 @@ test("單據管理顯示收款status bar、單類filter及已發工程部狀態"
     .locator("tbody tr")
     .filter({ hasText: "SHMM26100001" });
   await expect(released.locator(".invoice-engineering-note")).toContainText(
-    "已發工程部",
+    "工程單 D2600001",
   );
+  const firstNewest = await page.locator("tbody tr").first().innerText();
+  await dateSort.selectOption("oldest");
+  await expect(dateSort).toHaveValue("oldest");
+  const firstOldest = await page.locator("tbody tr").first().innerText();
+  expect(firstOldest).not.toBe(firstNewest);
+  await dateSort.selectOption("newest");
   await orderFilter.selectOption("additional");
   await expect(
     page.locator("tbody tr").filter({ hasText: "SHMM26100001" }),

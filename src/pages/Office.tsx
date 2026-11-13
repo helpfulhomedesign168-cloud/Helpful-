@@ -530,6 +530,9 @@ export function Submissions() {
   const [orderFilter, setOrderFilter] = useState<
     "all" | "new" | "additional"
   >("all");
+  const [dateOrder, setDateOrder] = useState<"newest" | "oldest">(
+    "newest",
+  );
   const [activePayment, setActivePayment] = useState<Payment | null>(null);
   const parentSummaryOf = (quote: Quote) =>
     quote.parentQuoteId
@@ -813,6 +816,9 @@ export function Invoices() {
   const [orderFilter, setOrderFilter] = useState<
     "all" | "new" | "additional"
   >("all");
+  const [dateOrder, setDateOrder] = useState<"newest" | "oldest">(
+    "newest",
+  );
   const actors = engine.listActors();
   const salesActors = actors.filter((candidate) =>
     ["sales", "supervisor", "head"].includes(candidate.role),
@@ -871,10 +877,14 @@ export function Invoices() {
         )
       );
     })
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort((a, b) =>
+      dateOrder === "newest"
+        ? b.createdAt.localeCompare(a.createdAt)
+        : a.createdAt.localeCompare(b.createdAt),
+    );
   const pager = usePagination(
     invoices,
-    `${search}|${statusFilter}|${orderFilter}|${teamFilter}|${salesFilter}`,
+    `${search}|${statusFilter}|${orderFilter}|${teamFilter}|${salesFilter}|${dateOrder}`,
   );
   return (
     <>
@@ -910,6 +920,18 @@ export function Invoices() {
               <option value="all">全部單類</option>
               <option value="new">新訂單</option>
               <option value="additional">後加單</option>
+            </select>
+            <select
+              aria-label="排序"
+              value={dateOrder}
+              onChange={(event) =>
+                setDateOrder(
+                  event.target.value as "newest" | "oldest",
+                )
+              }
+            >
+              <option value="newest">最新至最舊</option>
+              <option value="oldest">最舊至最新</option>
             </select>
             <select
               aria-label="Invoice Team"
@@ -981,7 +1003,7 @@ export function Invoices() {
                           )}
                           {order?.csReleasedAt && (
                             <small className="invoice-engineering-note">
-                              已發工程部 · {order.csReleasedAt.slice(0, 10)}
+                              工程單 {order.number}
                             </small>
                           )}
                         </div>

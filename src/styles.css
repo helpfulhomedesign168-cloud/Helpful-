@@ -11526,3 +11526,37 @@ textarea::placeholder {
   font-weight: 600;
   letter-spacing: 0;
 }
+.invoice-toolbar {
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+.invoice-toolbar .search {
+  max-width: 300px;
+  min-width: 220px;
+  flex: 1 1 240px;
+}
+.invoice-toolbar .submission-filters {
+  flex: 0 0 auto;
+  gap: 10px;
+}
+.invoice-toolbar .submission-filters select {
+  flex: 0 0 135px;
+  width: 135px;
+}
+@media (max-width: 1180px) {
+  .invoice-toolbar {
+    flex-wrap: wrap;
+  }
+  .invoice-toolbar .search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .invoice-toolbar .submission-filters {
+    width: 100%;
+    margin-left: 0;
+  }
+  .invoice-toolbar .submission-filters select {
+    flex: 1 1 0;
+    width: auto;
+  }
+}
