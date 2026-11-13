@@ -25,13 +25,29 @@ test("8萬資助開Invoice會建立正單A及可修改市政單B", async ({ page
 
   await page.getByRole("link", { name: "市政單", exact: true }).click();
   await expect(page.getByRole("heading", { name: "市政單", exact: true })).toBeVisible();
+  await expect(
+    page.locator(".municipal-table thead th"),
+  ).toHaveText([
+    "市政單",
+    "正單",
+    "日期",
+    "客戶",
+    "申請編號",
+    "批核金額",
+    "市政單金額",
+  ]);
+  await expect(page.getByLabel("市政單排序")).toHaveValue("newest");
+  await expect(page.getByLabel("市政單月份")).toBeVisible();
   const municipalRow = page.locator(".municipal-table tbody tr").first();
   const municipalNumber = (await municipalRow.locator("strong").first().innerText()).trim();
   const principalNumber = (await municipalRow.locator("td").nth(1).innerText()).trim();
   expect(principalNumber).toBe(invoiceNumber);
   expect(principalNumber).toMatch(/A$/);
   expect(municipalNumber).toBe(invoiceNumber.replace(/A$/, "B"));
-  await municipalRow.getByRole("link", { name: "查看／修改" }).click();
+  await expect(
+    municipalRow.getByRole("link", { name: "查看／修改" }),
+  ).toHaveCount(0);
+  await municipalRow.click();
   await expect(page.getByRole("heading", { name: municipalNumber })).toBeVisible();
   const principalSnapshot = page.locator(".municipal-principal");
   await expect(principalSnapshot).toContainText(principalNumber);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Check,
@@ -21,20 +21,68 @@ import { MunicipalOrderLine, money } from "../domain/types";
 
 export function MunicipalOrders() {
   const { actor, engine } = useApp();
+  const nav = useNavigate();
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [dateOrder, setDateOrder] = useState<"newest" | "oldest">(
+    "newest",
+  );
   const orders = engine.listMunicipalOrders(actor);
-  const pager = usePagination(orders, "");
+  const months = [
+    ...new Set(orders.map((order) => order.createdAt.slice(0, 7))),
+  ]
+    .sort()
+    .reverse();
+  const shown = orders
+    .filter(
+      (order) =>
+        monthFilter === "all" ||
+        order.createdAt.startsWith(monthFilter),
+    )
+    .sort((a, b) =>
+      dateOrder === "newest"
+        ? b.createdAt.localeCompare(a.createdAt)
+        : a.createdAt.localeCompare(b.createdAt),
+    );
+  const pager = usePagination(
+    shown,
+    `${monthFilter}|${dateOrder}`,
+  );
   return (
     <>
-      <PageHead
-        eyebrow="8萬資助"
-        title="市政單"
-        description="市政單由正單分拆，只作政府申請用途，不是客人真實成交單，也不計入會計。"
-      />
+      <PageHead title="市政單" />
       <div className="list-panel">
+        <div className="municipal-toolbar">
+          <span>共 {shown.length} 張市政單</span>
+          <div className="submission-filters">
+            <select
+              aria-label="市政單月份"
+              value={monthFilter}
+              onChange={(event) => setMonthFilter(event.target.value)}
+            >
+              <option value="all">全部月份</option>
+              {months.map((month) => (
+                <option key={month} value={month}>
+                  {month.replace("-", "年")}月
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="市政單排序"
+              value={dateOrder}
+              onChange={(event) =>
+                setDateOrder(
+                  event.target.value as "newest" | "oldest",
+                )
+              }
+            >
+              <option value="newest">最新至最舊</option>
+              <option value="oldest">最舊至最新</option>
+            </select>
+          </div>
+        </div>
         {orders.length === 0 ? (
           <Empty
             title="暫無市政單"
-            description="當8萬資助報價開立Invoice後，系統會建立正單A及市政單B。"
           />
         ) : (
           <div className="table-scroll">
@@ -43,43 +91,64 @@ export function MunicipalOrders() {
                 <tr>
                   <th>市政單</th>
                   <th>正單</th>
+                  <th>日期</th>
                   <th>客戶</th>
-                  <th>Invoice</th>
+                  <th>申請編號</th>
+                  <th className="numeric">批核金額</th>
                   <th className="numeric">市政單金額</th>
-                  <th>建立日期</th>
-                  <th />
                 </tr>
               </thead>
               <tbody>
                 {pager.items.map((order) => {
-                  let invoiceNumber = "";
+                  let grantApplicationNumber = "";
+                  let grantApprovedAmount = 0;
                   try {
-                    invoiceNumber = engine.getInvoice(actor, order.invoiceId).number;
+                    const quote = engine.getQuote(actor, order.quoteId);
+                    grantApplicationNumber =
+                      quote.grantApplicationNumber ?? "";
+                    grantApprovedAmount =
+                      quote.grantApprovedAmount ?? 0;
                   } catch {}
                   return (
-                    <tr key={order.id}>
+                    <tr
+                      key={order.id}
+                      className="municipal-clickable-row"
+                      tabIndex={0}
+                      onClick={() =>
+                        nav(`/municipal-orders/${order.id}`)
+                      }
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === "Enter" ||
+                          event.key === " "
+                        ) {
+                          event.preventDefault();
+                          nav(`/municipal-orders/${order.id}`);
+                        }
+                      }}
+                    >
                       <td>
                         <strong>{order.number}</strong>
                       </td>
                       <td>{order.principalOrderNumber}</td>
+                      <td>{order.createdAt.slice(0, 10)}</td>
                       <td>
                         <strong>{order.customer.name}</strong>
                         <small>{order.customer.district}</small>
                       </td>
-                      <td>{invoiceNumber || "—"}</td>
+                      <td>{grantApplicationNumber || "—"}</td>
+                      <td className="numeric money">
+                        {grantApprovedAmount
+                          ? money(grantApprovedAmount)
+                          : "—"}
+                      </td>
                       <td className="numeric money">
                         {money(
-                          order.lines.reduce((sum, line) => sum + line.amount, 0),
+                          order.lines.reduce(
+                            (sum, line) => sum + line.amount,
+                            0,
+                          ),
                         )}
-                      </td>
-                      <td>{order.createdAt.slice(0, 10)}</td>
-                      <td>
-                        <Link
-                          className="text-button"
-                          to={`/municipal-orders/${order.id}`}
-                        >
-                          查看／修改
-                        </Link>
                       </td>
                     </tr>
                   );
