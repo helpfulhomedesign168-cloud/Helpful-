@@ -675,6 +675,33 @@ export function Customers() {
         "";
       return bDate.localeCompare(aDate);
     });
+  const relatedOrdersFor = (customer: Customer) => {
+    if (csRole) {
+      return engine
+        .listOrders(actor)
+        .filter(
+          (order) =>
+            order.customer.id === customer.id ||
+            order.customer.phone === customer.phone,
+        )
+        .map((order) => ({
+          id: order.id,
+          label: order.number,
+          path: `/orders/${order.id}`,
+        }));
+    }
+    return qs
+      .filter(
+        (quote) =>
+          currentVersion(quote).customer.id === customer.id ||
+          currentVersion(quote).customer.phone === customer.phone,
+      )
+      .map((quote) => ({
+        id: quote.id,
+        label: quote.number,
+        path: `/quotes/${quote.id}`,
+      }));
+  };
   const pager = usePagination(list, `${salesFilter}|${search}`);
   return (
     <>
@@ -748,32 +775,57 @@ export function Customers() {
                   {isClerk && <th scope="col">Sales</th>}
                   <th scope="col">聯絡電話</th>
                   <th scope="col">工程地址</th>
-                  <th scope="col" />
+                  <th scope="col">相關訂單</th>
                 </tr>
               </thead>
               <tbody>
-                {pager.items.map((c) => (
-                  <tr key={c.id || c.phone}>
-                    <td>
-                      <strong>{c.name}</strong>
-                    </td>
-                    {isClerk && <td>{ownerName(c)}</td>}
-                    <td>{c.phone}</td>
-                    <td>
-                      {c.district} · {c.estate}
-                      <small>{c.address}</small>
-                    </td>
-                    <td>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setActive(c)}
-                        aria-label={`查看${c.name}`}
-                      >
-                        <ArrowUpRight size={22} />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {pager.items.map((c) => {
+                  const related = relatedOrdersFor(c);
+                  return (
+                    <tr key={c.id || c.phone}>
+                      <td>
+                        <strong>{c.name}</strong>
+                      </td>
+                      {isClerk && <td>{ownerName(c)}</td>}
+                      <td>{c.phone}</td>
+                      <td>
+                        {c.district} · {c.estate}
+                        <small>{c.address}</small>
+                      </td>
+                      <td className="related-order-cell">
+                        {related.length === 0 ? (
+                          <span>—</span>
+                        ) : related.length === 1 ? (
+                          <button
+                            type="button"
+                            className="related-order-link"
+                            onClick={() => nav(related[0].path)}
+                          >
+                            {related[0].label}
+                          </button>
+                        ) : (
+                          <select
+                            aria-label={`${c.name}相關訂單`}
+                            defaultValue=""
+                            onChange={(event) => {
+                              if (event.target.value)
+                                nav(event.target.value);
+                            }}
+                          >
+                            <option value="">
+                              選擇訂單（{related.length}）
+                            </option>
+                            {related.map((order) => (
+                              <option key={order.id} value={order.path}>
+                                {order.label}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
