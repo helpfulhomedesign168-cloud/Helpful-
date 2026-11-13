@@ -341,28 +341,35 @@ export function SalesSchedule() {
         title={canEdit ? "Sales排班" : "我的排班"}
         actions={
           <div className="schedule-month-nav">
-            <Button
-              variant="ghost"
+            <button
+              type="button"
+              className="schedule-month-arrow"
               aria-label="上一個月"
               onClick={() => moveMonth(-1)}
             >
-              <ChevronLeft size={18} />
-            </Button>
-            <input
-              aria-label="排班月份"
-              type="month"
-              value={month}
-              onChange={(event) =>
-                setMonth(event.target.value || DEMO_TODAY.slice(0, 7))
-              }
-            />
-            <Button
-              variant="ghost"
+              <ChevronLeft size={20} />
+            </button>
+            <label className="schedule-month-current">
+              <span>{monthLabel(month)}</span>
+              <CalendarDays size={18} />
+              <input
+                className="schedule-month-input"
+                aria-label="排班月份"
+                type="month"
+                value={month}
+                onChange={(event) =>
+                  setMonth(event.target.value || DEMO_TODAY.slice(0, 7))
+                }
+              />
+            </label>
+            <button
+              type="button"
+              className="schedule-month-arrow"
               aria-label="下一個月"
               onClick={() => moveMonth(1)}
             >
-              <ChevronRight size={18} />
-            </Button>
+              <ChevronRight size={20} />
+            </button>
           </div>
         }
       />

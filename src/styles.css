@@ -4863,12 +4863,57 @@ textarea {
 
 /* Calendar-first sales roster */
 .schedule-month-nav {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+  height: 52px;
+  padding: 4px;
+  border: 1px solid #d5dbe4;
+  border-radius: 999px;
+  background: #fff;
 }
-.schedule-month-nav input[type="month"] {
-  width: 160px;
+.schedule-month-arrow {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #f0f3f7;
+  color: #151a22;
+  cursor: pointer;
+}
+.schedule-month-arrow:hover {
+  background: #e6ebf2;
+}
+.schedule-month-current {
+  position: relative;
+  display: flex;
+  height: 40px;
+  min-width: 190px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 16px;
+  color: #151a22;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.schedule-month-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+@media (max-width: 700px) {
+  .schedule-month-current {
+    min-width: 0;
+    padding: 0 8px;
+    font-size: 14px;
+  }
 }
 .schedule-layout {
   display: grid;
