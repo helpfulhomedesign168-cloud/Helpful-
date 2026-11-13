@@ -11653,3 +11653,95 @@ textarea::placeholder {
   color: #313642;
   font-size: 12px;
 }
+
+/* Payment review two-column layout */
+.payment-review-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 28px;
+  align-items: start;
+}
+.payment-review-info {
+  display: grid;
+  gap: 15px;
+}
+.payment-review-field {
+  display: grid;
+  gap: 7px;
+}
+.payment-review-field > span,
+.payment-review-notes > span,
+.payment-review-proof > strong {
+  color: #747c88;
+  font-size: 13px;
+}
+.payment-review-field > strong {
+  color: #20252d;
+  font-size: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.payment-review-field > input {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid #d7dde7;
+  border-radius: 7px;
+  background: #fff;
+  color: #20252d;
+  font: inherit;
+  font-size: 15px;
+}
+.payment-review-notes {
+  display: grid;
+  gap: 7px;
+}
+.payment-review-notes textarea {
+  min-height: 135px;
+  resize: vertical;
+  padding: 12px 13px;
+  border: 1px solid #d7dde7;
+  border-radius: 7px;
+  background: #fff;
+  color: #20252d;
+  font: inherit;
+}
+.payment-review-proof {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 16px;
+  border-radius: 8px;
+  background: #f6f7f9;
+}
+.payment-review-proof .proof-thumb {
+  width: 100%;
+  height: auto;
+  min-height: 250px;
+  padding: 10px;
+  background: #fff;
+}
+.payment-review-proof .proof-thumb img {
+  width: 100%;
+  height: auto;
+  max-height: 500px;
+  object-fit: contain;
+}
+.payment-review-proof-empty {
+  display: grid;
+  min-height: 250px;
+  place-items: center;
+  color: #929aa6;
+  background: #fff;
+  font-size: 13px;
+}
+.payment-review-actions {
+  margin-top: 24px;
+}
+@media (max-width: 800px) {
+  .payment-review-layout {
+    grid-template-columns: 1fr;
+  }
+  .payment-review-proof .proof-thumb {
+    min-height: 190px;
+  }
+}

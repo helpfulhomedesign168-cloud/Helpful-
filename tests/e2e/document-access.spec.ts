@@ -64,15 +64,33 @@ test("開單員在提交報價頁核對Sales付款，分類前開單按鈕保持
   const row = page.locator("tbody tr").filter({ hasText: "李好波" });
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "核對收款", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "核對這筆客戶收款" });
+  const dialog = page.getByRole("dialog", { name: "核對收款" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("Demo-1500", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("付款證明", { exact: true })).toBeVisible();
   await dialog
-    .getByRole("button", { name: "確認有效收款", exact: true })
+    .getByRole("button", { name: "收款有效", exact: true })
     .click();
   await expect(dialog).toBeHidden();
   await expect(
     row.getByRole("button", { name: "待Sales分類", exact: true }),
   ).toBeDisabled();
   await expect(row.getByRole("combobox", { name: /分類/ })).toHaveCount(0);
+});
+
+test("未能核對未填備註會彈出提示，不會提交", async ({ page }) => {
+  await page.goto("/");
+  await switchRole(page, "開單員");
+  const row = page.locator("tbody tr").filter({ hasText: "李好波" });
+  await row.getByRole("button", { name: "核對收款", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "核對收款" });
+  await dialog.getByRole("button", { name: "未能核對", exact: true }).click();
+  const notice = page.getByRole("dialog", { name: "未能核對" });
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText("請先填寫備註／退回原因");
+  await notice.getByRole("button", { name: "知道", exact: true }).click();
+  await expect(notice).toBeHidden();
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("備註").fill("銀行未見入帳");
+  await dialog.getByRole("button", { name: "未能核對", exact: true }).click();
+  await expect(dialog).toBeHidden();
 });
