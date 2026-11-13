@@ -5722,11 +5722,11 @@ textarea {
 }
 .invoice-list-table th:nth-child(1),
 .invoice-list-table td:nth-child(1) {
-  width: 10%;
+  width: 18%;
 }
 .invoice-list-table th:nth-child(2),
 .invoice-list-table td:nth-child(2) {
-  width: 18%;
+  width: 10%;
 }
 .invoice-list-table th:nth-child(3),
 .invoice-list-table td:nth-child(3) {
@@ -5785,12 +5785,12 @@ textarea {
 }
 .invoice-list-table th:nth-child(1),
 .invoice-list-table td:nth-child(1) {
-  width: 12%;
+  width: 18%;
   white-space: nowrap;
 }
 .invoice-list-table th:nth-child(2),
 .invoice-list-table td:nth-child(2) {
-  width: 17%;
+  width: 10%;
 }
 .invoice-list-table th:nth-child(3),
 .invoice-list-table td:nth-child(3) {
@@ -11517,4 +11517,12 @@ textarea::placeholder {
   margin: 0 0 12px;
   color: #7b8492;
   font-size: 12px;
+}
+
+.invoice-number-cell > small.invoice-engineering-note {
+  margin-top: 5px;
+  color: #1f6b46;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
 }

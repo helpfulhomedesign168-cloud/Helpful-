@@ -7,9 +7,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   ChevronDown,
-  ArrowUpDown,
   FileText,
   Plus,
   Hammer,
@@ -812,10 +810,9 @@ export function Invoices() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState<"all" | "A" | "B">("all");
   const [salesFilter, setSalesFilter] = useState("all");
-  const [sortKey, setSortKey] = useState<
-    "none" | "invoice" | "sales" | "status"
-  >("none");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [orderFilter, setOrderFilter] = useState<
+    "all" | "new" | "additional"
+  >("all");
   const actors = engine.listActors();
   const salesActors = actors.filter((candidate) =>
     ["sales", "supervisor", "head"].includes(candidate.role),
@@ -838,14 +835,6 @@ export function Invoices() {
     if (order?.csReleasedAt) return "已發工程部";
     return "待收足訂金";
   };
-  const statusRank = (label: string) =>
-    label === "已退訂"
-      ? 4
-      : label === "已完成工程"
-        ? 3
-        : label === "已發工程部"
-          ? 2
-          : 1;
   const quoteOf = (invoice: Invoice) =>
     engine.getQuote(actor, invoice.quoteId);
   const parentOf = (invoice: Invoice) => {
@@ -871,6 +860,10 @@ export function Invoices() {
       return (
         (statusFilter === "all" ||
           statusKeyOf(invoice) === statusFilter) &&
+        (orderFilter === "all" ||
+          (orderFilter === "additional"
+            ? Boolean(quote.isAdditionalOrder)
+            : !quote.isAdditionalOrder)) &&
         (teamFilter === "all" || quote.team === teamFilter) &&
         (salesFilter === "all" || quote.ownerId === salesFilter) &&
         `${invoice.number} ${invoice.customer.name} ${invoice.customer.address} ${parent?.number ?? ""}`.includes(
@@ -878,52 +871,10 @@ export function Invoices() {
         )
       );
     })
-    .sort((a, b) => {
-      if (sortKey === "invoice")
-        return sortDir === "asc"
-          ? a.number.localeCompare(b.number)
-          : b.number.localeCompare(a.number);
-      if (sortKey === "sales")
-        return sortDir === "asc"
-          ? salesName(a).localeCompare(salesName(b), "zh-Hant")
-          : salesName(b).localeCompare(salesName(a), "zh-Hant");
-      if (sortKey === "status")
-        return sortDir === "asc"
-          ? statusRank(engineeringLabel(a)) - statusRank(engineeringLabel(b))
-          : statusRank(engineeringLabel(b)) - statusRank(engineeringLabel(a));
-      return b.createdAt.localeCompare(a.createdAt);
-    });
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const pager = usePagination(
     invoices,
-    `${search}|${statusFilter}|${teamFilter}|${salesFilter}|${sortKey}|${sortDir}`,
-  );
-  const sortButton = (
-    key: "invoice" | "sales" | "status",
-    label: string,
-  ) => (
-    <button
-      type="button"
-      className={`sortable-th ${sortKey === key ? "active" : ""}`}
-      onClick={() => {
-        if (sortKey === key) {
-          setSortDir(sortDir === "asc" ? "desc" : "asc");
-        } else {
-          setSortKey(key);
-          setSortDir("asc");
-        }
-      }}
-    >
-      {label}
-      {sortKey === key ? (
-        sortDir === "asc" ? (
-          <ChevronUp size={14} />
-        ) : (
-          <ChevronDown size={14} />
-        )
-      ) : (
-        <ArrowUpDown size={13} />
-      )}
-    </button>
+    `${search}|${statusFilter}|${orderFilter}|${teamFilter}|${salesFilter}`,
   );
   return (
     <>
@@ -946,6 +897,19 @@ export function Invoices() {
               <option value="released">已發工程部</option>
               <option value="completed">已完成工程</option>
               <option value="voided">已退訂</option>
+            </select>
+            <select
+              aria-label="單類"
+              value={orderFilter}
+              onChange={(event) =>
+                setOrderFilter(
+                  event.target.value as "all" | "new" | "additional",
+                )
+              }
+            >
+              <option value="all">全部單類</option>
+              <option value="new">新訂單</option>
+              <option value="additional">後加單</option>
             </select>
             <select
               aria-label="Invoice Team"
@@ -972,10 +936,6 @@ export function Invoices() {
             </select>
           </div>
         </div>
-        <div className="submission-legend invoice-legend">
-          <span className="normal-dot">正單</span>
-          <span className="additional-dot">加單</span>
-        </div>
         {invoices.length === 0 ? (
           <Empty
             title="還未開立Invoice"
@@ -986,13 +946,13 @@ export function Invoices() {
             <table className="invoice-list-table">
               <thead>
                 <tr>
+                  <th>Invoice單</th>
                   <th>日期</th>
-                  <th>{sortButton("invoice", "Invoice單")}</th>
                   <th>客戶／地區</th>
-                  <th>{sortButton("sales", "Sales")}</th>
+                  <th>Sales</th>
                   <th>收款進度</th>
                   <th>分類</th>
-                  <th>{sortButton("status", "狀態")}</th>
+                  <th>狀態</th>
                 </tr>
               </thead>
               <tbody>
@@ -1006,7 +966,6 @@ export function Invoices() {
                   const engineering = engineeringLabel(invoice);
                   return (
                     <tr key={invoice.id}>
-                      <td>{invoice.createdAt.slice(0, 10)}</td>
                       <td>
                         <div
                           className={`invoice-number-cell ${
@@ -1020,8 +979,14 @@ export function Invoices() {
                                 ?.number ?? "原單未能讀取"}
                             </small>
                           )}
+                          {order?.csReleasedAt && (
+                            <small className="invoice-engineering-note">
+                              已發工程部 · {order.csReleasedAt.slice(0, 10)}
+                            </small>
+                          )}
                         </div>
                       </td>
+                      <td>{invoice.createdAt.slice(0, 10)}</td>
                       <td>
                         <strong>{invoice.customer.name}</strong>
                         <small>
