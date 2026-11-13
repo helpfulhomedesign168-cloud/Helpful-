@@ -201,7 +201,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
 
   await role(page, "阿花");
   await page
-    .getByPlaceholder("搜尋工程單、客戶、電話或Sales")
+    .getByPlaceholder(/搜尋工程單/)
     .fill(qNumber);
   row = page.locator("tbody tr").filter({ hasText: "UI測試新客戶" });
   await expect(row).toBeVisible();

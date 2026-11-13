@@ -1517,6 +1517,7 @@ export function Handoff() {
   const [monthFilter, setMonthFilter] = useState("all");
   const [salesFilter, setSalesFilter] = useState("all");
   const [csFilter, setCsFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [assigning, setAssigning] = useState<HandoffRow | null>(null);
   const [selectedCs, setSelectedCs] = useState("");
   const rows = engine.listHandoffs(actor);
@@ -1536,7 +1537,11 @@ export function Handoff() {
     actor.role === "cs_supervisor" ||
     ["admin", "admin_staff"].includes(actor.role);
   const shown = [...rows]
-    .sort((a, b) => b.releasedAt.localeCompare(a.releasedAt))
+    .sort((a, b) =>
+      sortOrder === "newest"
+        ? b.releasedAt.localeCompare(a.releasedAt)
+        : a.releasedAt.localeCompare(b.releasedAt),
+    )
     .filter((row) => {
       if (monthFilter !== "all" && !row.releasedAt.startsWith(monthFilter))
         return false;
@@ -1546,13 +1551,13 @@ export function Handoff() {
         (row.csOwnerId ?? "unassigned") !== csFilter
       )
         return false;
-      return `${row.workOrderNumber} ${row.quoteNumber} ${row.invoiceNumber} ${row.customerName} ${row.phone} ${row.salesName} ${row.csOwnerName ?? ""}`.includes(
-        search,
-      );
+      return `${row.workOrderNumber} ${row.quoteNumber} ${row.invoiceNumber} INV ${row.invoiceNumber} INV-${row.invoiceNumber} ${row.customerName} ${row.phone} ${row.salesName} ${row.csOwnerName ?? ""}`
+        .toLowerCase()
+        .includes(search.toLowerCase());
     });
   const pager = usePagination(
     shown,
-    `${search}|${monthFilter}|${salesFilter}|${csFilter}`,
+    `${search}|${monthFilter}|${salesFilter}|${csFilter}|${sortOrder}`,
   );
   return (
     <>
@@ -1562,7 +1567,7 @@ export function Handoff() {
           <Search
             value={search}
             onChange={setSearch}
-            placeholder="搜尋工程單、客戶、電話或Sales"
+            placeholder="搜尋工程單、客戶、電話、Sales或Invoice"
           />
           <div className="submission-filters">
             <select
@@ -1588,6 +1593,16 @@ export function Handoff() {
                   {candidate.name}
                 </option>
               ))}
+            </select>
+            <select
+              aria-label="排序"
+              value={sortOrder}
+              onChange={(event) =>
+                setSortOrder(event.target.value as "newest" | "oldest")
+              }
+            >
+              <option value="newest">最新至最舊</option>
+              <option value="oldest">最舊至最新</option>
             </select>
             <select
               aria-label="跟進同事"
