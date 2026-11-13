@@ -58,7 +58,7 @@ test("單據管理顯示收款status bar、單類filter及已發工程部狀態"
     .locator("tbody tr")
     .filter({ hasText: "SHMM26100001" });
   await expect(released.locator(".invoice-engineering-note")).toContainText(
-    "工程單 D2600001",
+    "D2600001",
   );
   const firstNewest = await page.locator("tbody tr").first().innerText();
   await dateSort.selectOption("oldest");

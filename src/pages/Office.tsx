@@ -1003,7 +1003,7 @@ export function Invoices() {
                           )}
                           {order?.csReleasedAt && (
                             <small className="invoice-engineering-note">
-                              工程單 {order.number}
+                              {order.number}
                             </small>
                           )}
                         </div>
