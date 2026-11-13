@@ -11627,3 +11627,29 @@ textarea::placeholder {
     width: auto;
   }
 }
+
+.related-order-cell {
+  min-width: 165px;
+}
+.related-order-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #1f4d8f;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.related-order-cell select {
+  width: 100%;
+  max-width: 190px;
+  padding: 7px 9px;
+  border: 1px solid #d7dde7;
+  border-radius: 6px;
+  background: #fff;
+  color: #313642;
+  font-size: 12px;
+}
