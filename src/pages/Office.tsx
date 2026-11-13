@@ -308,101 +308,10 @@ export function Finance() {
         )}
       </div>
       {active && (
-        <Dialog title="核對這筆客戶收款" onClose={() => setActive(null)}>
-          <div className="review-amount">
-            <span>
-              {METHOD_NAMES[active.method]} ·{" "}
-              {active.custody === "sales" ? "Sales保管" : "公司"}
-            </span>
-            <strong>{money(active.amount)}</strong>
-          </div>
-          <div className="review-details">
-            <div>
-              <span>來源報價</span>
-              <strong>{engine.getQuote(actor, active.quoteId).number}</strong>
-            </div>
-            <div>
-              <span>交易參考</span>
-              <strong>{active.reference || "未填／現金記錄"}</strong>
-            </div>
-          </div>
-          {active.proof && (
-            <Button
-              onClick={() =>
-                showAttachment(active.proof!).catch((e) =>
-                  run(() => {
-                    throw e;
-                  }),
-                )
-              }
-            >
-              <FileText size={20} />
-              查看付款證明
-            </Button>
-          )}
-          <Field label="有效收款日期" required>
-            <input
-              type="date"
-              max={DEMO_TODAY}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </Field>
-          {active.method !== "cash" && (
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={cleared}
-                onChange={(e) => setCleared(e.target.checked)}
-              />
-              {active.method === "cheque"
-                ? "支票已成功兌現"
-                : "我已核實公司銀行收到這筆款項"}
-            </label>
-          )}
-          <Field label="核對備註／退回原因">
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="按銀行紀錄或合法現金来源核對"
-            />
-          </Field>
-          <div className="dialog-actions">
-            <Button
-              onClick={() => {
-                const r = run(() => {
-                  engine.validatePayment(actor, active.id, {
-                    date,
-                    cleared,
-                    notes,
-                    reject: true,
-                  });
-                  return true;
-                }, "已退回補資料。");
-                if (r) setActive(null);
-              }}
-            >
-              退回補資料
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                const r = run(() => {
-                  engine.validatePayment(actor, active.id, {
-                    date,
-                    cleared,
-                    notes,
-                  });
-                  return true;
-                }, "收款已核對，首期資格已同步更新。");
-                if (r) setActive(null);
-              }}
-            >
-              <Check size={20} />
-              確認有效收款
-            </Button>
-          </div>
-        </Dialog>
+        <PaymentReviewDialog
+          payment={active}
+          onClose={() => setActive(null)}
+        />
       )}
     </>
   );
@@ -415,106 +324,125 @@ function PaymentReviewDialog({
   onClose: () => void;
 }) {
   const { actor, engine, run } = useApp();
-  const [date, setDate] = useState(DEMO_TODAY);
+  const [date, setDate] = useState(payment.date || DEMO_TODAY);
   const [cleared, setCleared] = useState(Boolean(payment.cleared));
   const [notes, setNotes] = useState("");
+  const [rejectNotice, setRejectNotice] = useState(false);
   const quote = engine.getQuote(actor, payment.quoteId);
+  const reject = () => {
+    if (!notes.trim()) {
+      setRejectNotice(true);
+      return;
+    }
+    const done = run(() => {
+      engine.validatePayment(actor, payment.id, {
+        date,
+        cleared,
+        notes,
+        reject: true,
+      });
+      return true;
+    }, "已退回補資料。");
+    if (done) onClose();
+  };
+  const accept = () => {
+    const done = run(() => {
+      engine.validatePayment(actor, payment.id, {
+        date,
+        cleared,
+        notes,
+      });
+      return true;
+    }, "收款已核對；達50%時會自動發工程部。");
+    if (done) onClose();
+  };
   return (
-    <Dialog title="核對這筆客戶收款" onClose={onClose}>
-      <div className="review-amount">
-        <span>
-          {METHOD_NAMES[payment.method]} ·{" "}
-          {payment.custody === "sales" ? "Sales保管" : "公司戶口／公司"}
-        </span>
-        <strong>{money(payment.amount)}</strong>
-      </div>
-      <div className="review-details">
-        <div>
-          <span>來源</span>
-          <strong>{payment.invoiceId ? "Invoice期款" : quote.number}</strong>
-        </div>
-        {payment.installment && (
-          <div>
-            <span>付款期數</span>
-            <strong>第{payment.installment}期</strong>
+    <>
+      <Dialog wide title="核對收款" onClose={onClose}>
+        <div className="payment-review-layout">
+          <div className="payment-review-info">
+            <div className="payment-review-field">
+              <span>報價單</span>
+              <strong>{quote.number}</strong>
+            </div>
+            <div className="payment-review-field">
+              <span>來訂金額</span>
+              <strong>{money(payment.amount)}</strong>
+            </div>
+            <div className="payment-review-field">
+              <span>繳交日期</span>
+              <input
+                aria-label="繳交日期"
+                type="date"
+                max={DEMO_TODAY}
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+              />
+            </div>
+            <div className="payment-review-field">
+              <span>入帳戶口</span>
+              <strong>
+                {payment.custody === "sales"
+                  ? "Sales保管"
+                  : "中國銀行 012 866 2028 1718"}
+              </strong>
+            </div>
+            <div className="payment-review-notes">
+              <span>備註</span>
+              <textarea
+                aria-label="備註"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="按銀行紀錄或合法現金來源核對"
+              />
+            </div>
+            {payment.method !== "cash" && (
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={cleared}
+                  onChange={(event) => setCleared(event.target.checked)}
+                />
+                {payment.method === "cheque"
+                  ? "支票已成功兌現"
+                  : "我已核實公司銀行收到這筆款項"}
+              </label>
+            )}
           </div>
-        )}
-        <div>
-          <span>交易參考</span>
-          <strong>{payment.reference || "未填／現金記錄"}</strong>
+          <div className="payment-review-proof">
+            <strong>付款證明</strong>
+            {payment.proof ? (
+              <ProofThumb attachment={payment.proof} />
+            ) : (
+              <div className="payment-review-proof-empty">
+                未上載付款證明
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="payment-proof-preview">
-        <span>付款證明</span>
-        {payment.proof ? (
-          <ProofThumb attachment={payment.proof} />
-        ) : (
-          <p className="muted">未上載付款證明</p>
-        )}
-      </div>
-      <Field label="有效收款日期" required>
-        <input
-          type="date"
-          max={DEMO_TODAY}
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-        />
-      </Field>
-      {payment.method !== "cash" && (
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={cleared}
-            onChange={(e) => setCleared(e.target.checked)}
-          />
-          {payment.method === "cheque"
-            ? "支票已成功兌現"
-            : "我已核實公司銀行收到這筆款項"}
-        </label>
+        <div className="dialog-actions payment-review-actions">
+          <Button onClick={reject}>未能核對</Button>
+          <Button variant="primary" onClick={accept}>
+            收款有效
+          </Button>
+        </div>
+      </Dialog>
+      {rejectNotice && (
+        <Dialog title="未能核對" onClose={() => setRejectNotice(false)}>
+          <p className="dialog-intro">
+            請先填寫備註／退回原因，才可以將這筆收款標記為未能核對。
+          </p>
+          <div className="dialog-actions">
+            <Button
+              variant="primary"
+              onClick={() => setRejectNotice(false)}
+            >
+              知道
+            </Button>
+          </div>
+        </Dialog>
       )}
-      <Field label="核對備註／退回原因">
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="按銀行紀錄或合法現金來源核對"
-        />
-      </Field>
-      <div className="dialog-actions">
-        <Button
-          onClick={() => {
-            const done = run(() => {
-              engine.validatePayment(actor, payment.id, {
-                date,
-                cleared,
-                notes,
-                reject: true,
-              });
-              return true;
-            }, "已退回補資料。");
-            if (done) onClose();
-          }}
-        >
-          退回補資料
-        </Button>
-        <Button
-          variant="primary"
-          onClick={() => {
-            const done = run(() => {
-              engine.validatePayment(actor, payment.id, {
-                date,
-                cleared,
-                notes,
-              });
-              return true;
-            }, "收款已核對；達50%時會自動發工程部。");
-            if (done) onClose();
-          }}
-        >
-          <Check size={20} />
-          確認有效收款
-        </Button>
-      </div>
-    </Dialog>
+    </>
   );
 }
 

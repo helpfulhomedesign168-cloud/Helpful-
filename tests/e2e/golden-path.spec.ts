@@ -133,7 +133,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
   await expect(proofPage).toHaveURL(/^blob:/);
   await proofPage.close();
   await review
-    .getByRole("button", { name: "確認有效收款", exact: true })
+    .getByRole("button", { name: "收款有效", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(row).toContainText("自費");
@@ -169,7 +169,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
     .check();
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: "確認有效收款", exact: true })
+    .getByRole("button", { name: "收款有效", exact: true })
     .click();
 
   await role(page, "工程CS");
@@ -196,7 +196,7 @@ test("全新來源經Sales→Finance→開單員→CS；部分款及未簽不會
     .check();
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: "確認有效收款", exact: true })
+    .getByRole("button", { name: "收款有效", exact: true })
     .click();
 
   await role(page, "阿花");
