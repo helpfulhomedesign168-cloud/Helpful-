@@ -4863,12 +4863,57 @@ textarea {
 
 /* Calendar-first sales roster */
 .schedule-month-nav {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
+  height: 52px;
+  padding: 4px;
+  border: 1px solid #d5dbe4;
+  border-radius: 999px;
+  background: #fff;
 }
-.schedule-month-nav input[type="month"] {
-  width: 160px;
+.schedule-month-arrow {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #f0f3f7;
+  color: #151a22;
+  cursor: pointer;
+}
+.schedule-month-arrow:hover {
+  background: #e6ebf2;
+}
+.schedule-month-current {
+  position: relative;
+  display: flex;
+  height: 40px;
+  min-width: 190px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 16px;
+  color: #151a22;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.schedule-month-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+@media (max-width: 700px) {
+  .schedule-month-current {
+    min-width: 0;
+    padding: 0 8px;
+    font-size: 14px;
+  }
 }
 .schedule-layout {
   display: grid;
@@ -11284,4 +11329,192 @@ textarea::placeholder {
     border-left: 0;
     text-align: left;
   }
+}
+
+.sales-location-note {
+  margin: 10px 0 0;
+  color: #7b8492;
+  font-size: 12px;
+}
+.sales-editor-section {
+  margin-bottom: 20px;
+}
+.sales-editor-section > strong,
+.roster-editor-add > strong {
+  display: block;
+  margin-bottom: 10px;
+  color: #313642;
+  font-size: 14px;
+}
+.roster-editor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f1;
+  border-radius: 7px;
+  background: #fff;
+}
+.roster-editor-row + .roster-editor-row {
+  margin-top: 8px;
+}
+.roster-editor-row strong {
+  font-size: 13px;
+}
+.roster-editor-row span {
+  color: #7b8492;
+  font-size: 12px;
+}
+.sales-delete-link {
+  border: 0;
+  background: none;
+  color: #b64a4a;
+  font-size: 12px;
+  cursor: pointer;
+}
+.roster-editor-add {
+  padding: 16px;
+  border-radius: 9px;
+  background: #f4f7fb;
+}
+.roster-editor-add .btn {
+  margin-top: 12px;
+}
+
+/* Sales schedule: calendar picker and meeting days */
+.sales-date-picker {
+  position: relative;
+}
+.sales-date-trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid #d7dde7;
+  border-radius: 7px;
+  background: #fff;
+  color: #313642;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sales-date-popover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 7px);
+  left: 0;
+  width: 280px;
+  padding: 12px;
+  border: 1px solid #d9e0ea;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(16, 31, 58, 0.16);
+}
+.sales-date-weekdays,
+.sales-date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.sales-date-weekdays span {
+  padding: 5px 0;
+  color: #8d96a4;
+  font-size: 11px;
+  text-align: center;
+}
+.sales-date-grid button {
+  height: 31px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #313642;
+  font-size: 12px;
+  cursor: pointer;
+}
+.sales-date-grid button:hover:not(:disabled) {
+  background: #eef4ff;
+}
+.sales-date-grid button.selected {
+  background: #ff7a00;
+  color: #fff;
+  font-weight: 700;
+}
+.sales-date-grid button.disabled {
+  color: #c4cad4;
+  cursor: not-allowed;
+}
+.sales-meeting-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  padding: 9px 16px;
+  border-top: 1px solid #edf0f5;
+  border-bottom: 1px solid #edf0f5;
+  background: #fff7f7;
+}
+.sales-meeting-bar > strong {
+  color: #9b2c2c;
+  font-size: 12px;
+}
+.sales-meeting-bar select {
+  flex: 0 0 180px;
+  width: 180px;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid #e7c8c8;
+  border-radius: 5px;
+  background: #fff;
+  color: #7a3333;
+  font-size: 12px;
+}
+.sales-meeting-bar .btn {
+  flex: 0 0 auto;
+}
+.sales-meeting-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+@media (max-width: 900px) {
+  .sales-meeting-bar {
+    flex-wrap: wrap;
+  }
+  .sales-meeting-chips {
+    margin-left: 0;
+  }
+}
+.sales-meeting-chips > span {
+  color: #9a8b8b;
+  font-size: 11px;
+}
+.sales-meeting-chips button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid #efcccc;
+  border-radius: 999px;
+  background: #ffe9e9;
+  color: #9b2c2c;
+  font-size: 11px;
+  cursor: pointer;
+}
+.sales-roster-grid th.meeting,
+.sales-location-grid th.meeting {
+  background: #ffe1e1 !important;
+  color: #9b2c2c !important;
+}
+.sales-shift-cell.meeting {
+  border-color: #f1caca;
+}
+.sales-team-note {
+  margin: 0 0 12px;
+  color: #7b8492;
+  font-size: 12px;
 }

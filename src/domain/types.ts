@@ -635,6 +635,7 @@ export interface AppState {
   salesTeamLocations: SalesTeamLocation[];
   salesRosterTeams: SalesRosterTeam[];
   salesRosterMembers: SalesRosterMember[];
+  salesMeetingDays: SalesMeetingDay[];
   audits: AuditEvent[];
   notifications: Notification[];
   customWorkRequests: CustomWorkRequest[];
@@ -884,6 +885,7 @@ export interface SalesRosterTeam {
   order: number;
   createdBy: string;
   createdAt: string;
+  deleted?: boolean;
 }
 export interface SalesRosterMember {
   id: string;
@@ -913,6 +915,14 @@ export interface SalesScheduleData {
   teams: SalesScheduleTeam[];
   shifts: SalesShift[];
   locations: SalesTeamLocation[];
+  meetingDays: string[];
+}
+export interface SalesMeetingDay {
+  id: string;
+  month: string;
+  date: string;
+  createdBy: string;
+  createdAt: string;
 }
 export interface DraftInput {
   customer: Customer;
