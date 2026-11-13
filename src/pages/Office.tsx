@@ -324,7 +324,7 @@ function PaymentReviewDialog({
   onClose: () => void;
 }) {
   const { actor, engine, run } = useApp();
-  const [date, setDate] = useState(payment.date || DEMO_TODAY);
+  const date = payment.date || DEMO_TODAY;
   const [cleared, setCleared] = useState(Boolean(payment.cleared));
   const [notes, setNotes] = useState("");
   const [rejectNotice, setRejectNotice] = useState(false);
@@ -371,13 +371,7 @@ function PaymentReviewDialog({
             </div>
             <div className="payment-review-field">
               <span>繳交日期</span>
-              <input
-                aria-label="繳交日期"
-                type="date"
-                max={DEMO_TODAY}
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-              />
+              <strong>{date.replaceAll("-", "/")}</strong>
             </div>
             <div className="payment-review-field">
               <span>入帳戶口</span>
