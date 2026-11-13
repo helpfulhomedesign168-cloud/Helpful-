@@ -524,3 +524,21 @@ it("提交報價首訂金額由分類計劃派生，付款證明 metadata 返回
     e.listPayments(clerk).find((row) => row.id === payment.id)?.proof?.name,
   ).toBe("首訂證明.png");
 });
+it("CS工程單可讀8萬資助批核摘要，但不讀原報價", () => {
+  const e = new Engine(undefined, createSeedState());
+  const admin = actor(e, "admin");
+  const csLead = actor(e, "cs-lead-ahfa");
+  const order = e.listOrders(admin)[0];
+  e.updateQuoteOrderMeta(admin, order.quoteId, {
+    orderCategories: ["grant-80k"],
+  });
+  e.recordGrantApproval(admin, order.quoteId, {
+    applicationNumber: "M24902103",
+    approvedAmount: 82000,
+  });
+  expect(e.orderGrantApproval(csLead, order.id)).toMatchObject({
+    applicationNumber: "M24902103",
+    approvedAmount: 82000,
+  });
+  expect(() => e.getQuote(csLead, order.quoteId)).toThrow("工程CS不可讀取原報價");
+});

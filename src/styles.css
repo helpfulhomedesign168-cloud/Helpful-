@@ -11216,3 +11216,72 @@ textarea::placeholder {
   font-size: 12px;
   line-height: 1.6;
 }
+
+/* CS engineering order: 8萬資助批核 summary */
+.wo-grant-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 2px 4px;
+  padding: 13px 16px;
+  border: 1px solid #f0d7b4;
+  border-radius: 9px;
+  background: #fff8ee;
+}
+.wo-grant-badge {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  flex: 0 0 44px;
+  border-radius: 50%;
+  background: #ff8e00;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.wo-grant-info {
+  display: grid;
+  gap: 3px;
+  min-width: 220px;
+}
+.wo-grant-info span,
+.wo-grant-amount span,
+.wo-grant-date span {
+  color: #8d96a4;
+  font-size: 11px;
+}
+.wo-grant-info strong,
+.wo-grant-amount strong,
+.wo-grant-date strong {
+  color: #313642;
+  font-size: 14px;
+  font-weight: 600;
+}
+.wo-grant-amount {
+  display: grid;
+  gap: 3px;
+  margin-left: auto;
+  text-align: right;
+}
+.wo-grant-date {
+  display: grid;
+  gap: 3px;
+  padding-left: 18px;
+  border-left: 1px solid #ecd8bc;
+  text-align: right;
+}
+@media (max-width: 900px) {
+  .wo-grant-card {
+    flex-wrap: wrap;
+  }
+  .wo-grant-amount {
+    margin-left: 0;
+    text-align: left;
+  }
+  .wo-grant-date {
+    padding-left: 0;
+    border-left: 0;
+    text-align: left;
+  }
+}

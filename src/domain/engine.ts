@@ -2639,6 +2639,37 @@ export class Engine {
       fail("你沒有查看此工程單的權限。");
     return sanitiseOrder(order, this.isAdmin(actor));
   }
+  /** CS-safe grant approval summary for a released engineering order. */
+  orderGrantApproval(
+    actorInput: Actor,
+    workOrderId: string,
+  ): {
+    applicationNumber?: string;
+    approvedAmount?: number;
+    approvedAt?: string;
+  } | undefined {
+    const actor = this.actor(actorInput);
+    const order =
+      this.state.orders.find((item) => item.id === workOrderId) ??
+      fail("找不到工程單。");
+    if (!this.orderReadable(actor, order))
+      fail("你沒有查看此工程單的權限。");
+    const quote = this.state.quotes.find(
+      (item) => item.id === order.quoteId,
+    );
+    if (!quote) return undefined;
+    const categories = quote.orderCategories?.length
+      ? quote.orderCategories
+      : quote.officeCategory
+        ? [quote.officeCategory]
+        : [];
+    if (!categories.includes("grant-80k")) return undefined;
+    return {
+      applicationNumber: quote.grantApplicationNumber,
+      approvedAmount: quote.grantApprovedAmount,
+      approvedAt: quote.grantApprovedAt,
+    };
+  }
   /** Quote-version line amounts for a released engineering order, without
    * exposing quote pricing to CS. */
   orderLineAmounts(

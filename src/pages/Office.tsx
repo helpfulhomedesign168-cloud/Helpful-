@@ -2447,6 +2447,16 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   } catch {
     categories = invoice.category ? [invoice.category] : [];
   }
+  let grantApproval:
+    | {
+        applicationNumber?: string;
+        approvedAmount?: number;
+        approvedAt?: string;
+      }
+    | undefined;
+  try {
+    grantApproval = engine.orderGrantApproval(actor, order.id);
+  } catch {}
   return (
     <>
       <div className="wo-detail-head">
@@ -2487,6 +2497,33 @@ function OrderPanel({ order }: { order: WorkOrder }) {
           )}
         </div>
       </div>
+      {grantApproval && (
+        <div className="wo-grant-card">
+          <div className="wo-grant-badge">8萬</div>
+          <div className="wo-grant-info">
+            <span>8萬資助批核</span>
+            <strong>
+              {grantApproval.applicationNumber
+                ? `申請編號：${grantApproval.applicationNumber}`
+                : "待政府批核"}
+            </strong>
+          </div>
+          <div className="wo-grant-amount">
+            <span>政府批核金額</span>
+            <strong>
+              {grantApproval.approvedAmount
+                ? money(grantApproval.approvedAmount)
+                : "—"}
+            </strong>
+          </div>
+          {grantApproval.approvedAt && (
+            <div className="wo-grant-date">
+              <span>批核日期</span>
+              <strong>{grantApproval.approvedAt.slice(0, 10)}</strong>
+            </div>
+          )}
+        </div>
+      )}
       <div className="wo-customer-row">
         <div>
           <span>聯絡人</span>
