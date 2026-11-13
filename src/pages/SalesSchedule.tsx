@@ -1,5 +1,11 @@
-import React, { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  X,
+} from "lucide-react";
 import { useApp } from "../context";
 import { Badge, Button, Dialog, Field, PageHead } from "../components/ui";
 import {
@@ -44,6 +50,94 @@ function colorForTeam(index: number) {
   return TEAM_COLORS[index % TEAM_COLORS.length];
 }
 
+function SalesDatePicker({
+  label,
+  value,
+  month,
+  disabledDates,
+  minDate,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  month: string;
+  disabledDates: Set<string>;
+  minDate?: string;
+  onChange: (date: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const days = monthDays(month);
+  const firstWeekday = new Date(`${month}-01T00:00:00`).getDay();
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => {
+      if (
+        rootRef.current &&
+        !rootRef.current.contains(event.target as Node)
+      )
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  return (
+    <div className="sales-date-picker" ref={rootRef}>
+      <button
+        type="button"
+        className="sales-date-trigger"
+        aria-label={label}
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>{value ? value.replaceAll("-", "/") : "選擇日期"}</span>
+        <CalendarDays size={17} />
+      </button>
+      {open && (
+        <div className="sales-date-popover" role="dialog" aria-label={`${label}日曆`}>
+          <div className="sales-date-weekdays">
+            {WEEKDAYS.map((weekday) => (
+              <span key={weekday}>{weekday}</span>
+            ))}
+          </div>
+          <div className="sales-date-grid">
+            {Array.from({ length: firstWeekday }, (_, index) => (
+              <span key={`blank-${index}`} />
+            ))}
+            {days.map((day) => {
+              const disabled =
+                disabledDates.has(day.date) ||
+                (minDate ? day.date < minDate : false);
+              return (
+                <button
+                  type="button"
+                  key={day.date}
+                  className={
+                    day.date === value
+                      ? "selected"
+                      : disabled
+                        ? "disabled"
+                        : ""
+                  }
+                  aria-label={day.date}
+                  disabled={disabled}
+                  onClick={() => {
+                    onChange(day.date);
+                    setOpen(false);
+                  }}
+                >
+                  {day.day}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type LocationDraft = {
   id?: string;
   team: string;
@@ -65,6 +159,7 @@ export function SalesSchedule() {
   const [cell, setCell] = useState<CellDraft | null>(null);
   const [teamEditor, setTeamEditor] = useState(false);
   const [salesEditor, setSalesEditor] = useState(false);
+  const [meetingDate, setMeetingDate] = useState("");
   const [newMember, setNewMember] = useState<{
     actorId: string;
     name: string;
@@ -224,6 +319,7 @@ export function SalesSchedule() {
       <strong>{member.name}</strong>
     </div>
   );
+  const meetingDates = new Set(schedule.meetingDays);
   const blockedLocationDates = new Set(
     location
       ? days
@@ -239,7 +335,6 @@ export function SalesSchedule() {
           .map((day) => day.date)
       : [],
   );
-  const dateOptionLabel = (date: string) => date.replaceAll("-", "/");
   return (
     <>
       <PageHead
@@ -287,11 +382,14 @@ export function SalesSchedule() {
                   {days.map((day) => (
                     <th
                       key={day.date}
-                      className={
+                      className={[
                         day.weekday === 0 || day.weekday === 6
                           ? "weekend"
-                          : ""
-                      }
+                          : "",
+                        meetingDates.has(day.date) ? "meeting" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                     >
                       <strong>{day.day}</strong>
                       <small>{WEEKDAYS[day.weekday]}</small>
@@ -362,19 +460,89 @@ export function SalesSchedule() {
               <Button onClick={() => setSalesEditor(true)}>編輯</Button>
             )}
           </div>
+          {canAdd && (
+            <div className="sales-meeting-bar">
+              <strong>開會日</strong>
+              <select
+                aria-label="選擇開會日"
+                value={meetingDate}
+                onChange={(event) => setMeetingDate(event.target.value)}
+              >
+                <option value="">選擇日期</option>
+                {days.map((day) => (
+                  <option key={day.date} value={day.date}>
+                    {day.date.replaceAll("-", "/")}
+                  </option>
+                ))}
+              </select>
+              <Button
+                disabled={!meetingDate}
+                onClick={() => {
+                  if (!meetingDate) return;
+                  run(
+                    () =>
+                      engine.setSalesMeetingDay(
+                        actor,
+                        month,
+                        meetingDate,
+                        !meetingDates.has(meetingDate),
+                      ),
+                    meetingDates.has(meetingDate)
+                      ? "已取消開會日。"
+                      : "已設為開會日，所有Sales安排上班。",
+                  );
+                }}
+              >
+                {meetingDate && meetingDates.has(meetingDate)
+                  ? "取消開會日"
+                  : "設為開會日"}
+              </Button>
+              <div className="sales-meeting-chips">
+                {schedule.meetingDays.length === 0 ? (
+                  <span>尚未設定</span>
+                ) : (
+                  schedule.meetingDays.map((date) => (
+                    <button
+                      type="button"
+                      key={date}
+                      aria-label={`取消開會日 ${date}`}
+                      onClick={() =>
+                        run(
+                          () =>
+                            engine.setSalesMeetingDay(
+                              actor,
+                              month,
+                              date,
+                              false,
+                            ),
+                          "已取消開會日。",
+                        )
+                      }
+                    >
+                      {date.slice(5).replace("-", "/")}
+                      <X size={12} />
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
           <div className="table-scroll sales-sheet-scroll">
             <table className="sales-roster-grid">
               <thead>
                 <tr>
-                  <th className="sales-table-name-head">Sales</th>
+                  <th className="sales-table-name-head">日期</th>
                   {days.map((day) => (
                     <th
                       key={day.date}
-                      className={
+                      className={[
                         day.weekday === 0 || day.weekday === 6
                           ? "weekend"
-                          : ""
-                      }
+                          : "",
+                        meetingDates.has(day.date) ? "meeting" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                     >
                       <strong>{day.day}</strong>
                       <small>{WEEKDAYS[day.weekday]}</small>
@@ -393,21 +561,36 @@ export function SalesSchedule() {
                         <th>{memberName(member)}</th>
                         {days.map((day) => {
                           const row = shifts.get(`${member.id}|${day.date}`);
+                          const meeting = meetingDates.has(day.date);
                           return (
                             <td key={day.date}>
                               <button
                                 type="button"
-                                className="sales-shift-cell"
+                                className={`sales-shift-cell ${
+                                  meeting ? "meeting" : ""
+                                }`}
                                 data-assignment={row?.assignment ?? ""}
                                 data-shift={row?.workShift ?? ""}
+                                data-meeting={meeting ? "true" : ""}
                                 aria-label={`${member.name} ${day.date} 更表`}
-                                style={cellStyle(
-                                  row?.assignment,
-                                  row?.workShift,
-                                )}
+                                style={
+                                  meeting
+                                    ? {
+                                        ...cellStyle(
+                                          row?.assignment,
+                                          row?.workShift,
+                                        ),
+                                        background: "#FFE1E1",
+                                        color: "#9B2C2C",
+                                      }
+                                    : cellStyle(
+                                        row?.assignment,
+                                        row?.workShift,
+                                      )
+                                }
                                 onClick={() => openCell(member, day.date)}
                               >
-                                {cellText(row?.assignment)}
+                                {meeting ? "會" : cellText(row?.assignment)}
                               </button>
                             </td>
                           );
@@ -433,21 +616,36 @@ export function SalesSchedule() {
                           <th>{memberName(member)}</th>
                           {days.map((day) => {
                             const row = shifts.get(`${member.id}|${day.date}`);
+                            const meeting = meetingDates.has(day.date);
                             return (
                               <td key={day.date}>
                                 <button
                                   type="button"
-                                  className="sales-shift-cell"
+                                  className={`sales-shift-cell ${
+                                    meeting ? "meeting" : ""
+                                  }`}
                                   data-assignment={row?.assignment ?? ""}
                                   data-shift={row?.workShift ?? ""}
+                                  data-meeting={meeting ? "true" : ""}
                                   aria-label={`${member.name} ${day.date} 更表`}
-                                  style={cellStyle(
-                                    row?.assignment,
-                                    row?.workShift,
-                                  )}
+                                  style={
+                                    meeting
+                                      ? {
+                                          ...cellStyle(
+                                            row?.assignment,
+                                            row?.workShift,
+                                          ),
+                                          background: "#FFE1E1",
+                                          color: "#9B2C2C",
+                                        }
+                                      : cellStyle(
+                                          row?.assignment,
+                                          row?.workShift,
+                                        )
+                                  }
                                   onClick={() => openCell(member, day.date)}
                                 >
-                                  {cellText(row?.assignment)}
+                                  {meeting ? "會" : cellText(row?.assignment)}
                                 </button>
                               </td>
                             );
@@ -465,6 +663,9 @@ export function SalesSchedule() {
 
       {teamEditor && (
         <Dialog title="編輯Team" onClose={() => setTeamEditor(false)}>
+          <p className="sales-team-note">
+            可新增或刪除 Team；如仍有成員、地點或更表，請先清空才刪除。
+          </p>
           <div className="roster-editor-list">
             {schedule.teams.map((team) => {
               const color = colorForTeam(team.colorIndex);
@@ -477,26 +678,24 @@ export function SalesSchedule() {
                     {team.code}
                   </span>
                   <strong>Team {team.code}</strong>
-                  {!["A", "B", "C"].includes(team.code) && (
-                    <button
-                      type="button"
-                      className="sales-delete-link"
-                      aria-label={`刪除 Team ${team.code}`}
-                      onClick={() =>
-                        run(
-                          () =>
-                            engine.deleteSalesRosterTeam(
-                              actor,
-                              month,
-                              team.code,
-                            ),
-                          `Team ${team.code} 已刪除。`,
-                        )
-                      }
-                    >
-                      刪除
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="sales-delete-link"
+                    aria-label={`刪除 Team ${team.code}`}
+                    onClick={() =>
+                      run(
+                        () =>
+                          engine.deleteSalesRosterTeam(
+                            actor,
+                            month,
+                            team.code,
+                          ),
+                        `Team ${team.code} 已刪除。`,
+                      )
+                    }
+                  >
+                    刪除
+                  </button>
                 </div>
               );
             })}
@@ -665,8 +864,18 @@ export function SalesSchedule() {
               >
                 <option value="early">早更 9-6</option>
                 <option value="normal">日常 10-7</option>
-                <option value="off">Off 放假</option>
-                <option value="ph">補假</option>
+                <option
+                  value="off"
+                  disabled={meetingDates.has(cell.date)}
+                >
+                  Off 放假
+                </option>
+                <option
+                  value="ph"
+                  disabled={meetingDates.has(cell.date)}
+                >
+                  補假
+                </option>
               </select>
             </Field>
           </div>
@@ -720,11 +929,12 @@ export function SalesSchedule() {
               />
             </Field>
             <Field label="開始日期" required>
-              <select
-                aria-label="開始日期"
+              <SalesDatePicker
+                label="開始日期"
                 value={location.startDate}
-                onChange={(event) => {
-                  const startDate = event.target.value;
+                month={month}
+                disabledDates={blockedLocationDates}
+                onChange={(startDate) =>
                   setLocation({
                     ...location,
                     startDate,
@@ -736,49 +946,21 @@ export function SalesSchedule() {
                               day.date >= startDate &&
                               !blockedLocationDates.has(day.date),
                           )?.date ?? startDate),
-                  });
-                }}
-              >
-                {days.map((day) => (
-                  <option
-                    key={day.date}
-                    value={day.date}
-                    disabled={blockedLocationDates.has(day.date)}
-                  >
-                    {dateOptionLabel(day.date)}
-                    {blockedLocationDates.has(day.date)
-                      ? "（已安排）"
-                      : ""}
-                  </option>
-                ))}
-              </select>
+                  })
+                }
+              />
             </Field>
             <Field label="結束日期" required>
-              <select
-                aria-label="結束日期"
+              <SalesDatePicker
+                label="結束日期"
                 value={location.endDate}
-                onChange={(event) =>
-                  setLocation({ ...location, endDate: event.target.value })
+                month={month}
+                disabledDates={blockedLocationDates}
+                minDate={location.startDate}
+                onChange={(endDate) =>
+                  setLocation({ ...location, endDate })
                 }
-              >
-                {days.map((day) => (
-                  <option
-                    key={day.date}
-                    value={day.date}
-                    disabled={
-                      blockedLocationDates.has(day.date) ||
-                      (!location.startDate
-                        ? false
-                        : day.date < location.startDate)
-                    }
-                  >
-                    {dateOptionLabel(day.date)}
-                    {blockedLocationDates.has(day.date)
-                      ? "（已安排）"
-                      : ""}
-                  </option>
-                ))}
-              </select>
+              />
             </Field>
           </div>
           <p className="sales-location-note">

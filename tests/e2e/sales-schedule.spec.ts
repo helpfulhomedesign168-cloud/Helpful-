@@ -46,8 +46,14 @@ test("Sales阿頭用編輯popup管理Team/Sale，自動排班及每格可改", a
   });
   await expect(locationDialog.getByLabel("開始日期")).toHaveCount(1);
   await locationDialog.getByLabel("工作地點").fill("恒安");
-  await locationDialog.getByLabel("開始日期").selectOption("2026-10-01");
-  await locationDialog.getByLabel("結束日期").selectOption("2026-10-03");
+  await locationDialog.getByLabel("開始日期").click();
+  await locationDialog
+    .getByRole("button", { name: "2026-10-01" })
+    .click();
+  await locationDialog.getByLabel("結束日期").click();
+  await locationDialog
+    .getByRole("button", { name: "2026-10-03" })
+    .click();
   await locationDialog
     .getByRole("button", { name: "儲存地點", exact: true })
     .click();
@@ -58,15 +64,19 @@ test("Sales阿頭用編輯popup管理Team/Sale，自動排班及每格可改", a
   // New location defaults to the first free day after 1-3, and already
   // arranged dates are disabled in the end-date picker.
   await teamARow.getByRole("button", { name: "+ 新增地方" }).click();
-  await expect(locationDialog.getByLabel("開始日期")).toHaveValue(
-    "2026-10-04",
+  await expect(locationDialog.getByLabel("開始日期")).toContainText(
+    "2026/10/04",
   );
+  await locationDialog.getByLabel("結束日期").click();
   await expect(
-    locationDialog
-      .getByLabel("結束日期")
-      .locator("option[disabled]")
-      .filter({ hasText: "已安排" }),
-  ).toHaveCount(3);
+    locationDialog.getByRole("button", { name: "2026-10-01" }),
+  ).toBeDisabled();
+  await expect(
+    locationDialog.getByRole("button", { name: "2026-10-03" }),
+  ).toBeDisabled();
+  await expect(
+    locationDialog.getByRole("button", { name: "2026-10-04" }),
+  ).toBeEnabled();
   await expect(
     locationDialog.getByRole("button", { name: "返回", exact: true }),
   ).toBeVisible();
@@ -173,4 +183,61 @@ test("舊localStorage未有排班欄位仍可自動migration，不會爆filter�
     page.getByText("原型遇到問題", { exact: false }),
   ).toHaveCount(0);
   await gotoRoster(page);
+});
+
+test("Sales阿頭設定開會日會全員上班並以淺紅顯示", async ({ page }) => {
+  await page.goto("/");
+  await switchRole(page, "Don A DN（測試碼）");
+  await gotoRoster(page);
+  await expect(
+    page.locator(".sales-roster-grid thead").getByText("日期", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("選擇開會日").selectOption("2026-10-02");
+  await page.getByRole("button", { name: "設為開會日", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "取消開會日 2026-10-02" }),
+  ).toBeVisible();
+  await expect(page.locator(".sales-roster-grid th.meeting")).toHaveCount(1);
+  const meetingCells = page.locator('.sales-shift-cell[data-meeting="true"]');
+  await expect(meetingCells.first()).toBeVisible();
+  expect(await meetingCells.count()).toBeGreaterThan(0);
+  await expect(meetingCells.first()).toHaveText("會");
+  expect(
+    await meetingCells.evaluateAll((cells) =>
+      cells.every((cell) => cell.textContent === "會"),
+    ),
+  ).toBe(true);
+  await meetingCells.first().click();
+  const shiftDialog = page.getByRole("dialog", { name: /更表/ });
+  await expect(
+    shiftDialog.locator('option[value="off"]'),
+  ).toHaveJSProperty("disabled", true);
+  await expect(
+    shiftDialog.locator('option[value="ph"]'),
+  ).toHaveJSProperty("disabled", true);
+  await shiftDialog.getByRole("button", { name: "取消", exact: true }).click();
+  await page
+    .getByRole("button", { name: "取消開會日 2026-10-02" })
+    .click();
+  await expect(page.locator(".sales-roster-grid th.meeting")).toHaveCount(0);
+});
+
+test("Sales阿頭可刪除及重新新增Team", async ({ page }) => {
+  await page.goto("/");
+  await switchRole(page, "Don A DN（測試碼）");
+  await gotoRoster(page);
+  await page
+    .locator(".sales-sheet-panel")
+    .first()
+    .getByRole("button", { name: "編輯", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "編輯Team" });
+  await dialog.getByRole("button", { name: "刪除 Team C" }).click();
+  await expect(
+    page.locator(".sales-location-name").filter({ hasText: "C" }),
+  ).toHaveCount(0);
+  await dialog.getByRole("button", { name: /Team$/ }).click();
+  await expect(
+    page.locator(".sales-location-name").filter({ hasText: "C" }),
+  ).toHaveCount(1);
 });
