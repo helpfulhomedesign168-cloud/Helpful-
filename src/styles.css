@@ -11285,3 +11285,54 @@ textarea::placeholder {
     text-align: left;
   }
 }
+
+.sales-location-note {
+  margin: 10px 0 0;
+  color: #7b8492;
+  font-size: 12px;
+}
+.sales-editor-section {
+  margin-bottom: 20px;
+}
+.sales-editor-section > strong,
+.roster-editor-add > strong {
+  display: block;
+  margin-bottom: 10px;
+  color: #313642;
+  font-size: 14px;
+}
+.roster-editor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f1;
+  border-radius: 7px;
+  background: #fff;
+}
+.roster-editor-row + .roster-editor-row {
+  margin-top: 8px;
+}
+.roster-editor-row strong {
+  font-size: 13px;
+}
+.roster-editor-row span {
+  color: #7b8492;
+  font-size: 12px;
+}
+.sales-delete-link {
+  border: 0;
+  background: none;
+  color: #b64a4a;
+  font-size: 12px;
+  cursor: pointer;
+}
+.roster-editor-add {
+  padding: 16px;
+  border-radius: 9px;
+  background: #f4f7fb;
+}
+.roster-editor-add .btn {
+  margin-top: 12px;
+}

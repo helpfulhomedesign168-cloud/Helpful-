@@ -44,10 +44,10 @@ test("Sales阿頭用編輯popup管理Team/Sale，自動排班及每格可改", a
   const locationDialog = page.getByRole("dialog", {
     name: /新增 Team A 地點/,
   });
-  await expect(locationDialog.locator("select")).toHaveCount(0);
+  await expect(locationDialog.getByLabel("開始日期")).toHaveCount(1);
   await locationDialog.getByLabel("工作地點").fill("恒安");
-  await locationDialog.getByLabel("開始日期").fill("2026-10-01");
-  await locationDialog.getByLabel("結束日期").fill("2026-10-03");
+  await locationDialog.getByLabel("開始日期").selectOption("2026-10-01");
+  await locationDialog.getByLabel("結束日期").selectOption("2026-10-03");
   await locationDialog
     .getByRole("button", { name: "儲存地點", exact: true })
     .click();
@@ -55,11 +55,35 @@ test("Sales阿頭用編輯popup管理Team/Sale，自動排班及每格可改", a
   await expect(
     teamARow.getByRole("button", { name: "恒安", exact: true }),
   ).toHaveCount(1);
+  // New location defaults to the first free day after 1-3, and already
+  // arranged dates are disabled in the end-date picker.
+  await teamARow.getByRole("button", { name: "+ 新增地方" }).click();
+  await expect(locationDialog.getByLabel("開始日期")).toHaveValue(
+    "2026-10-04",
+  );
+  await expect(
+    locationDialog
+      .getByLabel("結束日期")
+      .locator("option[disabled]")
+      .filter({ hasText: "已安排" }),
+  ).toHaveCount(3);
+  await expect(
+    locationDialog.getByRole("button", { name: "返回", exact: true }),
+  ).toBeVisible();
+  await expect(
+    locationDialog.getByRole("button", { name: "取消地點", exact: true }),
+  ).toBeDisabled();
+  await locationDialog.getByRole("button", { name: "返回", exact: true }).click();
 
   await salesPanel.getByRole("button", { name: "編輯", exact: true }).click();
   const salesDialog = page.getByRole("dialog", { name: "編輯Sales" });
-  await salesDialog.getByLabel("新成員名稱").fill("Karen");
-  await salesDialog.getByLabel("新成員類型").selectOption("sales");
+  await expect(salesDialog.getByLabel("新成員類型")).toHaveCount(0);
+  await salesDialog
+    .getByLabel("新成員名稱")
+    .selectOption("supervisor-sh");
+  await expect(
+    salesDialog.getByLabel("新成員名稱").locator("option:checked"),
+  ).toHaveText("世雄B SH - Sales主管");
   await salesDialog.getByLabel("新成員Team").selectOption("A");
   await salesDialog
     .getByRole("button", { name: "新增並自動排班", exact: true })
@@ -67,7 +91,7 @@ test("Sales阿頭用編輯popup管理Team/Sale，自動排班及每格可改", a
   await salesDialog.getByRole("button", { name: "完成", exact: true }).click();
   const memberRow = page
     .locator(".sales-member-row")
-    .filter({ hasText: "Karen" });
+    .filter({ hasText: "世雄B SH" });
   await expect(memberRow).toBeVisible();
   await expect(memberRow.locator('button[data-assignment="OFF"]')).toHaveCount(
     5,
@@ -76,12 +100,12 @@ test("Sales阿頭用編輯popup管理Team/Sale，自動排班及每格可改", a
     await memberRow.locator('button[data-shift="early"]').count(),
   ).toBeGreaterThanOrEqual(10);
 
-  const firstCell = page.getByRole("button", {
-    name: "Karen 2026-10-01 更表",
+  const firstCell = memberRow.getByRole("button", {
+    name: "世雄B SH 2026-10-01 更表",
   });
   await firstCell.click();
   const cellDialog = page.getByRole("dialog", {
-    name: "Karen · 2026-10-01 更表",
+    name: "世雄B SH · 2026-10-01 更表",
   });
   await cellDialog.getByLabel("更份").selectOption("ph");
   await cellDialog.getByRole("button", { name: "儲存", exact: true }).click();
@@ -90,16 +114,19 @@ test("Sales阿頭用編輯popup管理Team/Sale，自動排班及每格可改", a
 
   await page.reload();
   await expect(
-    page.locator(".sales-member-row").filter({ hasText: "Karen" }),
+    page.locator(".sales-member-row").filter({ hasText: "世雄B SH" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Karen 2026-10-01 更表" }),
+    page
+      .locator(".sales-member-row")
+      .filter({ hasText: "世雄B SH" })
+      .getByRole("button", { name: "世雄B SH 2026-10-01 更表" }),
   ).toHaveAttribute("data-assignment", "PH");
 
   await salesPanel.getByRole("button", { name: "編輯", exact: true }).click();
-  await salesDialog.getByRole("button", { name: "刪除 Karen" }).click();
+  await salesDialog.getByRole("button", { name: "刪除 世雄B SH" }).click();
   await expect(
-    page.locator(".sales-member-row").filter({ hasText: "Karen" }),
+    page.locator(".sales-member-row").filter({ hasText: "世雄B SH" }),
   ).toHaveCount(0);
 });
 
