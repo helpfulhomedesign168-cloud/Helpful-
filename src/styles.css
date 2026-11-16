@@ -11769,3 +11769,49 @@ textarea::placeholder {
 .receipt-sheet .receipt-statement {
   margin-top: 22px;
 }
+
+/* Municipal document uses the shared document blueprint */
+.municipal-sheet .municipal-document-table {
+  table-layout: fixed;
+}
+.municipal-sheet .municipal-document-table th:nth-child(1) {
+  width: 42px;
+}
+.municipal-sheet .municipal-document-table th:nth-child(2) {
+  width: 22%;
+  text-align: left;
+}
+.municipal-sheet .municipal-document-table th:nth-child(3) {
+  width: 29%;
+  text-align: left;
+}
+.municipal-sheet .municipal-document-table th:nth-child(4) {
+  width: 11%;
+  text-align: center;
+}
+.municipal-sheet .municipal-document-table th:nth-child(5) {
+  width: 15%;
+  text-align: right;
+}
+.municipal-sheet .municipal-document-table th:nth-child(6) {
+  width: 18%;
+  text-align: right;
+}
+.municipal-sheet .municipal-document-table td:nth-child(2) {
+  text-align: left;
+}
+.municipal-sheet .municipal-document-table td:nth-child(3) {
+  color: #4f5b6e;
+  text-align: left;
+}
+.municipal-sheet .municipal-document-table td:nth-child(4) {
+  text-align: center;
+}
+.municipal-sheet .municipal-document-table td:nth-child(5),
+.municipal-sheet .municipal-document-table td:nth-child(6) {
+  text-align: right;
+}
+.municipal-sheet .municipal-document-table td:nth-child(4),
+.municipal-sheet .municipal-document-table td:nth-child(5) {
+  white-space: nowrap;
+}

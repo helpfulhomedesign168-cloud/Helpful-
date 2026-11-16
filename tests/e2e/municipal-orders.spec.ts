@@ -77,6 +77,13 @@ test("8萬資助開Invoice會建立正單A及可修改市政單B", async ({ page
   await expect(page.locator(".document-sheet")).toContainText(
     municipalNumber,
   );
+  await expect(page.locator(".municipal-sheet .quotation-head")).toHaveCount(1);
+  await expect(
+    page.locator(".municipal-sheet .quotation-title h1"),
+  ).toHaveText("市政單");
+  await expect(
+    page.locator(".municipal-sheet .document-totals"),
+  ).toContainText("市政單總額");
 
   await page.goto("/handoff");
   await expect(
