@@ -62,7 +62,14 @@ export function Documents() {
       invoiceYear && invoiceMonth && invoiceDay
         ? `${invoiceDay} / ${invoiceMonth} / ${invoiceYear}`
         : invoiceDate || "—";
-    const styledDocument = Boolean(quote || inv);
+    const styledDocument = Boolean(quote || inv || municipal);
+    const municipalDate = (municipal?.createdAt ?? "").slice(0, 10);
+    const [municipalYear, municipalMonth, municipalDay] =
+      municipalDate.split("-");
+    const municipalDateDisplay =
+      municipalYear && municipalMonth && municipalDay
+        ? `${municipalDay} / ${municipalMonth} / ${municipalYear}`
+        : municipalDate || "—";
     const receiptDate = (receipt?.issuedAt ?? "").slice(0, 10);
     const [receiptYear, receiptMonth, receiptDay] = receiptDate.split("-");
     const receiptDateDisplay =
@@ -102,11 +109,13 @@ export function Documents() {
           className={`document-sheet ${
             quote
               ? "quotation-sheet"
-              : receipt
-                ? "quotation-sheet receipt-sheet"
-                : invoiceDocument
-                  ? "quotation-sheet invoice-sheet"
-                  : ""
+              : municipal
+                ? "quotation-sheet municipal-sheet"
+                : receipt
+                  ? "quotation-sheet receipt-sheet"
+                  : invoiceDocument
+                    ? "quotation-sheet invoice-sheet"
+                    : ""
           }`}
         >
           {quote ? (
@@ -145,7 +154,7 @@ export function Documents() {
                 </div>
               </div>
             </>
-          ) : receipt || invoiceDocument ? (
+          ) : municipal || receipt || invoiceDocument ? (
             <>
               <header className="quotation-head">
                 <div className="quotation-brand">
@@ -161,8 +170,20 @@ export function Documents() {
                 </div>
               </header>
               <div className="quotation-title">
-                <h1>{receipt ? "正式收據" : "工程Invoice"}</h1>
-                <span>{receipt ? "RECEIPT" : "INVOICE"}</span>
+                <h1>
+                  {municipal
+                    ? "市政單"
+                    : receipt
+                      ? "正式收據"
+                      : "工程Invoice"}
+                </h1>
+                <span>
+                  {municipal
+                    ? "MUNICIPAL ORDER"
+                    : receipt
+                      ? "RECEIPT"
+                      : "INVOICE"}
+                </span>
               </div>
               <div className="quotation-meta-line">
                 <div>
@@ -174,7 +195,11 @@ export function Documents() {
                 <div>
                   日期：
                   <strong>
-                    {receipt ? receiptDateDisplay : invoiceDateDisplay}
+                    {municipal
+                      ? municipalDateDisplay
+                      : receipt
+                        ? receiptDateDisplay
+                        : invoiceDateDisplay}
                   </strong>
                 </div>
               </div>
@@ -196,34 +221,19 @@ export function Documents() {
           <header className="document-letterhead">
             <img src="/company-logo.png" alt="好幫手家居裝修設計有限公司" />
             <div>
-              <h1>
-                {municipal
-                  ? "市政單"
-                  : receipt
-                    ? "正式收據"
-                    : "工程報價單"}
-              </h1>
+              <h1>工程報價單</h1>
               <strong className="document-number">{displayNumber}</strong>
               <p>
-                {municipal
-                  ? `正單 ${municipal.principalOrderNumber} · 政府8萬資助申請`
-                  : `版本 ${v?.index || "快照"} · ${
-                      v?.printPreparation?.date ||
-                      v?.createdAt.slice(0, 10)
-                    }`}
+                {`版本 ${v?.index || "快照"} · ${
+                  v?.printPreparation?.date ||
+                  v?.createdAt.slice(0, 10)
+                }`}
               </p>
             </div>
           </header>
           <div className="document-company-bar">
             <span>
-              住宅裝修工程{" "}
-              {municipal
-                ? "市政單"
-                : receipt
-                  ? "收據"
-                  : inv
-                    ? "Invoice"
-                    : "報價"}
+              住宅裝修工程 報價
             </span>
             <span>聯絡、條款及收款資料將由公司設定代入</span>
           </div>
@@ -247,7 +257,7 @@ export function Documents() {
           )}
           {municipal ? (
             <>
-              <table className="document-table">
+              <table className="document-table municipal-document-table">
                 <thead>
                   <tr>
                     <th>#</th>
@@ -473,15 +483,17 @@ export function Documents() {
               </div>
             )
           )}
-          {quote || inv ? (
+          {quote || inv || municipal ? (
             <footer className="quotation-footer">
               <span>好幫手家居裝修設計有限公司</span>
               <span>
-                {receipt
-                  ? "正式收據"
-                  : invoiceDocument
-                    ? "工程 Invoice"
-                    : "工程報價單"}{" "}
+                {municipal
+                  ? "市政單"
+                  : receipt
+                    ? "正式收據"
+                    : invoiceDocument
+                      ? "工程 Invoice"
+                      : "工程報價單"}{" "}
                 · {displayNumber}
               </span>
             </footer>
