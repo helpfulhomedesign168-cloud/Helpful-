@@ -17,6 +17,16 @@ test("CS可讀已發工程部的Invoice與工程；開單員不可再直入工�
     page.getByRole("heading", { name: "工程Invoice", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("SHMM26100001", { exact: true })).toBeVisible();
+  await expect(page.locator(".invoice-sheet .quotation-head")).toHaveCount(1);
+  await expect(
+    page.locator(".invoice-sheet .quotation-title h1"),
+  ).toHaveText("工程Invoice");
+  await expect(
+    page.locator(".invoice-sheet .document-table thead"),
+  ).toContainText("實際範圍");
+  await expect(
+    page.locator(".invoice-sheet .quotation-footer"),
+  ).toContainText("工程 Invoice");
   await page.goto("/orders/workorder-issued");
   await expect(
     page.getByRole("heading", { name: "D2600001", exact: true }),
@@ -93,4 +103,24 @@ test("未能核對未填備註會彈出提示，不會提交", async ({ page }) 
   await dialog.getByLabel("備註").fill("銀行未見入帳");
   await dialog.getByRole("button", { name: "未能核對", exact: true }).click();
   await expect(dialog).toBeHidden();
+});
+
+test("收據使用新文件藍本但標題為正式收據", async ({ page }) => {
+  await page.goto("/");
+  await switchRole(page, "開單員");
+  await page.goto("/invoices/invoice-issued");
+  await page.getByRole("button", { name: "開收據", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/documents\/receipt\//);
+  await expect(
+    page.getByRole("heading", { name: "正式收據", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "工程Invoice", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator(".invoice-sheet")).toHaveCount(0);
+  await expect(page.locator(".receipt-sheet .quotation-head")).toHaveCount(1);
+  await expect(
+    page.locator(".receipt-sheet .receipt-summary-table"),
+  ).toContainText("對應 Invoice");
+  await expect(page.locator("article")).not.toContainText("undefined");
 });
