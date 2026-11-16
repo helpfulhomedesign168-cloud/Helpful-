@@ -55,13 +55,14 @@ export function Documents() {
       quoteYear && quoteMonth && quoteDay
         ? `${quoteDay} / ${quoteMonth} / ${quoteYear}`
         : quoteDate;
-    const invoiceDate = (inv?.createdAt ?? "").slice(0, 10);
+    const invoiceDocument = kind === "invoice" ? inv : undefined;
+    const invoiceDate = (invoiceDocument?.createdAt ?? "").slice(0, 10);
     const [invoiceYear, invoiceMonth, invoiceDay] = invoiceDate.split("-");
     const invoiceDateDisplay =
       invoiceYear && invoiceMonth && invoiceDay
         ? `${invoiceDay} / ${invoiceMonth} / ${invoiceYear}`
         : invoiceDate || "—";
-    const styledDocument = Boolean(quote || inv);
+    const styledDocument = Boolean(quote || invoiceDocument);
     return (
       <div
         className={`document-page ${
@@ -95,7 +96,7 @@ export function Documents() {
           className={`document-sheet ${
             quote
               ? "quotation-sheet"
-              : inv
+              : invoiceDocument
                 ? "quotation-sheet invoice-sheet"
                 : ""
           }`}
@@ -136,7 +137,7 @@ export function Documents() {
                 </div>
               </div>
             </>
-          ) : inv ? (
+          ) : invoiceDocument ? (
             <>
               <header className="quotation-head">
                 <div className="quotation-brand">
@@ -187,18 +188,18 @@ export function Documents() {
                   ? "市政單"
                   : receipt
                     ? "正式收據"
-                    : inv
-                      ? "工程Invoice"
-                      : "工程報價單"}
+                    : "工程報價單"}
               </h1>
               <strong className="document-number">{displayNumber}</strong>
               <p>
                 {municipal
                   ? `正單 ${municipal.principalOrderNumber} · 政府8萬資助申請`
-                  : `版本 ${v?.index || "快照"} · ${
-                      v?.printPreparation?.date ||
-                      v?.createdAt.slice(0, 10)
-                    }`}
+                  : receipt
+                    ? `收據日期 · ${receipt.issuedAt.slice(0, 10)}`
+                    : `版本 ${v?.index || "快照"} · ${
+                        v?.printPreparation?.date ||
+                        v?.createdAt.slice(0, 10)
+                      }`}
               </p>
             </div>
           </header>
@@ -388,7 +389,7 @@ export function Documents() {
               ))}
             </div>
           )}
-          {(quote || inv) && (
+          {(quote || invoiceDocument) && (
             <div className="quotation-bank">
               <div>
                 <span>客戶入帳戶口</span>
@@ -439,11 +440,12 @@ export function Documents() {
               </div>
             )
           )}
-          {quote || inv ? (
+          {quote || invoiceDocument ? (
             <footer className="quotation-footer">
               <span>好幫手家居裝修設計有限公司</span>
               <span>
-                {inv ? "工程 Invoice" : "工程報價單"} · {displayNumber}
+                {invoiceDocument ? "工程 Invoice" : "工程報價單"} ·{" "}
+                {displayNumber}
               </span>
             </footer>
           ) : (

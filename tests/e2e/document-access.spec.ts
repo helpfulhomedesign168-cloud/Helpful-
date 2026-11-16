@@ -104,3 +104,19 @@ test("未能核對未填備註會彈出提示，不會提交", async ({ page }) 
   await dialog.getByRole("button", { name: "未能核對", exact: true }).click();
   await expect(dialog).toBeHidden();
 });
+
+test("收據保留正式收據設計，不套用工程Invoice樣式", async ({ page }) => {
+  await page.goto("/");
+  await switchRole(page, "開單員");
+  await page.goto("/invoices/invoice-issued");
+  await page.getByRole("button", { name: "開收據", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/documents\/receipt\//);
+  await expect(
+    page.getByRole("heading", { name: "正式收據", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "工程Invoice", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator(".invoice-sheet")).toHaveCount(0);
+  await expect(page.locator("article")).not.toContainText("undefined");
+});
