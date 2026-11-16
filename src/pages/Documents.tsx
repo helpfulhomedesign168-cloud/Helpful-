@@ -55,8 +55,19 @@ export function Documents() {
       quoteYear && quoteMonth && quoteDay
         ? `${quoteDay} / ${quoteMonth} / ${quoteYear}`
         : quoteDate;
+    const invoiceDate = (inv?.createdAt ?? "").slice(0, 10);
+    const [invoiceYear, invoiceMonth, invoiceDay] = invoiceDate.split("-");
+    const invoiceDateDisplay =
+      invoiceYear && invoiceMonth && invoiceDay
+        ? `${invoiceDay} / ${invoiceMonth} / ${invoiceYear}`
+        : invoiceDate || "—";
+    const styledDocument = Boolean(quote || inv);
     return (
-      <div className={`document-page ${quote ? "quotation-page" : ""}`}>
+      <div
+        className={`document-page ${
+          styledDocument ? "quotation-page" : ""
+        }`}
+      >
         <div className={`document-toolbar ${quote ? "quote-toolbar" : ""}`}>
           {!quote && (
             <Button onClick={() => nav(-1)}>
@@ -80,7 +91,15 @@ export function Documents() {
             </Button>
           )}
         </div>
-        <article className={`document-sheet ${quote ? "quotation-sheet" : ""}`}>
+        <article
+          className={`document-sheet ${
+            quote
+              ? "quotation-sheet"
+              : inv
+                ? "quotation-sheet invoice-sheet"
+                : ""
+          }`}
+        >
           {quote ? (
             <>
               <header className="quotation-head">
@@ -117,6 +136,47 @@ export function Documents() {
                 </div>
               </div>
             </>
+          ) : inv ? (
+            <>
+              <header className="quotation-head">
+                <div className="quotation-brand">
+                  <img
+                    src="/design-assets/logo.svg"
+                    alt="好幫手家居裝修設計有限公司"
+                  />
+                </div>
+                <div className="quotation-contact">
+                  <span>九龍荔枝角長義街 2-4 號新昌工業大廈 2 樓 202A 室</span>
+                  <span>info@helpfulhomedesign.com.hk</span>
+                  <span>+852 6600 2878 · +852 3615 0180 · 3615 0198</span>
+                </div>
+              </header>
+              <div className="quotation-title">
+                <h1>工程Invoice</h1>
+                <span>INVOICE</span>
+              </div>
+              <div className="quotation-meta-line">
+                <div>
+                  No.{" "}
+                  <strong className="document-number">
+                    {displayNumber}
+                  </strong>
+                </div>
+                <div>日期：<strong>{invoiceDateDisplay}</strong></div>
+              </div>
+              <div className="quotation-customer-lines">
+                <div>
+                  <span>客戶姓名：</span>
+                  <strong>{customer.name || "待填客戶"}</strong>
+                  <span className="quotation-phone-label">聯絡電話：</span>
+                  <strong>{customer.phone}</strong>
+                </div>
+                <div>
+                  <span>客戶地址：</span>
+                  <strong>{customer.address || "待填地址"}</strong>
+                </div>
+              </div>
+            </>
           ) : (
             <>
           <header className="document-letterhead">
@@ -136,7 +196,6 @@ export function Documents() {
                 {municipal
                   ? `正單 ${municipal.principalOrderNumber} · 政府8萬資助申請`
                   : `版本 ${v?.index || "快照"} · ${
-                      inv?.createdAt.slice(0, 10) ||
                       v?.printPreparation?.date ||
                       v?.createdAt.slice(0, 10)
                     }`}
@@ -329,7 +388,7 @@ export function Documents() {
               ))}
             </div>
           )}
-          {quote && (
+          {(quote || inv) && (
             <div className="quotation-bank">
               <div>
                 <span>客戶入帳戶口</span>
@@ -351,9 +410,11 @@ export function Documents() {
           )}
           {!receipt && !municipal && (
             <div className="document-terms">
-              <h3>確認及付款</h3>
+              <h3>{inv ? "付款及收款資料" : "確認及付款"}</h3>
               <p>
-                本報價按列明工程範圍及款式／位置計算；客戶簽署指定版本後，開單員會按成交分類確認收款計劃。
+                {inv
+                  ? "此 Invoice 按已確認的報價版本發出；收款計劃及期款以開單員確認的付款安排為準。"
+                  : "本報價按列明工程範圍及款式／位置計算；客戶簽署指定版本後，開單員會按成交分類確認收款計劃。"}
               </p>
               <p>
                 此工程單經客戶確認簽署後正式生效，表示客戶同意清楚明白報價單所有維修項目內容不能減少。如客戶要求取消工程，所付之訂金將不獲退還。如需更改工程日期，請於工程前兩星期通知，否則公司將有機會收取客人港幣 $1,500 行政費用。
@@ -378,10 +439,12 @@ export function Documents() {
               </div>
             )
           )}
-          {quote ? (
+          {quote || inv ? (
             <footer className="quotation-footer">
               <span>好幫手家居裝修設計有限公司</span>
-              <span>工程報價單 · {displayNumber}</span>
+              <span>
+                {inv ? "工程 Invoice" : "工程報價單"} · {displayNumber}
+              </span>
             </footer>
           ) : (
             <footer>

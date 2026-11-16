@@ -17,6 +17,16 @@ test("CS可讀已發工程部的Invoice與工程；開單員不可再直入工�
     page.getByRole("heading", { name: "工程Invoice", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("SHMM26100001", { exact: true })).toBeVisible();
+  await expect(page.locator(".invoice-sheet .quotation-head")).toHaveCount(1);
+  await expect(
+    page.locator(".invoice-sheet .quotation-title h1"),
+  ).toHaveText("工程Invoice");
+  await expect(
+    page.locator(".invoice-sheet .document-table thead"),
+  ).toContainText("實際範圍");
+  await expect(
+    page.locator(".invoice-sheet .quotation-footer"),
+  ).toContainText("工程 Invoice");
   await page.goto("/orders/workorder-issued");
   await expect(
     page.getByRole("heading", { name: "D2600001", exact: true }),
