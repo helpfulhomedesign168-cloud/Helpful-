@@ -11745,3 +11745,27 @@ textarea::placeholder {
     min-height: 190px;
   }
 }
+
+/* Receipt uses the same document blueprint with receipt-specific summary */
+.receipt-sheet .receipt-summary-table th:first-child,
+.receipt-sheet .receipt-summary-table td:first-child {
+  width: 34%;
+  color: #4f5b6e;
+  text-align: left;
+}
+.receipt-sheet .receipt-summary-table th:last-child,
+.receipt-sheet .receipt-summary-table td:last-child {
+  text-align: left;
+}
+.receipt-sheet .receipt-summary-table td {
+  color: #17253b;
+}
+.receipt-sheet .receipt-summary-table td:last-child strong {
+  font-size: 13px;
+}
+.receipt-sheet .receipt-totals {
+  margin-top: 22px;
+}
+.receipt-sheet .receipt-statement {
+  margin-top: 22px;
+}

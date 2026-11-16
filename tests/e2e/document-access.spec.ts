@@ -105,7 +105,7 @@ test("未能核對未填備註會彈出提示，不會提交", async ({ page }) 
   await expect(dialog).toBeHidden();
 });
 
-test("收據保留正式收據設計，不套用工程Invoice樣式", async ({ page }) => {
+test("收據使用新文件藍本但標題為正式收據", async ({ page }) => {
   await page.goto("/");
   await switchRole(page, "開單員");
   await page.goto("/invoices/invoice-issued");
@@ -118,5 +118,9 @@ test("收據保留正式收據設計，不套用工程Invoice樣式", async ({ p
     page.getByRole("heading", { name: "工程Invoice", exact: true }),
   ).toHaveCount(0);
   await expect(page.locator(".invoice-sheet")).toHaveCount(0);
+  await expect(page.locator(".receipt-sheet .quotation-head")).toHaveCount(1);
+  await expect(
+    page.locator(".receipt-sheet .receipt-summary-table"),
+  ).toContainText("對應 Invoice");
   await expect(page.locator("article")).not.toContainText("undefined");
 });

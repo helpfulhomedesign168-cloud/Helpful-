@@ -62,7 +62,13 @@ export function Documents() {
       invoiceYear && invoiceMonth && invoiceDay
         ? `${invoiceDay} / ${invoiceMonth} / ${invoiceYear}`
         : invoiceDate || "—";
-    const styledDocument = Boolean(quote || invoiceDocument);
+    const styledDocument = Boolean(quote || inv);
+    const receiptDate = (receipt?.issuedAt ?? "").slice(0, 10);
+    const [receiptYear, receiptMonth, receiptDay] = receiptDate.split("-");
+    const receiptDateDisplay =
+      receiptYear && receiptMonth && receiptDay
+        ? `${receiptDay} / ${receiptMonth} / ${receiptYear}`
+        : receiptDate || "—";
     return (
       <div
         className={`document-page ${
@@ -96,9 +102,11 @@ export function Documents() {
           className={`document-sheet ${
             quote
               ? "quotation-sheet"
-              : invoiceDocument
-                ? "quotation-sheet invoice-sheet"
-                : ""
+              : receipt
+                ? "quotation-sheet receipt-sheet"
+                : invoiceDocument
+                  ? "quotation-sheet invoice-sheet"
+                  : ""
           }`}
         >
           {quote ? (
@@ -137,7 +145,7 @@ export function Documents() {
                 </div>
               </div>
             </>
-          ) : invoiceDocument ? (
+          ) : receipt || invoiceDocument ? (
             <>
               <header className="quotation-head">
                 <div className="quotation-brand">
@@ -153,8 +161,8 @@ export function Documents() {
                 </div>
               </header>
               <div className="quotation-title">
-                <h1>工程Invoice</h1>
-                <span>INVOICE</span>
+                <h1>{receipt ? "正式收據" : "工程Invoice"}</h1>
+                <span>{receipt ? "RECEIPT" : "INVOICE"}</span>
               </div>
               <div className="quotation-meta-line">
                 <div>
@@ -163,7 +171,12 @@ export function Documents() {
                     {displayNumber}
                   </strong>
                 </div>
-                <div>日期：<strong>{invoiceDateDisplay}</strong></div>
+                <div>
+                  日期：
+                  <strong>
+                    {receipt ? receiptDateDisplay : invoiceDateDisplay}
+                  </strong>
+                </div>
               </div>
               <div className="quotation-customer-lines">
                 <div>
@@ -194,12 +207,10 @@ export function Documents() {
               <p>
                 {municipal
                   ? `正單 ${municipal.principalOrderNumber} · 政府8萬資助申請`
-                  : receipt
-                    ? `收據日期 · ${receipt.issuedAt.slice(0, 10)}`
-                    : `版本 ${v?.index || "快照"} · ${
-                        v?.printPreparation?.date ||
-                        v?.createdAt.slice(0, 10)
-                      }`}
+                  : `版本 ${v?.index || "快照"} · ${
+                      v?.printPreparation?.date ||
+                      v?.createdAt.slice(0, 10)
+                    }`}
               </p>
             </div>
           </header>
@@ -288,26 +299,48 @@ export function Documents() {
               </div>
             </>
           ) : receipt ? (
-            <div className="document-totals">
-              <div>
-                <span>對應Invoice</span>
-                <strong>{inv?.number}</strong>
+            <>
+              <table className="document-table receipt-summary-table">
+                <thead>
+                  <tr>
+                    <th>項目</th>
+                    <th>內容</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>對應 Invoice</td>
+                    <td>
+                      <strong>{inv?.number}</strong>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>收款期數</td>
+                    <td>
+                      <strong>
+                        {receipt.installmentLabel ||
+                          `第${receipt.installment}期`}
+                        {receipt.percentage
+                          ? ` · ${receipt.percentage}%`
+                          : ""}
+                      </strong>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="document-totals receipt-totals">
+                <div className="total">
+                  <span>本次已收</span>
+                  <strong>{money(receipt.amount)}</strong>
+                </div>
               </div>
-              <div>
-                <span>收款期數</span>
-                <strong>
-                  {receipt.installmentLabel || `第${receipt.installment}期`}
-                  {receipt.percentage ? ` · ${receipt.percentage}%` : ""}
-                </strong>
+              <div className="document-terms receipt-statement">
+                <h3>收據聲明</h3>
+                <p>
+                  此收據只代表上述一筆款項已由公司核對為有效收款；並不代表全部工程款已結清。
+                </p>
               </div>
-              <div className="total">
-                <span>本次已收</span>
-                <strong>{money(receipt.amount)}</strong>
-              </div>
-              <p>
-                此收據只代表上述一筆款項已由公司核對為有效收款；並不代表全部工程款已結清。
-              </p>
-            </div>
+            </>
           ) : (
             <table className="document-table">
               <thead>
@@ -389,7 +422,7 @@ export function Documents() {
               ))}
             </div>
           )}
-          {(quote || invoiceDocument) && (
+          {(quote || inv) && (
             <div className="quotation-bank">
               <div>
                 <span>客戶入帳戶口</span>
@@ -440,12 +473,16 @@ export function Documents() {
               </div>
             )
           )}
-          {quote || invoiceDocument ? (
+          {quote || inv ? (
             <footer className="quotation-footer">
               <span>好幫手家居裝修設計有限公司</span>
               <span>
-                {invoiceDocument ? "工程 Invoice" : "工程報價單"} ·{" "}
-                {displayNumber}
+                {receipt
+                  ? "正式收據"
+                  : invoiceDocument
+                    ? "工程 Invoice"
+                    : "工程報價單"}{" "}
+                · {displayNumber}
               </span>
             </footer>
           ) : (
