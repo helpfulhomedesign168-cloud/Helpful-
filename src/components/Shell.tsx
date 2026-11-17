@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useApp } from "../context";
 import { ROLE_NAMES } from "../domain/types";
+import { notificationTarget } from "../notificationTarget";
 import { Button, Dialog, Notice } from "./ui";
 
 const NAV_ICON: Record<string, string> = {
@@ -158,6 +159,10 @@ export function Shell() {
               ["/services", "工程價目", Tags],
               ["/quotes", "報價查閱", Files],
             ];
+  const navItems = [
+    ...items,
+    ["/notifications", "訊息通知", Bell],
+  ] as Array<[string, string, typeof Files]>;
   const notices = engine.notifications(actor);
   const unread = notices.filter((n) => !n.read).length;
   return (
@@ -229,7 +234,7 @@ export function Shell() {
           {selling ? "Sales 工作區" : office ? "Office 工作區" : "工作區"}
         </div>
         <nav>
-          {items.map(([path, label, Icon]) => {
+          {navItems.map(([path, label, Icon]) => {
             const I = Icon as typeof Files;
             const iconAsset = NAV_ICON[label as string];
             return (
@@ -260,6 +265,9 @@ export function Shell() {
                   <I className="nav-icon-lucide" size={22} strokeWidth={1.7} />
                 )}
                 <span>{label as string}</span>
+                {path === "/notifications" && unread > 0 && (
+                  <span className="nav-notification-count">{unread}</span>
+                )}
               </NavLink>
             );
           })}
@@ -371,28 +379,7 @@ export function Shell() {
                   onClick={() => {
                     run(() => engine.readNotification(actor, n.id));
                     setNotifications(false);
-                    nav(
-                      actor.role === "cs" ||
-                      actor.role === "cs_supervisor"
-                        ? n.customRequestId
-                          ? "/custom-work-requests"
-                          : "/handoff"
-                        : actor.role === "finance"
-                          ? n.cancellationCaseId
-                            ? "/cancellation-cases/" + n.cancellationCaseId
-                            : "/finance"
-                          : actor.role === "clerk" ||
-                              actor.role === "finance_supervisor"
-                            ? n.cancellationCaseId
-                              ? "/cancellation-cases/" +
-                                n.cancellationCaseId
-                              : n.invoiceId
-                                ? "/invoices/" + n.invoiceId
-                                : "/submissions"
-                            : n.customRequestId
-                              ? "/quotes/" + n.quoteId + "/edit"
-                              : "/quotes/" + n.quoteId,
-                    );
+                    nav(notificationTarget(actor.role, n));
                   }}
                 >
                   <span className={!n.read ? "unread-dot" : ""} />
