@@ -11977,3 +11977,6 @@ textarea::placeholder {
   opacity: 1;
   visibility: visible;
 }
+.material-deduction-note {
+  color: #a95c2a !important;
+}

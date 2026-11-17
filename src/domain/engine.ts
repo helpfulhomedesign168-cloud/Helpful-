@@ -5586,6 +5586,17 @@ export class Engine {
       if (!resource.active) fail("此合作資源已停用。");
       if (!input.lineIds.length) fail("請選擇至少一項待安排明細。");
       if (!input.date || !input.time) fail("請填寫安排日期及時間。");
+      if (
+        input.fee !== undefined &&
+        (!Number.isFinite(input.fee) || input.fee < 0)
+      )
+        fail("師傅收費無效。");
+      if (
+        input.materialDeductionAmount !== undefined &&
+        (!Number.isFinite(input.materialDeductionAmount) ||
+          input.materialDeductionAmount < 0)
+      )
+        fail("扣減材料金額無效。");
       const endDate = input.endDate ?? input.date;
       if (endDate < input.date) fail("完工日期不可早於開工日期。");
       const selected = order.lines.filter((line) =>
@@ -5611,6 +5622,9 @@ export class Engine {
         endDate,
         time: input.time,
         notes: input.notes ?? "",
+        fee: input.fee,
+        materialDeductionItem: input.materialDeductionItem,
+        materialDeductionAmount: input.materialDeductionAmount,
         actorId: actor.id,
         createdAt: NOW,
       };
@@ -5651,6 +5665,17 @@ export class Engine {
       if (!this.orderReadable(actor, order))
         fail("你沒有修改此工程安排的權限。");
       if (!input.date || !input.time) fail("請填寫安排日期及時間。");
+      if (
+        input.fee !== undefined &&
+        (!Number.isFinite(input.fee) || input.fee < 0)
+      )
+        fail("師傅收費無效。");
+      if (
+        input.materialDeductionAmount !== undefined &&
+        (!Number.isFinite(input.materialDeductionAmount) ||
+          input.materialDeductionAmount < 0)
+      )
+        fail("扣減材料金額無效。");
       const endDate = input.endDate ?? input.date;
       if (endDate < input.date) fail("完工日期不可早於開工日期。");
       const resource =
@@ -5666,6 +5691,9 @@ export class Engine {
       assignment.endDate = endDate;
       assignment.time = input.time;
       assignment.notes = input.notes ?? "";
+      assignment.fee = input.fee;
+      assignment.materialDeductionItem = input.materialDeductionItem;
+      assignment.materialDeductionAmount = input.materialDeductionAmount;
       this.audit(state, {
         quoteId: order.quoteId,
         workOrderId: order.id,

@@ -450,6 +450,10 @@ export interface Assignment {
   endDate: string;
   time: string;
   notes: string;
+  /** CS可覆寫師傅收費；未填時沿用師傅收費公式。 */
+  fee?: number;
+  materialDeductionItem?: string;
+  materialDeductionAmount?: number;
   actorId: string;
   createdAt: string;
 }
@@ -954,6 +958,9 @@ export interface AssignmentInput {
   endDate?: string;
   time: string;
   notes: string;
+  fee?: number;
+  materialDeductionItem?: string;
+  materialDeductionAmount?: number;
 }
 export interface ExtraWorkInput {
   id?: string;
