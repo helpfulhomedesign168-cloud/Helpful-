@@ -1934,14 +1934,16 @@ function WorkOrderCalendar({
     const resource = resources.find(
       (item) => item.id === extra.resourceId,
     );
+    const baseLabel =
+      extra.kind === "fabrication"
+        ? `造貨 · ${resource?.name ?? "未分派師傅"}`
+        : `${EXTRA_WORK_LABELS[extra.kind]} · ${resource?.name ?? "未分派師傅"} · ${extra.time}`;
+    const note = extra.notes.trim();
     events.push({
       id: extra.id,
       start: extra.startDate,
       end: extra.endDate,
-      label:
-        extra.kind === "fabrication"
-          ? `造貨 · ${resource?.name ?? "未分派師傅"}`
-          : `${EXTRA_WORK_LABELS[extra.kind]} · ${resource?.name ?? "未分派師傅"} · ${extra.time}`,
+      label: note ? `${baseLabel} · ${note}` : baseLabel,
     });
   });
   const cells: Array<string | null> = [
@@ -2060,17 +2062,28 @@ function WorkOrderCalendar({
                   const tone = calendarEventColor(bar.event.id);
                   return (
                     <div
-                      className="calendar-event-bar"
+                      className="calendar-event-slot"
                       key={`${bar.event.id}-${weekIndex}`}
                       style={{
                         gridColumn: `${bar.startCol + 1} / span ${bar.endCol - bar.startCol + 1}`,
                         gridRow: bar.lane + 1,
-                        background: tone.bg,
-                        color: tone.text,
                       }}
-                      title={bar.event.label}
                     >
-                      {bar.event.label}
+                      <div
+                        className="calendar-event-bar"
+                        style={{
+                          background: tone.bg,
+                          color: tone.text,
+                        }}
+                        title={bar.event.label}
+                        tabIndex={0}
+                        aria-label={bar.event.label}
+                      >
+                        {bar.event.label}
+                      </div>
+                      <span className="calendar-event-tooltip" role="tooltip">
+                        {bar.event.label}
+                      </span>
                     </div>
                   );
                 })}

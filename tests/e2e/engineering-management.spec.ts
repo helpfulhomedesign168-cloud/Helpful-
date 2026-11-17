@@ -150,7 +150,7 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await secondMeasure.getByLabel("時段", { exact: false }).selectOption("上午");
   await secondMeasure
     .getByLabel("安排備註", { exact: false })
-    .fill("E2E 第二次度尺");
+    .fill("E2E 第二次度尺 · 度浴屏及現場覆尺");
   await secondMeasure.getByLabel("額外收費", { exact: false }).fill("600");
   await secondMeasure
     .getByRole("button", { name: "儲存安排", exact: true })
@@ -160,6 +160,23 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
     .filter({ hasText: "度尺" });
   await expect(measureRows).toHaveCount(2);
   await expect(measureRows).toContainText(["HK$500.00", "HK$600.00"]);
+  const notedCalendarEvent = page
+    .locator(".calendar-event-bar")
+    .filter({ hasText: "度浴屏及現場覆尺" })
+    .first();
+  await expect(notedCalendarEvent).toHaveAttribute(
+    "title",
+    /度浴屏及現場覆尺/,
+  );
+  const notedSlot = page
+    .locator(".calendar-event-slot")
+    .filter({ hasText: "度浴屏及現場覆尺" })
+    .first();
+  await notedSlot.hover();
+  await expect(notedSlot.getByRole("tooltip")).toBeVisible();
+  await expect(notedSlot.getByRole("tooltip")).toHaveText(
+    /度浴屏及現場覆尺/,
+  );
 
   await page.getByRole("button", { name: "額外工程", exact: true }).click();
   await page.getByRole("button", { name: /造貨/ }).click();
