@@ -2608,7 +2608,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                 <th scope="col">執行師傅</th>
                 <th scope="col">師傅收費</th>
                 <th scope="col">工程時間</th>
-                <th scope="col">完工時間</th>
+                <th scope="col">工程相片</th>
                 <th scope="col">操作</th>
               </tr>
             </thead>
@@ -2699,8 +2699,47 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                         "—"
                       )}
                     </td>
-                    <td>{assignment?.date ?? "—"}</td>
-                    <td>{assignment?.endDate ?? assignment?.date ?? "—"}</td>
+                    <td>
+                      {assignment ? (
+                        <div className="engineering-date-stack">
+                          <span>{assignment.date}</span>
+                          <small>至</small>
+                          <span>
+                            {assignment.endDate ?? assignment.date}
+                          </span>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="engineering-photo-cell">
+                      {order.sitePhotos?.length ? (
+                        <>
+                          <button
+                            type="button"
+                            className="engineering-photo-thumb"
+                            aria-label={`查看工程相片 ${order.sitePhotos[0].name}`}
+                            onClick={() =>
+                              showAttachment(order.sitePhotos![0]).catch(
+                                (error) =>
+                                  run(() => {
+                                    throw error;
+                                  }),
+                              )
+                            }
+                          >
+                            <PhotoImage
+                              attachment={order.sitePhotos[0]}
+                            />
+                          </button>
+                          {order.sitePhotos.length > 1 && (
+                            <small>+{order.sitePhotos.length - 1}</small>
+                          )}
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td>
                       <div className="engineering-row-actions">
                         {canEdit && (
@@ -2743,8 +2782,14 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                       </strong>
                       <small>自訂收費</small>
                     </td>
-                    <td>{extra.startDate}</td>
-                    <td>{extra.endDate}</td>
+                    <td>
+                      <div className="engineering-date-stack">
+                        <span>{extra.startDate}</span>
+                        <small>至</small>
+                        <span>{extra.endDate}</span>
+                      </div>
+                    </td>
+                    <td>—</td>
                     <td>
                       <div className="engineering-row-actions">
                         {canEdit && (

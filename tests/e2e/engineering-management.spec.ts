@@ -100,6 +100,20 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
     .filter({ hasText: "木門" });
   await expect(itemRow).toContainText("2026-11-05");
   await expect(itemRow).toContainText("2026-11-07");
+  await expect(
+    page.getByRole("columnheader", { name: "工程相片", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "完工時間", exact: true }),
+  ).toHaveCount(0);
+  const dateStack = itemRow.locator(".engineering-date-stack");
+  await expect(dateStack).toContainText("2026-11-05");
+  await expect(dateStack).toContainText("至");
+  await expect(dateStack).toContainText("2026-11-07");
+  await expect(itemRow.locator(".engineering-photo-thumb")).toHaveCount(1);
+  await expect(itemRow.locator(".engineering-photo-cell small")).toHaveText(
+    "+1",
+  );
   await expect(itemRow).toContainText("項目6成");
   await expect(itemRow).toContainText(/HK\$/);
   const cost = page.getByRole("region", { name: "成本總和" });
