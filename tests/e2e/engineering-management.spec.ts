@@ -230,3 +230,63 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
   await expect(page.locator(".order-rail-row").filter({ hasText: "D2600001" })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
+
+test("安排施工可修改師傅收費並扣減材料", async ({ page }) => {
+  await page.goto("/");
+  await switchRole(page, "阿花");
+  await page.goto("/orders");
+  await page
+    .locator(".order-rail-row")
+    .filter({ hasText: "D2600001" })
+    .click();
+  const firstRow = page.locator(".engineering-table tbody tr").first();
+  const itemName = await firstRow.locator("td strong").first().innerText();
+  await firstRow.getByRole("button", { name: "安排", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "安排施工" });
+  await dialog
+    .getByLabel("執行師傅", { exact: false })
+    .selectOption({ index: 1 });
+  const fee = dialog.getByLabel("師傅收費", { exact: true });
+  await expect(fee).not.toHaveValue("");
+  await fee.fill("2000");
+  const deduction = dialog.getByLabel("扣減材料", { exact: true });
+  await expect(deduction.locator("option")).toHaveText([
+    "沒有",
+    "瓷磚",
+    "浴屏",
+    "馬桶",
+    "龍頭",
+    "吸咀",
+    "隔器",
+    "制面",
+    "新增項目",
+  ]);
+  await deduction.selectOption("瓷磚");
+  await dialog
+    .getByLabel("扣減材料金額", { exact: true })
+    .fill("300");
+  await dialog.getByRole("button", { name: "儲存安排", exact: true }).click();
+  const row = page
+    .locator(".engineering-table tbody tr")
+    .filter({ hasText: itemName })
+    .first();
+  await expect(row).toContainText("HK$1,700.00");
+  await expect(row).toContainText("扣減 瓷磚 −HK$300.00");
+
+  // Custom deduction item + editing that assignment.
+  await row.getByRole("button", { name: "更改", exact: true }).click();
+  const editDialog = page.getByRole("dialog", { name: "更改安排" });
+  await editDialog
+    .getByLabel("扣減材料", { exact: true })
+    .selectOption("新增項目");
+  await editDialog
+    .getByLabel("新增材料名稱", { exact: true })
+    .fill("特色玻璃");
+  await editDialog
+    .getByLabel("扣減材料金額", { exact: true })
+    .fill("300");
+  await editDialog
+    .getByRole("button", { name: "儲存安排", exact: true })
+    .click();
+  await expect(row).toContainText("扣減 特色玻璃 −HK$300.00");
+});

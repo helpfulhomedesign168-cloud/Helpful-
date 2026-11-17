@@ -1878,6 +1878,18 @@ function dateRange(startDate: string, endDate: string): string[] {
   return dates;
 }
 
+const MATERIAL_DEDUCTION_OPTIONS = [
+  "沒有",
+  "瓷磚",
+  "浴屏",
+  "馬桶",
+  "龍頭",
+  "吸咀",
+  "隔器",
+  "制面",
+  "新增項目",
+] as const;
+
 const CALENDAR_EVENT_COLORS = [
   { bg: "#88BAFF", text: "#0D1B40" }, // Primary Blue 3
   { bg: "#FFD29A", text: "#5A2800" }, // Primary Orange 3
@@ -2240,6 +2252,11 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   const [endDate, setEndDate] = useState(order.startDate);
   const [time, setTime] = useState("未定");
   const [notes, setNotes] = useState("");
+  const [fee, setFee] = useState("");
+  const [feeTouched, setFeeTouched] = useState(false);
+  const [deductionItem, setDeductionItem] = useState("沒有");
+  const [deductionCustom, setDeductionCustom] = useState("");
+  const [deductionAmount, setDeductionAmount] = useState("");
   const [extraKind, setExtraKind] = useState<ExtraWorkKind | null>(null);
   const [editingExtraId, setEditingExtraId] = useState("");
   const [extraResourceId, setExtraResource] = useState("");
@@ -2313,17 +2330,41 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         assignment.endDate ?? assignment.date,
       ).length,
     );
+  const defaultAssignmentFee = (
+    resourceId: string,
+    line: WorkOrder["lines"][number],
+    lineIndex: number,
+    startDate: string,
+    finishDate: string,
+  ) => {
+    const resource = resources.find((item) => item.id === resourceId);
+    if (!resource?.feeMode) return 0;
+    if (resource.feeMode === "daily")
+      return (
+        (resource.feeAmount ?? 0) *
+        Math.max(1, dateRange(startDate, finishDate).length)
+      );
+    if (resource.feeMode === "fixed") return resource.feeAmount ?? 0;
+    return (lineAmountFor(line.id, lineIndex) ?? 0) * 0.6;
+  };
   const lineCostFor = (line: WorkOrder["lines"][number], lineIndex: number) => {
     const assignment = assigned.get(line.id);
     if (!assignment) return 0;
     const resource = resources.find(
       (item) => item.id === assignment.resourceId,
     );
-    if (!resource?.feeMode) return 0;
-    if (resource.feeMode === "daily")
-      return (resource.feeAmount ?? 0) * assignmentDays(assignment);
-    if (resource.feeMode === "fixed") return resource.feeAmount ?? 0;
-    return (lineAmountFor(line.id, lineIndex) ?? 0) * 0.6;
+    const base =
+      assignment.fee !== undefined
+        ? assignment.fee
+        : defaultAssignmentFee(
+            assignment.resourceId,
+            line,
+            lineIndex,
+            assignment.date,
+            assignment.endDate ?? assignment.date,
+          );
+    const deduction = assignment.materialDeductionAmount ?? 0;
+    return Math.max(0, base - deduction);
   };
   const quoteTotal = invoice.netTotal;
   const unassignedCount = order.lines.filter(
@@ -2351,14 +2392,71 @@ function OrderPanel({ order }: { order: WorkOrder }) {
         assignment?.date ??
         order.startDate,
     );
+    const startDate = assignment?.date ?? order.startDate;
+    const finishDate =
+      assignment?.endDate ?? assignment?.date ?? order.startDate;
     setTime(assignment?.time ?? "未定");
     setNotes(assignment?.notes ?? "");
+    const line = order.lines.find((item) => item.id === lineId);
+    const lineIndex = order.lines.findIndex((item) => item.id === lineId);
+    const defaultFee =
+      assignment?.fee ??
+      (assignment
+        ? defaultAssignmentFee(
+            assignment.resourceId,
+            line!,
+            lineIndex,
+            startDate,
+            finishDate,
+          )
+        : 0);
+    setFee(assignment ? String(defaultFee) : "");
+    setFeeTouched(assignment?.fee !== undefined);
+    const deduction = assignment?.materialDeductionItem ?? "沒有";
+    setDeductionItem(
+      deduction &&
+        ![
+          "瓷磚",
+          "浴屏",
+          "馬桶",
+          "龍頭",
+          "吸咀",
+          "隔器",
+          "制面",
+        ].includes(deduction)
+        ? "新增項目"
+        : deduction || "沒有",
+    );
+    setDeductionCustom(
+      deduction &&
+        ![
+          "瓷磚",
+          "浴屏",
+          "馬桶",
+          "龍頭",
+          "吸咀",
+          "隔器",
+          "制面",
+        ].includes(deduction)
+        ? deduction
+        : "",
+    );
+    setDeductionAmount(
+      assignment?.materialDeductionAmount
+        ? String(assignment.materialDeductionAmount)
+        : "",
+    );
   };
   const closeAssignment = () => {
     setSelectedLineId("");
     setEditingAssignmentId("");
     setResource("");
     setNotes("");
+    setFee("");
+    setFeeTouched(false);
+    setDeductionItem("沒有");
+    setDeductionCustom("");
+    setDeductionAmount("");
   };
   const openExtra = (kind: ExtraWorkKind, extraId?: string) => {
     const existing = extraId
@@ -2576,17 +2674,24 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                       {resource ? (
                         <>
                           <strong className="resource-fee-mode">
+                            {money(lineCost)}
+                          </strong>
+                          <small>
                             {resource.feeMode
                               ? RESOURCE_FEE_LABELS[resource.feeMode]
                               : "—"}
-                          </strong>
-                          {lineCost !== undefined && (
-                            <small>{money(lineCost)}</small>
-                          )}
+                          </small>
                           {resource.feeMode === "daily" && assignment && (
                             <small className="fee-breakdown">
                               {money(resource.feeAmount ?? 0)} ×{" "}
                               {assignmentDays(assignment)}日
+                            </small>
+                          )}
+                          {(assignment?.materialDeductionAmount ?? 0) > 0 && (
+                            <small className="material-deduction-note">
+                              扣減{" "}
+                              {assignment?.materialDeductionItem ?? "材料"} −
+                              {money(assignment?.materialDeductionAmount ?? 0)}
                             </small>
                           )}
                         </>
@@ -2716,7 +2821,28 @@ function OrderPanel({ order }: { order: WorkOrder }) {
             <Field label="執行師傅" required>
               <select
                 value={resourceId}
-                onChange={(event) => setResource(event.target.value)}
+                onChange={(event) => {
+                  const nextResource = event.target.value;
+                  setResource(nextResource);
+                  if (!feeTouched && selectedLine) {
+                    const lineIndex = order.lines.findIndex(
+                      (line) => line.id === selectedLine.id,
+                    );
+                    setFee(
+                      nextResource
+                        ? String(
+                            defaultAssignmentFee(
+                              nextResource,
+                              selectedLine,
+                              lineIndex,
+                              date,
+                              endDate,
+                            ),
+                          )
+                        : "",
+                    );
+                  }
+                }}
               >
                 <option value="">選擇判頭或公司師傅</option>
                 {compatible.map((resource) => (
@@ -2758,6 +2884,55 @@ function OrderPanel({ order }: { order: WorkOrder }) {
               </select>
             </Field>
           </div>
+          <Field label="師傅收費（可修改）" required>
+            <input
+              aria-label="師傅收費"
+              type="number"
+              min="0"
+              value={fee}
+              onChange={(event) => {
+                setFee(event.target.value);
+                setFeeTouched(true);
+              }}
+              placeholder="選擇師傅後帶出天書預設"
+            />
+          </Field>
+          <div className="form-grid two">
+            <Field label="扣減材料">
+              <select
+                aria-label="扣減材料"
+                value={deductionItem}
+                onChange={(event) => setDeductionItem(event.target.value)}
+              >
+                {MATERIAL_DEDUCTION_OPTIONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="扣減材料金額">
+              <input
+                aria-label="扣減材料金額"
+                type="number"
+                min="0"
+                value={deductionAmount}
+                disabled={deductionItem === "沒有"}
+                onChange={(event) => setDeductionAmount(event.target.value)}
+                placeholder="0"
+              />
+            </Field>
+          </div>
+          {deductionItem === "新增項目" && (
+            <Field label="新增材料名稱" required>
+              <input
+                aria-label="新增材料名稱"
+                value={deductionCustom}
+                onChange={(event) => setDeductionCustom(event.target.value)}
+                placeholder="例如：特色玻璃"
+              />
+            </Field>
+          )}
           <Field label="安排備註">
             <input
               value={notes}
@@ -2769,7 +2944,14 @@ function OrderPanel({ order }: { order: WorkOrder }) {
             <Button onClick={closeAssignment}>取消</Button>
             <Button
               variant="primary"
-              disabled={!resourceId || !date || !endDate || endDate < date}
+              disabled={
+                !resourceId ||
+                !date ||
+                !endDate ||
+                endDate < date ||
+                !fee ||
+                (deductionItem === "新增項目" && !deductionCustom.trim())
+              }
               onClick={() => {
                 const result = run(
                   () =>
@@ -2780,6 +2962,17 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                           endDate,
                           time,
                           notes,
+                          fee: Number(fee || 0),
+                          materialDeductionItem:
+                            deductionItem === "沒有"
+                              ? undefined
+                              : deductionItem === "新增項目"
+                                ? deductionCustom.trim()
+                                : deductionItem,
+                          materialDeductionAmount:
+                            deductionItem === "沒有"
+                              ? undefined
+                              : Number(deductionAmount || 0),
                         })
                       : engine.assign(actor, order.id, {
                           resourceId,
@@ -2788,6 +2981,17 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                           endDate,
                           time,
                           notes,
+                          fee: Number(fee || 0),
+                          materialDeductionItem:
+                            deductionItem === "沒有"
+                              ? undefined
+                              : deductionItem === "新增項目"
+                                ? deductionCustom.trim()
+                                : deductionItem,
+                          materialDeductionAmount:
+                            deductionItem === "沒有"
+                              ? undefined
+                              : Number(deductionAmount || 0),
                         }),
                   editingAssignmentId
                     ? "施工安排已更新；日曆已更新。"

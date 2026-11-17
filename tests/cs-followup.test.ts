@@ -123,11 +123,17 @@ it("普通CS只看自己被分派的工程；主管及Admin看全部；現場圖
     endDate: "2026-11-04",
     time: "下午",
     notes: "更新安排",
+    fee: 2000,
+    materialDeductionItem: "瓷磚",
+    materialDeductionAmount: 300,
   });
   expect(updatedAssignment.date).toBe("2026-11-02");
   expect(updatedAssignment.endDate).toBe("2026-11-04");
   expect(updatedAssignment.time).toBe("下午");
   expect(updatedAssignment.notes).toBe("更新安排");
+  expect(updatedAssignment.fee).toBe(2000);
+  expect(updatedAssignment.materialDeductionItem).toBe("瓷磚");
+  expect(updatedAssignment.materialDeductionAmount).toBe(300);
   const extra = engine.scheduleExtraWork(joe, orderId, {
     kind: "measure",
     resourceId: "resource-staff",
