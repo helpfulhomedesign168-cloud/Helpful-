@@ -2228,6 +2228,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
   const [time, setTime] = useState("未定");
   const [notes, setNotes] = useState("");
   const [extraKind, setExtraKind] = useState<ExtraWorkKind | null>(null);
+  const [editingExtraId, setEditingExtraId] = useState("");
   const [extraResourceId, setExtraResource] = useState("");
   const [extraStart, setExtraStart] = useState(order.startDate);
   const [extraEnd, setExtraEnd] = useState(order.startDate);
@@ -2346,9 +2347,12 @@ function OrderPanel({ order }: { order: WorkOrder }) {
     setResource("");
     setNotes("");
   };
-  const openExtra = (kind: ExtraWorkKind) => {
-    const existing = extraWorks.find((extra) => extra.kind === kind);
+  const openExtra = (kind: ExtraWorkKind, extraId?: string) => {
+    const existing = extraId
+      ? extraWorks.find((extra) => extra.id === extraId)
+      : undefined;
     setExtraKind(kind);
+    setEditingExtraId(existing?.id ?? "");
     setExtraResource(existing?.resourceId ?? "");
     setExtraStart(existing?.startDate ?? order.startDate);
     setExtraEnd(existing?.endDate ?? order.startDate);
@@ -2359,7 +2363,10 @@ function OrderPanel({ order }: { order: WorkOrder }) {
     setExtraSupplierId(existing?.supplierId ?? "");
     setExtraCategory(existing?.category ?? "");
   };
-  const closeExtra = () => setExtraKind(null);
+  const closeExtra = () => {
+    setExtraKind(null);
+    setEditingExtraId("");
+  };
   let categories: InvoiceCategory[] = [];
   try {
     const quote = engine.getQuote(actor, order.quoteId);
@@ -2625,7 +2632,9 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                         {canEdit && (
                           <Button
                             variant="ghost"
-                            onClick={() => openExtra(extra.kind)}
+                            onClick={() =>
+                              openExtra(extra.kind, extra.id)
+                            }
                           >
                             更改
                           </Button>
@@ -2781,7 +2790,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
       )}
       {extraKind && (
         <Dialog
-          title={`${extraWorks.some((extra) => extra.kind === extraKind) ? "更改" : "安排"}${EXTRA_WORK_LABELS[extraKind]}`}
+          title={`${editingExtraId ? "更改" : "安排"}${EXTRA_WORK_LABELS[extraKind]}`}
           onClose={closeExtra}
         >
           <p className="dialog-intro">
@@ -2944,6 +2953,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                 const result = run(
                   () =>
                     engine.scheduleExtraWork(actor, order.id, {
+                      id: editingExtraId || undefined,
                       kind: extraKind,
                       resourceId:
                         extraKind === "fabrication" ? "" : extraResourceId,
@@ -2975,7 +2985,7 @@ function OrderPanel({ order }: { order: WorkOrder }) {
       {extraMenu && (
         <Dialog title="額外工程" onClose={() => setExtraMenu(false)}>
           <p className="dialog-intro">
-            選擇要安排的額外工程；已安排的項目可再更改。
+            每個項目可以安排多過一次；已安排的項目可各自更改。
           </p>
           <div className="extra-menu-list">
             {(
@@ -2986,22 +2996,44 @@ function OrderPanel({ order }: { order: WorkOrder }) {
                 "fabrication",
               ] as ExtraWorkKind[]
             ).map((kind) => {
-              const existing = extraWorks.find(
+              const entries = extraWorks.filter(
                 (extra) => extra.kind === kind,
               );
               return (
-                <button
-                  type="button"
-                  key={kind}
-                  className="extra-menu-item"
-                  onClick={() => {
-                    setExtraMenu(false);
-                    openExtra(kind);
-                  }}
-                >
-                  <span>{EXTRA_WORK_LABELS[kind]}</span>
-                  <strong>{existing ? "更改" : "安排"}</strong>
-                </button>
+                <div className="extra-menu-group" key={kind}>
+                  <button
+                    type="button"
+                    className="extra-menu-item"
+                    onClick={() => {
+                      setExtraMenu(false);
+                      openExtra(kind);
+                    }}
+                  >
+                    <span>
+                      {EXTRA_WORK_LABELS[kind]}
+                      {entries.length > 0 && (
+                        <small>{entries.length} 筆</small>
+                      )}
+                    </span>
+                    <strong>安排</strong>
+                  </button>
+                  {entries.map((entry) => (
+                    <button
+                      type="button"
+                      key={entry.id}
+                      className="extra-menu-entry"
+                      onClick={() => {
+                        setExtraMenu(false);
+                        openExtra(kind, entry.id);
+                      }}
+                    >
+                      <span>
+                        {entry.startDate} 至 {entry.endDate} · {entry.time}
+                      </span>
+                      <strong>更改</strong>
+                    </button>
+                  ))}
+                </div>
               );
             })}
           </div>

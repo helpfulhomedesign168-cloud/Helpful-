@@ -956,6 +956,7 @@ export interface AssignmentInput {
   notes: string;
 }
 export interface ExtraWorkInput {
+  id?: string;
   kind: ExtraWorkKind;
   resourceId: string;
   startDate: string;

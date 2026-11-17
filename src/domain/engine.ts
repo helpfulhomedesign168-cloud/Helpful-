@@ -5769,9 +5769,12 @@ export class Engine {
         fail("完工日期不可早於開工日期。");
       if (input.price !== undefined && (!Number.isFinite(input.price) || input.price < 0))
         fail("請填寫有效的額外工程收費。");
-      const existing = state.extraWorks.find(
-        (item) => item.workOrderId === order.id && item.kind === input.kind,
-      );
+      const existing = input.id
+        ? state.extraWorks.find(
+            (item) => item.id === input.id && item.workOrderId === order.id,
+          )
+        : undefined;
+      if (input.id && !existing) fail("找不到這筆額外工程。");
       const record: ExtraWork = existing ?? {
         id: uid("extra-work"),
         workOrderId: order.id,
@@ -5787,6 +5790,7 @@ export class Engine {
         actorId: actor.id,
         createdAt: NOW,
       };
+      record.kind = input.kind;
       record.resourceId = resource?.id ?? "";
       record.startDate = input.startDate;
       record.endDate = input.endDate;
