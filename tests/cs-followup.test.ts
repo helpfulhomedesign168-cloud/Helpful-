@@ -138,15 +138,32 @@ it("普通CS只看自己被分派的工程；主管及Admin看全部；現場圖
   });
   expect(extra.kind).toBe("measure");
   expect(engine.listExtraWorks(joe, orderId)).toHaveLength(1);
-  engine.scheduleExtraWork(joe, orderId, {
+  const secondExtra = engine.scheduleExtraWork(joe, orderId, {
     kind: "measure",
     resourceId: "resource-staff",
     startDate: "2026-11-10",
     endDate: "2026-11-10",
     time: "上午",
+    notes: "第二次度尺",
+  });
+  expect(secondExtra.id).not.toBe(extra.id);
+  expect(engine.listExtraWorks(joe, orderId)).toHaveLength(2);
+  const editedExtra = engine.scheduleExtraWork(joe, orderId, {
+    id: extra.id,
+    kind: "measure",
+    resourceId: "resource-staff",
+    startDate: "2026-11-11",
+    endDate: "2026-11-11",
+    time: "下午",
     notes: "更改度尺",
   });
-  expect(engine.listExtraWorks(joe, orderId)).toHaveLength(1);
+  expect(editedExtra.id).toBe(extra.id);
+  expect(engine.listExtraWorks(joe, orderId)).toHaveLength(2);
+  expect(
+    engine
+      .listExtraWorks(joe, orderId)
+      .find((item) => item.id === extra.id)?.notes,
+  ).toBe("更改度尺");
   expect(() =>
     engine.scheduleExtraWork(nicole, orderId, {
       kind: "delivery",
