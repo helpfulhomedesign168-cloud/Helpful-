@@ -1934,14 +1934,16 @@ function WorkOrderCalendar({
     const resource = resources.find(
       (item) => item.id === extra.resourceId,
     );
+    const baseLabel =
+      extra.kind === "fabrication"
+        ? `造貨 · ${resource?.name ?? "未分派師傅"}`
+        : `${EXTRA_WORK_LABELS[extra.kind]} · ${resource?.name ?? "未分派師傅"} · ${extra.time}`;
+    const note = extra.notes.trim();
     events.push({
       id: extra.id,
       start: extra.startDate,
       end: extra.endDate,
-      label:
-        extra.kind === "fabrication"
-          ? `造貨 · ${resource?.name ?? "未分派師傅"}`
-          : `${EXTRA_WORK_LABELS[extra.kind]} · ${resource?.name ?? "未分派師傅"} · ${extra.time}`,
+      label: note ? `${baseLabel} · ${note}` : baseLabel,
     });
   });
   const cells: Array<string | null> = [
