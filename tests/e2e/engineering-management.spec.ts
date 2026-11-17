@@ -168,6 +168,15 @@ test("工程管理：主管看全部、普通CS只看自己、日曆、逐項安
     "title",
     /度浴屏及現場覆尺/,
   );
+  const notedSlot = page
+    .locator(".calendar-event-slot")
+    .filter({ hasText: "度浴屏及現場覆尺" })
+    .first();
+  await notedSlot.hover();
+  await expect(notedSlot.getByRole("tooltip")).toBeVisible();
+  await expect(notedSlot.getByRole("tooltip")).toHaveText(
+    /度浴屏及現場覆尺/,
+  );
 
   await page.getByRole("button", { name: "額外工程", exact: true }).click();
   await page.getByRole("button", { name: /造貨/ }).click();

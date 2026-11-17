@@ -2062,17 +2062,28 @@ function WorkOrderCalendar({
                   const tone = calendarEventColor(bar.event.id);
                   return (
                     <div
-                      className="calendar-event-bar"
+                      className="calendar-event-slot"
                       key={`${bar.event.id}-${weekIndex}`}
                       style={{
                         gridColumn: `${bar.startCol + 1} / span ${bar.endCol - bar.startCol + 1}`,
                         gridRow: bar.lane + 1,
-                        background: tone.bg,
-                        color: tone.text,
                       }}
-                      title={bar.event.label}
                     >
-                      {bar.event.label}
+                      <div
+                        className="calendar-event-bar"
+                        style={{
+                          background: tone.bg,
+                          color: tone.text,
+                        }}
+                        title={bar.event.label}
+                        tabIndex={0}
+                        aria-label={bar.event.label}
+                      >
+                        {bar.event.label}
+                      </div>
+                      <span className="calendar-event-tooltip" role="tooltip">
+                        {bar.event.label}
+                      </span>
                     </div>
                   );
                 })}
