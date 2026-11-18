@@ -717,6 +717,22 @@ export function QuoteEditor() {
   } | null>(null);
   const [handwrittenOpen, setHandwrittenOpen] = useState(false);
   const [handwrittenBusy, setHandwrittenBusy] = useState(false);
+  const [aiJson, setAiJson] = useState("");
+  const [aiError, setAiError] = useState("");
+  const [aiRawTotal, setAiRawTotal] = useState<number | undefined>();
+  const [aiItems, setAiItems] = useState<
+    | Array<{
+        id: string;
+        include: boolean;
+        name: string;
+        quantity: number;
+        unit: string;
+        amount: number;
+        rawText?: string;
+        confidence?: number;
+      }>
+    | null
+  >(null);
   const handwrittenInput = useRef<HTMLInputElement>(null);
   const [customers, setCustomers] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
@@ -1038,6 +1054,103 @@ export function QuoteEditor() {
     } finally {
       setHandwrittenBusy(false);
     }
+  }
+  function parseAiJson() {
+    setAiError("");
+    try {
+      const parsed = JSON.parse(aiJson);
+      const rawItems = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed.items)
+          ? parsed.items
+          : [];
+      if (!rawItems.length) throw new Error("JSON 內沒有 items 項目。");
+      const items = rawItems.map((item: any, index: number) => {
+        const name = String(item.name ?? item.rawText ?? "").trim();
+        const amount = Number(item.amount);
+        const quantity = Number(item.quantity ?? 1);
+        if (!name || !Number.isFinite(amount) || amount < 0)
+          throw new Error(`第 ${index + 1} 項缺少名稱或有效金額。`);
+        return {
+          id: crypto.randomUUID(),
+          include: true,
+          name,
+          quantity:
+            Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+          unit: String(item.unit ?? "項").trim() || "項",
+          amount,
+          rawText: item.rawText ? String(item.rawText) : undefined,
+          confidence:
+            item.confidence !== undefined
+              ? Number(item.confidence)
+              : undefined,
+        };
+      });
+      setAiItems(items);
+      setAiRawTotal(
+        Number.isFinite(Number(parsed.rawTotal))
+          ? Number(parsed.rawTotal)
+          : undefined,
+      );
+    } catch (error) {
+      setAiError(
+        error instanceof Error ? error.message : "JSON 格式無效。",
+      );
+    }
+  }
+  function applyAiItems() {
+    if (!aiItems) return;
+    const selected = aiItems.filter((item) => item.include);
+    if (!selected.length) {
+      setAiError("請最少選擇一項工程。");
+      return;
+    }
+    const imported: QuoteLine[] = selected.map((item) => {
+      const quantity = Math.max(0.01, item.quantity);
+      const amount = Math.max(0, item.amount);
+      const unitPrice = Number((amount / quantity).toFixed(2));
+      const snapshot: ServiceItem = {
+        id: crypto.randomUUID(),
+        code: "AI-" + Date.now().toString(36),
+        name: item.name,
+        category: "手寫單項目",
+        scope: "",
+        details: item.rawText
+          ? `由手寫單匯入：${item.rawText}`
+          : "由手寫單匯入",
+        unit: item.unit,
+        price: unitPrice,
+        measure: "quantity",
+        minQty: 1,
+        minAmount: 0,
+        increment: 1,
+        minScope: "line",
+        execution: "contractor",
+        costMode: "ratio",
+        needsProductStyle: false,
+        options: [],
+        allowPending: false,
+        notes: "",
+        published: true,
+      };
+      return {
+        id: crypto.randomUUID(),
+        itemId: snapshot.id,
+        itemSnapshot: snapshot,
+        position: "",
+        length: 0,
+        width: 0,
+        dimensionUnit: "呎",
+        quantity,
+        style: "",
+        notes: item.rawText ? `手寫單原文：${item.rawText}` : "",
+        manual: true,
+      };
+    });
+    setLines([...lines, ...imported]);
+    setAiItems(null);
+    setAiError("");
+    setHandwrittenOpen(false);
   }
   const customerCandidates = engine
     .listCustomers(actor)
@@ -1637,45 +1750,215 @@ export function QuoteEditor() {
         <Dialog
           wide
           title="核對手寫單"
-          onClose={() => setHandwrittenOpen(false)}
+          onClose={() => {
+            setHandwrittenOpen(false);
+            setAiItems(null);
+            setAiError("");
+          }}
         >
-          <div className="handwritten-review">
-            <div className="handwritten-review-image">
-              <img
-                src={handwritten.url}
-                alt="已上載的手寫報價單"
-              />
-            </div>
-            <div className="handwritten-review-panel">
-              <span className="handwritten-demo-badge">
-                上載／預覽已接通
-              </span>
-              <h3>AI 抽取尚未接駁</h3>
-              <p>
-                這張手寫單已真實儲存在這次報價編輯中。現時
-                prototype 未接 Vision API／backend，所以未會假造
-                AI 電子單結果。
-              </p>
-              <p>
-                接上 AI 後，右邊會顯示抽取出的工程項目、尺寸、數量及價錢，
-                Sales 再逐項核對。
-              </p>
+          {aiItems ? (
+            <div className="ai-review">
+              <div className="ai-review-head">
+                <div>
+                  <h3>AI 核對結果</h3>
+                  <p>未匹配天書的項目會建立為手動工程項目。</p>
+                </div>
+                <strong>
+                  合計{" "}
+                  {money(
+                    aiItems
+                      .filter((item) => item.include)
+                      .reduce((sum, item) => sum + item.amount, 0),
+                  )}
+                </strong>
+              </div>
+              <div className="ai-review-table-wrap">
+                <table className="ai-review-table">
+                  <thead>
+                    <tr>
+                      <th>加入</th>
+                      <th>工程項目</th>
+                      <th>數量</th>
+                      <th>單位</th>
+                      <th>金額</th>
+                      <th>信心</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aiItems.map((item, index) => (
+                      <tr key={item.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={item.include}
+                            aria-label={`加入第${index + 1}項`}
+                            onChange={(event) =>
+                              setAiItems(
+                                aiItems.map((row) =>
+                                  row.id === item.id
+                                    ? {
+                                        ...row,
+                                        include: event.target.checked,
+                                      }
+                                    : row,
+                                ),
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <input
+                            value={item.name}
+                            aria-label={`第${index + 1}項名稱`}
+                            onChange={(event) =>
+                              setAiItems(
+                                aiItems.map((row) =>
+                                  row.id === item.id
+                                    ? { ...row, name: event.target.value }
+                                    : row,
+                                ),
+                              )
+                            }
+                          />
+                          {item.rawText && <small>{item.rawText}</small>}
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.quantity}
+                            aria-label={`第${index + 1}項數量`}
+                            onChange={(event) =>
+                              setAiItems(
+                                aiItems.map((row) =>
+                                  row.id === item.id
+                                    ? {
+                                        ...row,
+                                        quantity: Number(event.target.value),
+                                      }
+                                    : row,
+                                ),
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <input
+                            value={item.unit}
+                            aria-label={`第${index + 1}項單位`}
+                            onChange={(event) =>
+                              setAiItems(
+                                aiItems.map((row) =>
+                                  row.id === item.id
+                                    ? { ...row, unit: event.target.value }
+                                    : row,
+                                ),
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.amount}
+                            aria-label={`第${index + 1}項金額`}
+                            onChange={(event) =>
+                              setAiItems(
+                                aiItems.map((row) =>
+                                  row.id === item.id
+                                    ? {
+                                        ...row,
+                                        amount: Number(event.target.value),
+                                      }
+                                    : row,
+                                ),
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          {item.confidence !== undefined
+                            ? `${Math.round(item.confidence * 100)}%`
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {aiRawTotal !== undefined && (
+                <p className="ai-review-reconcile">
+                  手寫總數 {money(aiRawTotal)} · 電子明細{" "}
+                  {money(
+                    aiItems
+                      .filter((item) => item.include)
+                      .reduce((sum, item) => sum + item.amount, 0),
+                  )}
+                  {Math.abs(
+                    aiRawTotal -
+                      aiItems
+                        .filter((item) => item.include)
+                        .reduce((sum, item) => sum + item.amount, 0),
+                  ) > 0.01
+                    ? " · 有差異，請核對"
+                    : " · 已對賬"}
+                </p>
+              )}
+              {aiError && <p className="form-error">{aiError}</p>}
               <div className="dialog-actions">
-                <Button onClick={() => setHandwrittenOpen(false)}>
-                  關閉
-                </Button>
                 <Button
-                  variant="primary"
                   onClick={() => {
-                    setHandwrittenOpen(false);
-                    setPicker(true);
+                    setAiItems(null);
+                    setAiError("");
                   }}
                 >
-                  手動新增工程
+                  返回
+                </Button>
+                <Button variant="primary" onClick={applyAiItems}>
+                  加入報價
                 </Button>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="handwritten-review">
+              <div className="handwritten-review-image">
+                <img src={handwritten.url} alt="已上載的手寫報價單" />
+              </div>
+              <div className="handwritten-review-panel">
+                <span className="handwritten-demo-badge">
+                  上載／預覽已接通
+                </span>
+                <h3>貼上 AI 結果</h3>
+                <p>
+                  由 chat 的 AI 讀取手寫單後，將 JSON 貼在下面核對。
+                  未接 Vision API，所以不會假造抽取結果。
+                </p>
+                <textarea
+                  className="ai-json-input"
+                  aria-label="貼上 AI JSON"
+                  value={aiJson}
+                  onChange={(event) => setAiJson(event.target.value)}
+                  placeholder='{"items":[{"name":"抽氣扇","quantity":1,"unit":"項","amount":2500}]}'
+                />
+                {aiError && <p className="form-error">{aiError}</p>}
+                <div className="dialog-actions">
+                  <Button onClick={() => setHandwrittenOpen(false)}>
+                    關閉
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={parseAiJson}
+                    disabled={!aiJson.trim()}
+                  >
+                    核對 AI 結果
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </Dialog>
       )}
       {styleLineIndex !== null && (

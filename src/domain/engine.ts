@@ -4586,6 +4586,17 @@ export class Engine {
         fail("已轉 Invoice 的來源不可修改，請使用工程變更流程。");
       const services = new Map(state.services.map((item) => [item.id, item]));
       const rebuilt = input.lines.map((line, index) => {
+        if (line.manual) {
+          const snapshot = deepCopy(line.itemSnapshot);
+          snapshot.costMode ??= "ratio";
+          return {
+            ...deepCopy(line),
+            id: line.id || uid("line"),
+            itemSnapshot: snapshot,
+            pricePending: false,
+            customWork: false,
+          };
+        }
         if (line.pricePending) {
           if (!line.itemSnapshot?.name?.trim())
             fail(`第 ${index + 1} 項自訂工程內容無效。`);

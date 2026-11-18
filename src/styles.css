@@ -12107,3 +12107,111 @@ textarea::placeholder {
     grid-template-columns: 1fr;
   }
 }
+.ai-json-input {
+  width: 100%;
+  min-height: 150px;
+  margin-top: 8px;
+  padding: 11px 12px;
+  border: 1px solid #d7dde7;
+  border-radius: 7px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  resize: vertical;
+}
+.ai-review {
+  display: grid;
+  gap: 12px;
+}
+.ai-review-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.ai-review-head h3 {
+  margin: 0 0 4px;
+  color: #17253b;
+  font-size: 18px;
+}
+.ai-review-head p {
+  margin: 0;
+  color: #7b8492;
+  font-size: 12px;
+}
+.ai-review-head > strong {
+  color: #17253b;
+  font-size: 18px;
+  white-space: nowrap;
+}
+.ai-review-table-wrap {
+  max-height: 430px;
+  overflow: auto;
+  border: 1px solid #e0e6ef;
+  border-radius: 7px;
+}
+.ai-review-table {
+  width: 100%;
+  min-width: 760px;
+}
+.ai-review-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 9px 8px;
+  background: #f5f8fc;
+  color: #6f7c8f;
+  font-size: 11px;
+  text-align: left;
+}
+.ai-review-table td {
+  padding: 7px 8px;
+  border-top: 1px solid #e8edf4;
+  vertical-align: top;
+}
+.ai-review-table input[type="text"],
+.ai-review-table input[type="number"],
+.ai-review-table input:not([type]) {
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid #d7dde7;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 12px;
+}
+.ai-review-table td:nth-child(1) {
+  width: 42px;
+  text-align: center;
+}
+.ai-review-table td:nth-child(3),
+.ai-review-table td:nth-child(4) {
+  width: 75px;
+}
+.ai-review-table td:nth-child(5) {
+  width: 110px;
+}
+.ai-review-table td:nth-child(6) {
+  width: 60px;
+  color: #7b8492;
+  font-size: 11px;
+}
+.ai-review-table small {
+  display: block;
+  margin-top: 3px;
+  color: #8a94a3;
+  font-size: 10px;
+}
+.ai-review-reconcile {
+  margin: 0;
+  color: #5f6b80;
+  font-size: 12px;
+}
+@media (max-width: 800px) {
+  .ai-review-head {
+    display: block;
+  }
+  .ai-review-head > strong {
+    display: block;
+    margin-top: 6px;
+  }
+}

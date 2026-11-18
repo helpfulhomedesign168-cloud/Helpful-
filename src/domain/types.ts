@@ -164,6 +164,8 @@ export interface QuoteLine {
   productStyle?: ProductStyleSnapshot;
   /** 自訂工程尚待工程部報價；未可計入正式成交或列印。 */
   pricePending?: boolean;
+  /** 由 AI 手寫單匯入的手動工程項目，不是價目表項目。 */
+  manual?: boolean;
   /** 由 Sales 加入的自訂工程，不是價目表項目。 */
   customWork?: boolean;
   customRequestId?: string;
