@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Link,
   Navigate,
@@ -20,11 +20,17 @@ import {
   Wallet,
   Archive,
   Search as SearchIcon,
+  Upload,
 } from "lucide-react";
-import { getAttachmentBlob, useApp } from "../context";
+import {
+  getAttachmentBlob,
+  saveAttachment,
+  useApp,
+} from "../context";
 import {
   Customer,
   Quote,
+  Attachment,
   QuoteLine,
   ServiceItem,
   EMPTY_CUSTOMER,
@@ -705,6 +711,13 @@ export function QuoteEditor() {
   );
   const [exitConfirm, setExitConfirm] = useState(false);
   const [picker, setPicker] = useState(false);
+  const [handwritten, setHandwritten] = useState<{
+    attachment: Attachment;
+    url: string;
+  } | null>(null);
+  const [handwrittenOpen, setHandwrittenOpen] = useState(false);
+  const [handwrittenBusy, setHandwrittenBusy] = useState(false);
+  const handwrittenInput = useRef<HTMLInputElement>(null);
   const [customers, setCustomers] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
   const [customWork, setCustomWork] = useState("");
@@ -1007,11 +1020,41 @@ export function QuoteEditor() {
     ]);
     setLinkedPrompt(null);
   }
+  async function uploadHandwritten(file: File) {
+    setHandwrittenBusy(true);
+    try {
+      const attachment = await saveAttachment(file);
+      const blob = await getAttachmentBlob(attachment);
+      if (!blob) throw new Error("未能讀取手寫單圖片。");
+      setHandwritten({
+        attachment,
+        url: URL.createObjectURL(blob),
+      });
+      setHandwrittenOpen(true);
+    } catch (error) {
+      run(() => {
+        throw error;
+      });
+    } finally {
+      setHandwrittenBusy(false);
+    }
+  }
   const customerCandidates = engine
     .listCustomers(actor)
     .map((profile) => profile.customer);
   return (
     <>
+      <input
+        ref={handwrittenInput}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0];
+          event.currentTarget.value = "";
+          if (file) void uploadHandwritten(file);
+        }}
+      />
       <PageHead
         title={orderEdit ? "修改報價" : wizard ? "建立報價" : "修改報價"}
         actions={
@@ -1084,21 +1127,60 @@ export function QuoteEditor() {
             number="02"
             title="工程項目"
             action={
-              <Button onClick={() => setPicker(true)}>
-                <Plus size={20} />
-                新增工程
-              </Button>
+              <div className="quote-section-actions">
+                <Button onClick={() => setPicker(true)}>
+                  <Plus size={20} />
+                  新增工程
+                </Button>
+                <Button
+                  onClick={() => handwrittenInput.current?.click()}
+                  disabled={handwrittenBusy}
+                >
+                  <Upload size={19} />
+                  {handwrittenBusy ? "上載中…" : "上載手寫單"}
+                </Button>
+              </div>
             }
           >
+            {handwritten && (
+              <div className="handwritten-source">
+                <img src={handwritten.url} alt="已上載的手寫報價單" />
+                <div>
+                  <strong>手寫單已上載</strong>
+                  <small>{handwritten.attachment.name}</small>
+                </div>
+                <Button onClick={() => setHandwrittenOpen(true)}>
+                  查看／核對
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setHandwritten(null)}
+                >
+                  移除
+                </Button>
+              </div>
+            )}
             {lines.length === 0 ? (
               <Empty
                 title="加入今次需要做的工程"
-                description="選工程，再輸入現場尺寸及位置。"
+                description="選工程，再輸入現場尺寸及位置；或上載手寫單作核對。"
                 action={
-                  <Button onClick={() => setPicker(true)}>
-                    <Plus size={20} />
-                    選擇工程
-                  </Button>
+                  <div className="quote-empty-actions">
+                    <Button
+                      variant="primary"
+                      onClick={() => setPicker(true)}
+                    >
+                      <Plus size={20} />
+                      選擇工程
+                    </Button>
+                    <Button
+                      onClick={() => handwrittenInput.current?.click()}
+                      disabled={handwrittenBusy}
+                    >
+                      <Upload size={19} />
+                      {handwrittenBusy ? "上載中…" : "上載手寫單"}
+                    </Button>
+                  </div>
                 }
               />
             ) : (
@@ -1550,6 +1632,51 @@ export function QuoteEditor() {
             </Button>
           )}
         </div>
+      )}
+      {handwrittenOpen && handwritten && (
+        <Dialog
+          wide
+          title="核對手寫單"
+          onClose={() => setHandwrittenOpen(false)}
+        >
+          <div className="handwritten-review">
+            <div className="handwritten-review-image">
+              <img
+                src={handwritten.url}
+                alt="已上載的手寫報價單"
+              />
+            </div>
+            <div className="handwritten-review-panel">
+              <span className="handwritten-demo-badge">
+                上載／預覽已接通
+              </span>
+              <h3>AI 抽取尚未接駁</h3>
+              <p>
+                這張手寫單已真實儲存在這次報價編輯中。現時
+                prototype 未接 Vision API／backend，所以未會假造
+                AI 電子單結果。
+              </p>
+              <p>
+                接上 AI 後，右邊會顯示抽取出的工程項目、尺寸、數量及價錢，
+                Sales 再逐項核對。
+              </p>
+              <div className="dialog-actions">
+                <Button onClick={() => setHandwrittenOpen(false)}>
+                  關閉
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setHandwrittenOpen(false);
+                    setPicker(true);
+                  }}
+                >
+                  手動新增工程
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Dialog>
       )}
       {styleLineIndex !== null && (
         <Dialog
