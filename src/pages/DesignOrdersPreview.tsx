@@ -128,7 +128,7 @@ export function DesignOrdersPreview() {
           <span />
         </button>
         <Link to="/design/users" className="preview-brand">
-          <img src="/design-assets/logo.svg" alt="好幫手家居裝修設計有限公司" />
+          <img src="/company-logo.png" alt="好幫手家居裝修設計有限公司" />
         </Link>
         <div className="preview-topbar-actions">
           <button className="preview-bell" aria-label="通知">
@@ -149,7 +149,7 @@ export function DesignOrdersPreview() {
         className={`preview-sidebar ${menuOpen ? "open" : ""}`}
       >
         <div className="preview-drawer-head">
-          <img src="/design-assets/logo.svg" alt="好幫手" />
+          <img src="/company-logo.png" alt="好幫手" />
           <button
             type="button"
             className="preview-drawer-close"

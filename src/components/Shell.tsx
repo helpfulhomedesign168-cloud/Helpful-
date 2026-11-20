@@ -190,7 +190,7 @@ export function Shell() {
           }}
         >
           <img
-            src="/design-assets/logo.svg"
+            src="/company-logo.png"
             alt="好幫手家居裝修設計有限公司"
           />
         </NavLink>
@@ -219,7 +219,7 @@ export function Shell() {
       >
         <div className="sidebar-drawer-head">
           <img
-            src="/design-assets/logo.svg"
+            src="/company-logo.png"
             alt="好幫手家居裝修設計有限公司"
           />
           <button
