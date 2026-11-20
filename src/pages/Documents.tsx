@@ -123,7 +123,7 @@ export function Documents() {
               <header className="quotation-head">
                 <div className="quotation-brand">
                   <img
-                    src="/design-assets/logo.svg"
+                    src="/company-logo.png"
                     alt="好幫手家居裝修設計有限公司"
                   />
                 </div>
@@ -159,7 +159,7 @@ export function Documents() {
               <header className="quotation-head">
                 <div className="quotation-brand">
                   <img
-                    src="/design-assets/logo.svg"
+                    src="/company-logo.png"
                     alt="好幫手家居裝修設計有限公司"
                   />
                 </div>
