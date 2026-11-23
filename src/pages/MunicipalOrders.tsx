@@ -15,6 +15,7 @@ import {
   Field,
   PageHead,
   Pagination,
+  Section,
   usePagination,
 } from "../components/ui";
 import { MunicipalOrderLine, money } from "../domain/types";
@@ -228,37 +229,9 @@ export function MunicipalOrderDetail() {
         eyebrow={`${order.principalOrderNumber} 的市政單`}
         title={order.number}
         actions={
-          <>
+          <div className="section-actions">
             <Button onClick={() => nav("/municipal-orders")}>
               <ArrowLeft size={18} /> 返回市政單
-            </Button>
-            <Button
-              onClick={() => {
-                let saved = false;
-                run(() => {
-                  engine.updateMunicipalOrder(actor, order.id, lines);
-                  saved = true;
-                  return true;
-                }, "市政單已保存。");
-                if (saved)
-                  nav("/documents/municipal/" + order.id);
-              }}
-            >
-              <Eye size={18} /> 預覽
-            </Button>
-            <Button
-              onClick={() => {
-                let saved = false;
-                run(() => {
-                  engine.updateMunicipalOrder(actor, order.id, lines);
-                  saved = true;
-                  return true;
-                }, "市政單已保存。");
-                if (saved)
-                  nav("/documents/municipal/" + order.id);
-              }}
-            >
-              <Printer size={18} /> 列印
             </Button>
             <Button
               variant="primary"
@@ -272,319 +245,310 @@ export function MunicipalOrderDetail() {
             >
               <Check size={18} /> 儲存市政單
             </Button>
-          </>
+          </div>
         }
       />
-      <div className="municipal-info">
-        <div>
-          <span>正單</span>
-          <strong>{order.principalOrderNumber}</strong>
-        </div>
-        <div>
-          <span>客戶</span>
-          <strong>{order.customer.name}</strong>
-        </div>
-        <div>
-          <span>工程地址</span>
-          <strong>{order.customer.address || "—"}</strong>
-        </div>
-        <div>
-          <span>市政單用途</span>
-          <strong>政府8萬資助申請，不作會計</strong>
-        </div>
-      </div>
-      <div className="municipal-editor-layout">
-        <div className="municipal-editor-main">
-      {principal && (
-        <section className="municipal-principal">
-          <div className="municipal-principal-head">
+      <div className="municipal-detail-page">
+        <Section number="01" title="正單 A">
+          <div className="municipal-info">
             <div>
-              <span className="eyebrow">正單 A</span>
-              <h2>{principal.number}</h2>
+              <span>正單</span>
+              <strong>{order.principalOrderNumber}</strong>
             </div>
-            <p>
-              客戶：{principal.customer.name} · {principal.customer.phone}
-              <br />
-              地址：{principal.customer.address || "—"}
-              <br />
-              工程期：{principal.startDate} 至 {principal.endDate}
-            </p>
+            <div>
+              <span>客戶</span>
+              <strong>{order.customer.name}</strong>
+            </div>
+            <div>
+              <span>工程地址</span>
+              <strong>{order.customer.address || "—"}</strong>
+            </div>
+            <div>
+              <span>市政單用途</span>
+              <strong>政府8萬資助申請，不作會計</strong>
+            </div>
           </div>
-          <div className="table-scroll">
-            <table className="municipal-principal-table">
-              <thead>
-                <tr>
-                  <th>工程項目</th>
-                  <th>位置</th>
-                  <th>尺寸／數量</th>
-                  <th>產品款式</th>
-                </tr>
-              </thead>
-              <tbody>
-                {principal.lines.map((line) => {
-                  const dimensions =
-                    line.itemSnapshot.measure === "area"
-                      ? `${line.length} × ${line.width} ${line.dimensionUnit}`
-                      : line.itemSnapshot.measure === "length"
-                        ? `${line.length} ${line.dimensionUnit}`
-                        : line.itemSnapshot.measure === "fixed"
-                          ? "一式"
-                          : `${line.quantity} ${line.itemSnapshot.unit}`;
-                  return (
-                    <tr key={line.id}>
-                      <td>
-                        <strong>{line.itemSnapshot.name}</strong>
-                      </td>
-                      <td>{line.position || "—"}</td>
-                      <td>{dimensions}</td>
-                      <td>
-                        {line.productStyle
-                          ? `${line.productStyle.factoryName} · ${line.productStyle.seriesName} · ${line.productStyle.productCode}`
-                          : line.style || "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-      <div className="list-panel municipal-lines-panel">
-        <div className="municipal-lines-head">
-          <div>
-            <strong>市政單項目</strong>
-            <p>可自由調整項目名稱、數量、單價及金額，只影響市政單。</p>
-          </div>
-          <Button onClick={addLine}>
-            <Plus size={18} /> 新增項目
-          </Button>
-        </div>
-        <div className="municipal-line-cards">
-          {lines.map((line, index) => (
-            <article className="municipal-line-card" key={line.id}>
-              <div className="municipal-line-title">
-                <span className="municipal-line-index">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
+          {principal && (
+            <section className="municipal-principal">
+              <div className="municipal-principal-head">
                 <div>
-                  <input
-                    className="municipal-line-name-input"
-                    aria-label={`第${index + 1}項名稱`}
-                    value={line.name}
-                    onChange={(event) =>
-                      update(index, { name: event.target.value })
-                    }
-                    placeholder="工程項目名稱"
-                  />
-                  <small>
-                    {money(line.unitPrice)}／{line.unit}
-                  </small>
+                  <span className="eyebrow">正單 A</span>
+                  <h2>{principal.number}</h2>
                 </div>
-                <Button
-                  variant="ghost"
-                  aria-label={`刪除第${index + 1}項`}
-                  onClick={() =>
-                    setLines((current) =>
-                      current.filter((_, i) => i !== index),
-                    )
-                  }
-                >
-                  <Trash2 size={18} />
-                </Button>
+                <p>
+                  客戶：{principal.customer.name} · {principal.customer.phone}
+                  <br />
+                  地址：{principal.customer.address || "—"}
+                  <br />
+                  工程期：{principal.startDate} 至 {principal.endDate}
+                </p>
               </div>
-              <div className="form-grid three municipal-line-fields">
-                <Field label="位置">
-                  <input
-                    aria-label={`第${index + 1}項位置`}
-                    value={line.position ?? ""}
-                    onChange={(event) =>
-                      update(index, { position: event.target.value })
+              <div className="table-scroll">
+                <table className="municipal-principal-table">
+                  <thead>
+                    <tr>
+                      <th>工程項目</th>
+                      <th>位置</th>
+                      <th>尺寸／數量</th>
+                      <th>產品款式</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {principal.lines.map((line) => {
+                      const dimensions =
+                        line.itemSnapshot.measure === "area"
+                          ? `${line.length} × ${line.width} ${line.dimensionUnit}`
+                          : line.itemSnapshot.measure === "length"
+                            ? `${line.length} ${line.dimensionUnit}`
+                            : line.itemSnapshot.measure === "fixed"
+                              ? "一式"
+                              : `${line.quantity} ${line.itemSnapshot.unit}`;
+                      return (
+                        <tr key={line.id}>
+                          <td>
+                            <strong>{line.itemSnapshot.name}</strong>
+                          </td>
+                          <td>{line.position || "—"}</td>
+                          <td>{dimensions}</td>
+                          <td>
+                            {line.productStyle
+                              ? `${line.productStyle.factoryName} · ${line.productStyle.seriesName} · ${line.productStyle.productCode}`
+                              : line.style || "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </Section>
+
+        <Section
+          number="02"
+          title="市政單項目"
+          action={
+            <Button onClick={addLine}>
+              <Plus size={18} /> 新增項目
+            </Button>
+          }
+        >
+          <p className="municipal-section-note">
+            可自由調整項目名稱、數量、單價及金額，只影響市政單。
+          </p>
+          <div className="quote-category-head">8萬資助</div>
+          <div className="municipal-line-cards quote-line-cards">
+            {lines.map((line, index) => (
+              <article className="line-card municipal-line-editor" key={line.id}>
+                <div className="line-head">
+                  <span className="line-index">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <div>
+                    <input
+                      className="municipal-line-name-input"
+                      aria-label={`第${index + 1}項名稱`}
+                      value={line.name}
+                      onChange={(event) =>
+                        update(index, { name: event.target.value })
+                      }
+                      placeholder="工程項目名稱"
+                    />
+                    <small className="muted">
+                      {money(line.unitPrice)}／{line.unit}
+                    </small>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    aria-label={`刪除第${index + 1}項`}
+                    onClick={() =>
+                      setLines((current) =>
+                        current.filter((_, i) => i !== index),
+                      )
                     }
-                    placeholder="例如：廚房"
-                  />
-                </Field>
-                {(line.measure === "area" || line.measure === "length") && (
-                  <Field label="長度／呎數">
+                  >
+                    <Trash2 size={18} />
+                  </Button>
+                </div>
+                <div className="form-grid line-inputs municipal-line-fields">
+                  <Field label="位置">
+                    <input
+                      aria-label={`第${index + 1}項位置`}
+                      value={line.position ?? ""}
+                      onChange={(event) =>
+                        update(index, { position: event.target.value })
+                      }
+                      placeholder="例如：廚房"
+                    />
+                  </Field>
+                  {(line.measure === "area" || line.measure === "length") && (
+                    <Field label="長度／呎數">
+                      <input
+                        className="numeric"
+                        aria-label={`第${index + 1}項長度`}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={line.length ?? 0}
+                        onChange={(event) =>
+                          update(index, { length: Number(event.target.value) })
+                        }
+                      />
+                    </Field>
+                  )}
+                  {line.measure === "area" && (
+                    <Field label="闊度">
+                      <input
+                        className="numeric"
+                        aria-label={`第${index + 1}項闊度`}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={line.width ?? 0}
+                        onChange={(event) =>
+                          update(index, { width: Number(event.target.value) })
+                        }
+                      />
+                    </Field>
+                  )}
+                  {(line.measure === "area" || line.measure === "length") && (
+                    <Field label="尺寸單位">
+                      <select
+                        aria-label={`第${index + 1}項尺寸單位`}
+                        value={line.dimensionUnit ?? "呎"}
+                        onChange={(event) =>
+                          update(index, {
+                            dimensionUnit: event.target.value as "呎" | "寸",
+                          })
+                        }
+                      >
+                        <option value="呎">呎</option>
+                        <option value="寸">寸</option>
+                      </select>
+                    </Field>
+                  )}
+                  <Field label="數量">
                     <input
                       className="numeric"
-                      aria-label={`第${index + 1}項長度`}
+                      aria-label={`第${index + 1}項數量`}
                       type="number"
                       min="0"
                       step="0.01"
-                      value={line.length ?? 0}
+                      value={line.quantity}
                       onChange={(event) =>
-                        update(index, { length: Number(event.target.value) })
+                        update(index, { quantity: Number(event.target.value) })
                       }
                     />
                   </Field>
-                )}
-                {line.measure === "area" && (
-                  <Field label="闊度">
+                  <Field label="單位">
+                    <input
+                      aria-label={`第${index + 1}項單位`}
+                      value={line.unit}
+                      onChange={(event) =>
+                        update(index, { unit: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="單價">
                     <input
                       className="numeric"
-                      aria-label={`第${index + 1}項闊度`}
+                      aria-label={`第${index + 1}項單價`}
                       type="number"
                       min="0"
                       step="0.01"
-                      value={line.width ?? 0}
+                      value={line.unitPrice}
                       onChange={(event) =>
-                        update(index, { width: Number(event.target.value) })
+                        update(index, { unitPrice: Number(event.target.value) })
                       }
                     />
                   </Field>
-                )}
-                {(line.measure === "area" || line.measure === "length") && (
-                  <Field label="尺寸單位">
-                    <select
-                      aria-label={`第${index + 1}項尺寸單位`}
-                      value={line.dimensionUnit ?? "呎"}
+                  <Field label="金額">
+                    <input
+                      className="numeric"
+                      aria-label={`第${index + 1}項金額`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={line.amount}
                       onChange={(event) =>
-                        update(index, {
-                          dimensionUnit: event.target.value as "呎" | "寸",
-                        })
+                        update(index, { amount: Number(event.target.value) })
                       }
-                    >
-                      <option value="呎">呎</option>
-                      <option value="寸">寸</option>
-                    </select>
+                    />
                   </Field>
-                )}
-                <Field label="數量">
-                  <input
-                    className="numeric"
-                    aria-label={`第${index + 1}項數量`}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={line.quantity}
+                </div>
+                {line.measure &&
+                  line.measure !== "fixed" &&
+                  line.measure !== "quantity" && (
+                    <p className="measurement-conversion">
+                      {line.measure === "area"
+                        ? `${line.length ?? 0} × ${line.width ?? 0} × ${line.quantity} ${line.dimensionUnit ?? "呎"}`
+                        : `${line.length ?? 0} × ${line.quantity} ${line.dimensionUnit ?? "呎"}`}
+                      <span>（市政單可獨立調整金額）</span>
+                    </p>
+                  )}
+                <details className="line-notes">
+                  <summary>現場要求及注意事項（選填）</summary>
+                  <textarea
+                    rows={2}
+                    aria-label={`第${index + 1}項說明`}
+                    value={line.description}
                     onChange={(event) =>
-                      update(index, { quantity: Number(event.target.value) })
+                      update(index, { description: event.target.value })
                     }
+                    placeholder="例如：包運輸及安裝"
                   />
-                </Field>
-                <Field label="單位">
-                  <input
-                    aria-label={`第${index + 1}項單位`}
-                    value={line.unit}
-                    onChange={(event) =>
-                      update(index, { unit: event.target.value })
-                    }
-                  />
-                </Field>
-                <Field label="單價">
-                  <input
-                    className="numeric"
-                    aria-label={`第${index + 1}項單價`}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={line.unitPrice}
-                    onChange={(event) =>
-                      update(index, { unitPrice: Number(event.target.value) })
-                    }
-                  />
-                </Field>
-                <Field label="金額">
-                  <input
-                    className="numeric"
-                    aria-label={`第${index + 1}項金額`}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={line.amount}
-                    onChange={(event) =>
-                      update(index, { amount: Number(event.target.value) })
-                    }
-                  />
-                </Field>
-              </div>
-              {line.measure &&
-                line.measure !== "fixed" &&
-                line.measure !== "quantity" && (
-                  <p className="municipal-line-calculation">
-                    {line.measure === "area"
-                      ? `${line.length ?? 0} × ${line.width ?? 0} × ${line.quantity} ${line.dimensionUnit ?? "呎"}`
-                      : `${line.length ?? 0} × ${line.quantity} ${line.dimensionUnit ?? "呎"}`}
-                    <span>（市政單可獨立調整金額）</span>
+                </details>
+                {line.productStyleText && (
+                  <p className="municipal-line-style">
+                    產品款式：{line.productStyleText}
                   </p>
                 )}
-              <Field label="現場要求及注意事項（選填）">
-                <textarea
-                  aria-label={`第${index + 1}項說明`}
-                  value={line.description}
-                  onChange={(event) =>
-                    update(index, { description: event.target.value })
-                  }
-                  placeholder="例如：包運輸及安裝"
-                />
-              </Field>
-              {line.productStyleText && (
-                <p className="municipal-line-style">
-                  產品款式：{line.productStyleText}
-                </p>
-              )}
-              <div className="municipal-line-amount">
-                金額 <strong>{money(line.amount)}</strong>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-        </div>
-        <aside className="municipal-summary">
-          <h2>市政單摘要</h2>
-          <div className="municipal-summary-row">
-            <span>項目數量</span>
-            <strong>{lines.length} 項</strong>
+                <div className="line-footer">
+                  <span>市政單項目金額</span>
+                  <strong>{money(line.amount)}</strong>
+                </div>
+              </article>
+            ))}
           </div>
-          <div className="municipal-summary-total">
-            <span>市政單總額</span>
+          <div className="quote-category-subtotal">
+            <span>市政單小計</span>
             <strong>{money(total)}</strong>
           </div>
-          <p>市政單只作政府8萬資助申請，不是客戶真實成交單，亦不計入會計。</p>
-          <Button
-            className="full-width"
-            variant="primary"
-            onClick={() => {
-              const saved = run(
-                () => engine.updateMunicipalOrder(actor, order.id, lines),
-                "市政單已保存。",
-              );
-              if (saved) setLines(structuredClone(saved.lines));
-            }}
-          >
-            <Check size={18} /> 儲存市政單
-          </Button>
-          <Button
-            className="full-width"
-            onClick={() => {
-              let saved = false;
-              run(() => {
-                engine.updateMunicipalOrder(actor, order.id, lines);
-                saved = true;
-                return true;
-              }, "市政單已保存。");
-              if (saved) nav("/documents/municipal/" + order.id);
-            }}
-          >
-            <Eye size={18} /> 預覽
-          </Button>
-          <Button
-            className="full-width"
-            onClick={() => {
-              let saved = false;
-              run(() => {
-                engine.updateMunicipalOrder(actor, order.id, lines);
-                saved = true;
-                return true;
-              }, "市政單已保存。");
-              if (saved) nav("/documents/municipal/" + order.id);
-            }}
-          >
-            <Printer size={18} /> 列印
-          </Button>
-        </aside>
+          <div className="municipal-save-bar">
+            <p>市政單只作政府8萬資助申請，不是客戶真實成交單，亦不計入會計。</p>
+            <div className="municipal-save-actions">
+              <Button
+                onClick={() => {
+                  const saved = run(
+                    () => engine.updateMunicipalOrder(actor, order.id, lines),
+                    "市政單已保存。",
+                  );
+                  if (saved) {
+                    setLines(structuredClone(saved.lines));
+                    nav("/documents/municipal/" + order.id);
+                  }
+                }}
+              >
+                <Eye size={18} /> 預覽
+              </Button>
+              <Button
+                onClick={() => {
+                  const saved = run(
+                    () => engine.updateMunicipalOrder(actor, order.id, lines),
+                    "市政單已保存。",
+                  );
+                  if (saved) {
+                    setLines(structuredClone(saved.lines));
+                    nav("/documents/municipal/" + order.id);
+                  }
+                }}
+              >
+                <Printer size={18} /> 列印
+              </Button>
+            </div>
+          </div>
+        </Section>
       </div>
     </>
   );
