@@ -12317,3 +12317,7 @@ textarea::placeholder {
 .handoff-quote-preview.direct-preview .direct-invoice-document {
   min-height: 0;
 }
+
+.payment-confirm-check {
+  margin: 14px 0 4px;
+}
