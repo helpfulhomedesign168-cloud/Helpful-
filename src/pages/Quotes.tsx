@@ -658,7 +658,9 @@ export function QuoteWizardProgress({
       ]
     : QUOTE_WIZARD_STEPS;
   return (
-    <div className="quote-wizard-progress">
+    <div
+      className={`quote-wizard-progress ${directInvoice ? "direct" : ""}`}
+    >
       {steps.map(([number, label], index) => {
         const done = step > index + 1;
         const active = step === index + 1;

@@ -12276,3 +12276,35 @@ textarea::placeholder {
     padding-right: 0;
   }
 }
+
+.quote-wizard-progress.direct {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 720px;
+}
+.direct-line-card {
+  gap: 10px 28px;
+  padding: 18px 22px;
+}
+.direct-line-card .direct-line-inputs {
+  gap: 14px;
+  padding-right: 52px;
+}
+.direct-line-card .direct-line-inputs .field {
+  width: 150px;
+}
+.direct-line-card .measurement-conversion {
+  margin-top: 4px;
+}
+.direct-line-card .line-footer {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.direct-line-delete {
+  top: 14px;
+  right: 12px;
+}
+@media (max-width: 1050px) {
+  .direct-line-card .direct-line-inputs {
+    gap: 12px;
+  }
+}
