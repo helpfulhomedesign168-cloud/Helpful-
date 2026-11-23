@@ -5469,6 +5469,7 @@ export class Engine {
       lines: QuoteLine[];
       discount: number;
       category: InvoiceCategory;
+      categories?: InvoiceCategory[];
       salesId?: string;
       supervisorId?: string;
       date?: string;
@@ -5481,6 +5482,19 @@ export class Engine {
     this.mutate((state) => {
       if (!Object.hasOwn(INVOICE_CATEGORY_NAMES, input.category))
         fail("請選擇有效的訂單分類。");
+      const selectedCategories = [
+        ...new Set(
+          input.categories?.length ? input.categories : [input.category],
+        ),
+      ];
+      if (
+        selectedCategories.some(
+          (category) => !Object.hasOwn(INVOICE_CATEGORY_NAMES, category),
+        )
+      )
+        fail("請選擇有效的單種。");
+      const effectiveCategory =
+        this.effectiveOrderCategory(selectedCategories) ?? input.category;
       if (!input.customer.name?.trim() || !input.customer.phone?.trim())
         fail("請填寫客戶姓名及電話。");
       if (!input.lines.length) fail("請最少加入一項工程。");
@@ -5540,8 +5554,9 @@ export class Engine {
         createdAt: input.date ? `${input.date}T09:00:00.000Z` : NOW,
         actorId: actor.id,
         supervisorId: supervisor?.id ?? actor.id,
-        category: input.category,
-        paymentPlan: this.installmentPlan(input.category, raw.total),
+        category: effectiveCategory,
+        categories: selectedCategories,
+        paymentPlan: this.installmentPlan(effectiveCategory, raw.total),
         calculation: frozen(raw),
       };
       const quote: Quote = {
@@ -5563,8 +5578,8 @@ export class Engine {
         createdAt: NOW,
         updatedAt: NOW,
         archived: false,
-        officeCategory: input.category,
-        orderCategories: [input.category],
+        officeCategory: effectiveCategory,
+        orderCategories: selectedCategories,
         directInvoice: true,
         invoiceId: invoice.id,
       };
