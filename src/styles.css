@@ -12206,3 +12206,73 @@ textarea::placeholder {
     display: none;
   }
 }
+
+.direct-line-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 20px;
+  padding: 14px 18px;
+  align-items: start;
+}
+.direct-line-card .direct-line-head {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+  padding-right: 0;
+}
+.direct-line-card .direct-line-inputs {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin: 0;
+  padding-right: 42px;
+  align-items: flex-start;
+}
+.direct-line-card .direct-line-inputs .field {
+  width: 136px;
+  margin: 0;
+}
+.direct-line-card .direct-line-inputs input,
+.direct-line-card .direct-line-inputs select {
+  height: 38px;
+}
+.direct-line-card .measurement-conversion {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 0;
+}
+.direct-line-card .quote-product-style,
+.direct-line-card .line-footer,
+.direct-line-card .linked-quote-button {
+  grid-column: 1 / -1;
+}
+.direct-line-card .line-footer {
+  margin-top: 5px;
+  padding-top: 7px;
+}
+.direct-line-delete {
+  position: absolute;
+  top: 11px;
+  right: 10px;
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+@media (max-width: 1050px) {
+  .direct-line-card {
+    grid-template-columns: 1fr;
+  }
+  .direct-line-card .direct-line-head,
+  .direct-line-card .direct-line-inputs,
+  .direct-line-card .measurement-conversion {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .direct-line-card .direct-line-inputs {
+    flex-wrap: wrap;
+    padding-right: 0;
+  }
+}

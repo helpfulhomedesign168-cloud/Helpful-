@@ -1281,13 +1281,13 @@ export function QuoteEditor() {
                     );
                   return (
                     <React.Fragment key={l.id}>
-                    {firstInCategory && (
+                    {firstInCategory && !directInvoice && (
                       <div className="quote-category-head">{s.category}</div>
                     )}
                     <article
-                      className={`line-card ${l.pricePending ? "pending-price" : ""}`}
+                      className={`line-card ${l.pricePending ? "pending-price" : ""} ${directInvoice ? "direct-line-card" : ""}`}
                     >
-                      <div className="line-head">
+                      <div className={`line-head ${directInvoice ? "direct-line-head" : ""}`}>
                         <span className="line-index">
                           {String(i + 1).padStart(2, "0")}
                         </span>
@@ -1306,18 +1306,20 @@ export function QuoteEditor() {
                             </span>
                           )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          disabled={Boolean(l.customRequestId)}
-                          aria-label={`移除${s.name}`}
-                          onClick={() =>
-                            setLines(lines.filter((_, n) => n !== i))
-                          }
-                        >
-                          <Trash2 size={20} />
-                        </Button>
+                        {!directInvoice && (
+                          <Button
+                            variant="ghost"
+                            disabled={Boolean(l.customRequestId)}
+                            aria-label={`移除${s.name}`}
+                            onClick={() =>
+                              setLines(lines.filter((_, n) => n !== i))
+                            }
+                          >
+                            <Trash2 size={20} />
+                          </Button>
+                        )}
                       </div>
-                      <div className="form-grid line-inputs">
+                      <div className={`form-grid line-inputs ${directInvoice ? "direct-line-inputs" : ""}`}>
                         {s.measure === "area" || s.measure === "length" ? (
                           <>
                             <Field
@@ -1402,6 +1404,19 @@ export function QuoteEditor() {
                           </Field>
                         )}
                       </div>
+                      {directInvoice && (
+                        <Button
+                          className="direct-line-delete"
+                          variant="ghost"
+                          disabled={Boolean(l.customRequestId)}
+                          aria-label={`移除${s.name}`}
+                          onClick={() =>
+                            setLines(lines.filter((_, n) => n !== i))
+                          }
+                        >
+                          <Trash2 size={19} />
+                        </Button>
+                      )}
                       {s.measure === "area" || s.measure === "length" ? (
                         <div className="measurement-conversion">
                           {s.measure === "area"
@@ -1457,15 +1472,19 @@ export function QuoteEditor() {
                         )}
                       </div>
                       )}
-                      <details className="line-notes">
-                        <summary>現場要求及注意事項（選填）</summary>
-                        <textarea
-                          rows={2}
-                          value={l.notes}
-                          placeholder="客戶要求、施工難點或需要特別留意的位置"
-                          onChange={(e) => update(i, { notes: e.target.value })}
-                        />
-                      </details>
+                      {!directInvoice && (
+                        <details className="line-notes">
+                          <summary>現場要求及注意事項（選填）</summary>
+                          <textarea
+                            rows={2}
+                            value={l.notes}
+                            placeholder="客戶要求、施工難點或需要特別留意的位置"
+                            onChange={(e) =>
+                              update(i, { notes: e.target.value })
+                            }
+                          />
+                        </details>
+                      )}
                       <div className="line-footer">
                         <span>
                           {a?.minApplied
@@ -1491,7 +1510,7 @@ export function QuoteEditor() {
                         </button>
                       )}
                     </article>
-                    {lastInCategory && (
+                    {lastInCategory && !directInvoice && (
                       <div className="quote-category-subtotal">
                         <span>工程小計</span>
                         <strong>{money(categoryTotal)}</strong>
@@ -1502,7 +1521,7 @@ export function QuoteEditor() {
                 })}
               </div>
             )}
-            {lines.length > 0 && (
+            {lines.length > 0 && !directInvoice && (
               <div className="quote-add-bottom">
                 <Button
                   aria-label="新增工程項目"
