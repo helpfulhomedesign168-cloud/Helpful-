@@ -1034,6 +1034,15 @@ export class Engine {
     if (this.isAdmin(actor)) return true;
     if (isCsActor(actor)) {
       if (!order.csReleasedAt) return false;
+      if (!order.csOwnerId) {
+        const quote = this.state.quotes.find(
+          (candidate) => candidate.id === order.quoteId,
+        );
+        // Direct invoices must be assigned through 工程單 before they enter
+        // 工程管理; legacy/Sales orders keep their historical visibility.
+        if (quote?.directInvoice) return false;
+        return actor.role === "cs_supervisor";
+      }
       return actor.role === "cs_supervisor" || order.csOwnerId === actor.id;
     }
     return (
@@ -2390,11 +2399,13 @@ export class Engine {
       fail("你沒有查看 Office 交接的權限。");
     return this.state.quotes.flatMap((quote) => {
       const version = currentVersion(quote);
+      const direct = Boolean(quote.directInvoice);
+      if (!quote.invoiceId) return [];
       if (
-        !quote.submission ||
-        quote.submission.versionId !== version.id ||
-        !quoteVersionIsSigned(version) ||
-        !quote.invoiceId
+        !direct &&
+        (!quote.submission ||
+          quote.submission.versionId !== version.id ||
+          !quoteVersionIsSigned(version))
       )
         return [];
       const owner = this.state.actors.find(

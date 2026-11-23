@@ -86,8 +86,16 @@ test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }
   // The new order must be visible to the CS supervisor by default.
   await page.locator(".actor-button").click();
   await page.locator(".role-option").filter({ hasText: "阿花" }).first().click();
+  await page.getByRole("link", { name: "工程單" }).click();
+  await expect(
+    page
+      .locator(".handoff-table tbody tr")
+      .filter({ hasText: invoiceNumber! })
+      .first(),
+  ).toBeVisible();
+  // It must not appear in 工程管理 until CS has assigned an owner.
   await page.getByRole("link", { name: "工程管理" }).click();
   await expect(
-    page.getByText(`INV-${invoiceNumber}`, { exact: true }).first(),
-  ).toBeVisible();
+    page.locator(".order-rail-row").filter({ hasText: invoiceNumber! }),
+  ).toHaveCount(0);
 });
