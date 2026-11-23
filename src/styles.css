@@ -12321,3 +12321,69 @@ textarea::placeholder {
 .payment-confirm-check {
   margin: 14px 0 4px;
 }
+
+.section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.municipal-detail-page {
+  display: grid;
+  gap: 18px;
+}
+.municipal-section-note {
+  margin: 0 0 14px;
+  color: #7b8492;
+  font-size: 13px;
+}
+.municipal-detail-page .municipal-info {
+  margin-bottom: 18px;
+}
+.municipal-detail-page .municipal-principal {
+  margin-bottom: 0;
+}
+.municipal-line-editor {
+  padding: 18px 0 0;
+}
+.municipal-line-editor:first-child {
+  padding-top: 0;
+}
+.municipal-line-editor .municipal-line-name-input {
+  font-size: 19px;
+}
+.municipal-line-editor .line-head small {
+  margin-top: 3px;
+}
+.municipal-line-editor .municipal-line-fields {
+  align-items: start;
+}
+.municipal-line-editor .line-footer {
+  margin-top: 8px;
+}
+.municipal-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #dfe5ee;
+}
+.municipal-save-bar p {
+  margin: 0;
+  color: #7b8492;
+  font-size: 12px;
+}
+.municipal-save-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+@media (max-width: 800px) {
+  .municipal-save-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
