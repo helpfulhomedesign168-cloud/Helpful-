@@ -41,7 +41,10 @@ test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }
   await expect(page.getByText("訂單分類", { exact: true })).toHaveCount(0);
   await expect(page.getByText("全單折扣", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: /下一步：預覽發票/ }).click();
-  await expect(page.getByText("預覽發票", { exact: false })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "3. 列印發票", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("預覽發票", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("INVOICE", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /建立並列印 Invoice/ }).click();
   await expect(page).toHaveURL(/\/documents\/invoice\//);

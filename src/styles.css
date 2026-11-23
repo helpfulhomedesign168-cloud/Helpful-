@@ -12127,3 +12127,32 @@ textarea::placeholder {
     text-align: left;
   }
 }
+
+.quote-wizard-layout.wizard-step-3 {
+  grid-template-columns: minmax(0, 1fr);
+}
+.handoff-quote-preview .direct-invoice-paper {
+  min-width: 680px;
+  min-height: 100%;
+  padding: 28px;
+  background: #fff;
+}
+@media (max-width: 800px) {
+  .handoff-quote-preview .direct-invoice-paper {
+    min-width: 0;
+    padding: 16px;
+  }
+}
+
+.handoff-preview-title {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 11px 16px;
+  border-bottom: 1px solid #d9e1eb;
+  background: #fff;
+  color: #27364b;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}

@@ -1534,74 +1534,149 @@ export function QuoteEditor() {
           </Section>
           )}
           {directInvoice && wizardStep === 3 && (
-            <Section number="03" title="預覽發票">
-              <div className="direct-invoice-preview">
-                <header className="direct-invoice-preview-head">
-                  <img
-                    src="/company-logo.png"
-                    alt="好幫手家居裝修設計有限公司"
-                  />
-                  <div>
-                    <h2>發票</h2>
-                    <span>INVOICE</span>
+            <>
+              <h2 className="quote-step-title">3. 列印發票</h2>
+              <div className="handoff-actions">
+                <Button variant="primary" onClick={createDirectInvoice}>
+                  <Printer size={18} /> 列印發票
+                </Button>
+                <Button onClick={() => setWizardStep(2)}>修改發票</Button>
+                <Button onClick={() => nav("/direct-invoices")}>
+                  返回直接開單
+                </Button>
+              </div>
+              <div className="handoff-print-grid">
+                <div className="handoff-print-settings">
+                  <h3>發票摘要</h3>
+                  <Field label="發票日期">
+                    <input type="date" value={invoiceDate} readOnly />
+                  </Field>
+                  <Field label="銷售員">
+                    <input
+                      value={
+                        salesOptions.find((item) => item.id === salesId)?.name ||
+                        "—"
+                      }
+                      readOnly
+                    />
+                  </Field>
+                  <Field label="Sales主管">
+                    <input
+                      value={
+                        supervisorOptions.find(
+                          (item) => item.id === supervisorId,
+                        )?.name || "—"
+                      }
+                      readOnly
+                    />
+                  </Field>
+                  <div className="handoff-prepared">
+                    <span>正式發票號</span>
+                    <strong>建立後產生</strong>
+                    <span>列印日期</span>
+                    <strong>{invoiceDate}</strong>
+                    <span>銷售員</span>
+                    <strong>
+                      {salesOptions.find((item) => item.id === salesId)?.name ||
+                        "—"}
+                    </strong>
+                    <span>Sales主管</span>
+                    <strong>
+                      {supervisorOptions.find(
+                        (item) => item.id === supervisorId,
+                      )?.name || "—"}
+                    </strong>
                   </div>
-                </header>
-                <div className="direct-invoice-preview-meta">
-                  <span>日期：{invoiceDate}</span>
-                  <span>
-                    銷售員：
-                    {salesOptions.find((item) => item.id === salesId)?.name ||
-                      "—"}
-                  </span>
-                  <span>
-                    主管：
-                    {supervisorOptions.find((item) => item.id === supervisorId)
-                      ?.name || "—"}
-                  </span>
+                  <p className="handoff-note">
+                    預覽後按「建立並列印 Invoice」正式建立發票；此步驟不設報價單或客戶簽署。
+                  </p>
+                  <Button
+                    className="full-width"
+                    variant="primary"
+                    onClick={() =>
+                      document
+                        .getElementById("direct-invoice-preview")
+                        ?.scrollIntoView({ behavior: "smooth" })
+                    }
+                  >
+                    預覽發票
+                  </Button>
                 </div>
-                <div className="direct-invoice-preview-customer">
-                  <strong>{customer.name || "待填客戶"}</strong>
-                  <span>{customer.phone}</span>
-                  <span>{customer.address || "待填地址"}</span>
-                </div>
-                <table className="document-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>工程項目</th>
-                      <th>數量</th>
-                      <th>單價</th>
-                      <th>金額</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((line, index) => {
-                      const amount =
-                        pricing.lineAmounts.find(
-                          (item) => item.id === line.id,
-                        )?.amount ?? 0;
-                      return (
-                        <tr key={line.id}>
-                          <td>{index + 1}</td>
-                          <td>
-                            <strong>{line.itemSnapshot.name}</strong>
-                          </td>
-                          <td>
-                            {line.quantity} {line.itemSnapshot.unit}
-                          </td>
-                          <td>{money(line.itemSnapshot.price)}</td>
-                          <td>{money(amount)}</td>
+                <div
+                  className="handoff-quote-preview"
+                  id="direct-invoice-preview"
+                >
+                  <div className="handoff-preview-title">預覽發票</div>
+                  <div className="direct-invoice-paper">
+                    <header className="direct-invoice-preview-head">
+                      <img
+                        src="/company-logo.png"
+                        alt="好幫手家居裝修設計有限公司"
+                      />
+                      <div>
+                        <h2>發票</h2>
+                        <span>INVOICE</span>
+                      </div>
+                    </header>
+                    <div className="direct-invoice-preview-meta">
+                      <span>日期：{invoiceDate}</span>
+                      <span>
+                        銷售員：
+                        {salesOptions.find((item) => item.id === salesId)
+                          ?.name || "—"}
+                      </span>
+                      <span>
+                        主管：
+                        {supervisorOptions.find(
+                          (item) => item.id === supervisorId,
+                        )?.name || "—"}
+                      </span>
+                    </div>
+                    <div className="direct-invoice-preview-customer">
+                      <strong>{customer.name || "待填客戶"}</strong>
+                      <span>{customer.phone}</span>
+                      <span>{customer.address || "待填地址"}</span>
+                    </div>
+                    <table className="document-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>工程項目</th>
+                          <th>數量</th>
+                          <th>單價</th>
+                          <th>金額</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <div className="direct-invoice-preview-total">
-                  <span>發票總額</span>
-                  <strong>{money(pricing.total)}</strong>
+                      </thead>
+                      <tbody>
+                        {lines.map((line, index) => {
+                          const amount =
+                            pricing.lineAmounts.find(
+                              (item) => item.id === line.id,
+                            )?.amount ?? 0;
+                          return (
+                            <tr key={line.id}>
+                              <td>{index + 1}</td>
+                              <td>
+                                <strong>{line.itemSnapshot.name}</strong>
+                              </td>
+                              <td>
+                                {line.quantity} {line.itemSnapshot.unit}
+                              </td>
+                              <td>{money(line.itemSnapshot.price)}</td>
+                              <td>{money(amount)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    <div className="direct-invoice-preview-total">
+                      <span>發票總額</span>
+                      <strong>{money(pricing.total)}</strong>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </Section>
+            </>
           )}
           {(base?.signature || clerkEditor) && !orderEdit && (
             <Section title="版本修改原因">
