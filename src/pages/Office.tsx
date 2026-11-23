@@ -1836,11 +1836,13 @@ function WorkOrderRail({
       }
       return true;
     })
-    .sort((a, b) =>
-      (b.csReleasedAt ?? b.createdAt).localeCompare(
+    .sort((a, b) => {
+      const byEvent = (b.csReleasedAt ?? b.createdAt).localeCompare(
         a.csReleasedAt ?? a.createdAt,
-      ),
-    );
+      );
+      if (byEvent !== 0) return byEvent;
+      return b.number.localeCompare(a.number, undefined, { numeric: true });
+    });
   const pager = usePagination(
     orders,
     `${filters.month}|${filters.ownerId}|${filters.category}`,
@@ -3405,10 +3407,21 @@ function OrderPanel({ order }: { order: WorkOrder }) {
 }
 
 export function Orders() {
-  const [filters, setFilters] = useState<OrderFilters>({
-    month: DEMO_TODAY.slice(0, 7),
-    ownerId: "all",
-    category: "all",
+  const { actor, engine } = useApp();
+  const [filters, setFilters] = useState<OrderFilters>(() => {
+    let month = DEMO_TODAY.slice(0, 7);
+    try {
+      const months = engine
+        .listOrders(actor)
+        .map((order) =>
+          (order.csReleasedAt ?? order.createdAt).slice(0, 7),
+        )
+        .sort();
+      month = months.at(-1) ?? month;
+    } catch {
+      // Keep the demo month if the current role cannot list orders.
+    }
+    return { month, ownerId: "all", category: "all" };
   });
   return (
     <>
