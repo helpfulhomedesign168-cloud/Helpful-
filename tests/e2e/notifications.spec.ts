@@ -12,6 +12,7 @@ test("所有角色在 sidebar 都見到訊息通知", async ({ page }) => {
     "開單員",
     "阿花",
     "會計",
+    "直接開單員",
     "Super Admin",
   ]) {
     await switchRole(page, role);

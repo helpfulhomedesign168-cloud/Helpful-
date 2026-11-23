@@ -4,6 +4,7 @@ export type Role =
   | "head"
   | "finance"
   | "clerk"
+  | "invoice_clerk"
   | "cs"
   | "cs_supervisor"
   | "finance_supervisor"
@@ -962,6 +963,18 @@ export interface AssignmentInput {
   materialDeductionItem?: string;
   materialDeductionAmount?: number;
 }
+export interface DirectInvoiceItemInput {
+  name: string;
+  quantity: number;
+  unit: string;
+  amount: number;
+}
+export interface DirectInvoiceInput {
+  customer: Customer;
+  items: DirectInvoiceItemInput[];
+  category: InvoiceCategory;
+  discount?: number;
+}
 export interface ExtraWorkInput {
   id?: string;
   kind: ExtraWorkKind;
@@ -1005,6 +1018,7 @@ export const ROLE_NAMES: Record<Role, string> = {
   finance: "會計",
   finance_supervisor: "會計主管",
   clerk: "開單員",
+  invoice_clerk: "直接開單員",
   cs: "CS",
   cs_supervisor: "CS主管",
   admin: "Super Admin",

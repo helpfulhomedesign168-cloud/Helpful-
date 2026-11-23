@@ -31,6 +31,7 @@ import {
 import { useApp } from "../context";
 import { ROLE_NAMES } from "../domain/types";
 import { notificationTarget } from "../notificationTarget";
+import { isRoleVisible } from "../features";
 import { Button, Dialog, Notice } from "./ui";
 
 const NAV_ICON: Record<string, string> = {
@@ -56,6 +57,8 @@ export const roleHome = (role: string) =>
     ? "/finance"
     : role === "finance_supervisor"
       ? "/accounting-dashboard"
+      : role === "invoice_clerk"
+      ? "/direct-invoices"
       : role === "clerk"
         ? "/submissions"
       : role === "cs" || role === "cs_supervisor"
@@ -124,7 +127,14 @@ export function Shell() {
             ["/invoices", "已開單據", Files],
             ["/cancellation-cases", "退款", FileText],
           ]
-        : actor.role === "clerk" || actor.role === "finance_supervisor"
+        : actor.role === "invoice_clerk"
+        ? [
+            ["/direct-invoices", "直接開單", Receipt],
+            ["/invoices", "單據管理", Files],
+            ["/customers", "客戶", Users],
+            ["/municipal-orders", "市政單", FileText],
+          ]
+      : actor.role === "clerk" || actor.role === "finance_supervisor"
           ? [
               ...(actor.role === "finance_supervisor"
                 ? [
@@ -339,7 +349,9 @@ export function Shell() {
           <div className="role-list">
             {engine
               .listActors()
-              .filter((a) => a.active !== false)
+              .filter(
+                (a) => a.active !== false && isRoleVisible(a.role),
+              )
               .map((a) => (
               <button
                 key={a.id}

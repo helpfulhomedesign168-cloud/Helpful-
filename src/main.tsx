@@ -27,6 +27,7 @@ import {
 import { Documents } from "./pages/Documents";
 import { UserProfile, Users } from "./pages/Users";
 import { Notifications } from "./pages/Notifications";
+import { DirectInvoices } from "./pages/DirectInvoices";
 import { AccountingDashboard } from "./pages/AccountingDashboard";
 import { BusinessOrders } from "./pages/BusinessOrders";
 import { CustomWorkRequests } from "./pages/CustomWorkRequests";
@@ -207,9 +208,17 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               }
             />
             <Route
+              path="/direct-invoices"
+              element={
+                <Guard roles={["invoice_clerk", "admin", "admin_staff"]}>
+                  <DirectInvoices />
+                </Guard>
+              }
+            />
+            <Route
               path="/invoices"
               element={
-                <Guard roles={["clerk", "finance", "finance_supervisor", "admin", "admin_staff"]}>
+                <Guard roles={["clerk", "invoice_clerk", "finance", "finance_supervisor", "admin", "admin_staff"]}>
                   <Invoices />
                 </Guard>
               }
@@ -217,7 +226,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/invoices/:id"
               element={
-                <Guard roles={["clerk", "finance", "finance_supervisor", "admin", "admin_staff"]}>
+                <Guard roles={["clerk", "invoice_clerk", "finance", "finance_supervisor", "admin", "admin_staff"]}>
                   <InvoiceDetail />
                 </Guard>
               }
@@ -273,7 +282,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/municipal-orders"
               element={
-                <Guard roles={["clerk", "finance_supervisor", "admin", "admin_staff"]}>
+                <Guard roles={["clerk", "invoice_clerk", "finance_supervisor", "admin", "admin_staff"]}>
                   <MunicipalOrders />
                 </Guard>
               }
@@ -281,7 +290,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/municipal-orders/:id"
               element={
-                <Guard roles={["clerk", "finance_supervisor", "admin", "admin_staff"]}>
+                <Guard roles={["clerk", "invoice_clerk", "finance_supervisor", "admin", "admin_staff"]}>
                   <MunicipalOrderDetail />
                 </Guard>
               }
