@@ -42,6 +42,7 @@ test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }
   ).toBeVisible();
   await expect(page.getByText("預覽發票", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("INVOICE", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "8萬資助", exact: true }).click();
   const downloadPromise = page.waitForEvent("download", { timeout: 30000 });
   await page.getByRole("button", { name: "匯出", exact: true }).click();
   const download = await downloadPromise;
@@ -50,9 +51,12 @@ test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }
   expect(downloadPath).not.toBeNull();
   expect(statSync(downloadPath!).size).toBeGreaterThan(1000);
   await page.getByRole("button", { name: /確定建立發票/ }).click();
-  await expect(page).toHaveURL(/\/quotes\/new\?direct=1$/);
-  await expect(page.getByText(/發票DINV\d+已建立/)).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "銷售員資料", exact: false }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/invoices$/);
+  const toast = page.getByText(/發票DINV\d+已建立/);
+  await expect(toast).toBeVisible();
+  const invoiceNumber = (await toast.innerText()).match(/DINV\d+/)?.[0];
+  await expect(page.locator("tbody tr").first()).toContainText(
+    invoiceNumber!,
+  );
+  await expect(page.locator("tbody tr").first()).toContainText("8萬");
 });

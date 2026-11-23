@@ -739,6 +739,8 @@ export function QuoteEditor() {
     supervisorOptions[0]?.id ?? "",
   );
   const [exporting, setExporting] = useState(false);
+  const [directCategory, setDirectCategory] =
+    useState<InvoiceCategory>("self-pay");
   const [exitConfirm, setExitConfirm] = useState(false);
   const [picker, setPicker] = useState(false);
   const [customers, setCustomers] = useState(false);
@@ -794,7 +796,7 @@ export function QuoteEditor() {
     pricing = engine.preview(actor, lines, discount);
   } catch {}
   const directPaymentPlan = directInvoice
-    ? engine.previewInstallmentPlan("self-pay", pricing.total)
+    ? engine.previewInstallmentPlan(directCategory, pricing.total)
     : [];
   const invoiceDateDisplay = invoiceDate
     ? invoiceDate.split("-").reverse().join(" / ")
@@ -864,7 +866,7 @@ export function QuoteEditor() {
           customer,
           lines,
           discount,
-          category: "self-pay",
+          category: directCategory,
           salesId,
           supervisorId,
           date: invoiceDate,
@@ -873,15 +875,7 @@ export function QuoteEditor() {
     );
     if (!invoice) return;
     run(() => invoice, `發票${invoice.number}已建立`);
-    setWizardStep(1);
-    setCustomer(structuredClone(EMPTY_CUSTOMER));
-    setLines([]);
-    setDiscountMode("none");
-    setDiscountValue(0);
-    setReason("");
-    setInvoiceDate(todayValue);
-    setSalesId(salesOptions[0]?.id ?? "");
-    setSupervisorId(supervisorOptions[0]?.id ?? "");
+    nav("/invoices");
   }
   async function exportExcel() {
     setExporting(true);
@@ -1491,7 +1485,9 @@ export function QuoteEditor() {
                         <span>
                           {a?.minApplied
                             ? `按最低 ${a.billedQty} ${s.unit}計費`
-                            : s.details || "按現場實際範圍計價"}
+                            : directInvoice
+                              ? ""
+                              : s.details || "按現場實際範圍計價"}
                         </span>
                         {l.pricePending ? (
                           <strong className="quote-pending">待報價</strong>
@@ -1633,6 +1629,26 @@ export function QuoteEditor() {
                       }
                       readOnly
                     />
+                  </Field>
+                  <Field label="單種" required>
+                    <div className="order-category-chips">
+                      {(
+                        Object.keys(
+                          INVOICE_CATEGORY_NAMES,
+                        ) as InvoiceCategory[]
+                      ).map((category) => (
+                        <button
+                          type="button"
+                          key={category}
+                          className={
+                            directCategory === category ? "selected" : ""
+                          }
+                          onClick={() => setDirectCategory(category)}
+                        >
+                          {INVOICE_CATEGORY_NAMES[category]}
+                        </button>
+                      ))}
+                    </div>
                   </Field>
                   <div className="handoff-prepared">
                     <span>正式發票號</span>
