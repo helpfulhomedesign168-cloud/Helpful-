@@ -494,9 +494,11 @@ export function Quotes() {
 export function CustomerForm({
   value,
   onChange,
+  hideNotes = false,
 }: {
   value: Customer;
   onChange: (v: Customer) => void;
+  hideNotes?: boolean;
 }) {
   const address = composeCustomerAddress(value);
   const set = (key: keyof Customer, val: string) => {
@@ -607,6 +609,7 @@ export function CustomerForm({
           {address || "請先填寫上方地址資料"}
         </output>
       </Field>
+      {!hideNotes && (
       <div className="form-grid two">
         <Field label="Sales備註">
           <textarea
@@ -627,6 +630,7 @@ export function CustomerForm({
           />
         </Field>
       </div>
+      )}
     </>
   );
 }
@@ -646,8 +650,9 @@ export function QuoteWizardProgress({
 }) {
   const steps = directInvoice
     ? [
-        ["1", "客戶資料"],
+        ["1", "發票資料"],
         ["2", "工程項目"],
+        ["3", "列印發票"],
       ]
     : QUOTE_WIZARD_STEPS;
   return (
@@ -714,11 +719,21 @@ export function QuoteEditor() {
       : "custom",
   );
   const [reason, setReason] = useState("");
-  const [wizardStep, setWizardStep] = useState<1 | 2>(
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(
     orderEdit || resumeStep === "2" ? 2 : 1,
   );
-  const [directCategory, setDirectCategory] =
-    useState<InvoiceCategory>("self-pay");
+  const today = new Date();
+  const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const [invoiceDate, setInvoiceDate] = useState(todayValue);
+  const allActors = engine.listActors();
+  const salesOptions = allActors.filter((candidate) => candidate.role === "sales");
+  const supervisorOptions = allActors.filter((candidate) =>
+    ["supervisor", "head"].includes(candidate.role),
+  );
+  const [salesId, setSalesId] = useState(salesOptions[0]?.id ?? "");
+  const [supervisorId, setSupervisorId] = useState(
+    supervisorOptions[0]?.id ?? "",
+  );
   const [exitConfirm, setExitConfirm] = useState(false);
   const [picker, setPicker] = useState(false);
   const [customers, setCustomers] = useState(false);
@@ -838,11 +853,14 @@ export function QuoteEditor() {
           customer,
           lines,
           discount,
-          category: directCategory,
+          category: "self-pay",
+          salesId,
+          supervisorId,
+          date: invoiceDate,
         }),
       "Invoice已建立。",
     );
-    if (invoice) nav("/invoices/" + invoice.id);
+    if (invoice) nav("/documents/invoice/" + invoice.id);
   }
   function save(destination: "draft" | "deal" | "handoff") {
     const q = run(
@@ -1060,6 +1078,10 @@ export function QuoteEditor() {
             <Button
               onClick={() => {
                 if (directInvoice) {
+                  if (wizardStep === 3) {
+                    setWizardStep(2);
+                    return;
+                  }
                   if (wizardStep === 2) {
                     setWizardStep(1);
                     return;
@@ -1122,15 +1144,59 @@ export function QuoteEditor() {
         className={`editor-layout ${wizard ? `quote-wizard-layout wizard-step-${wizardStep}` : ""}`}
       >
         <div className="editor-main">
+          {(!wizard || wizardStep === 1) && directInvoice && (
+            <Section number="01" title="銷售員資料">
+              <div className="form-grid three">
+                <Field label="發票日期" required>
+                  <input
+                    aria-label="發票日期"
+                    type="date"
+                    value={invoiceDate}
+                    onChange={(event) => setInvoiceDate(event.target.value)}
+                  />
+                </Field>
+                <Field label="銷售員" required>
+                  <select
+                    aria-label="銷售員"
+                    value={salesId}
+                    onChange={(event) => setSalesId(event.target.value)}
+                  >
+                    {salesOptions.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.name}（{candidate.code}）
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Sales主管" required>
+                  <select
+                    aria-label="Sales主管"
+                    value={supervisorId}
+                    onChange={(event) => setSupervisorId(event.target.value)}
+                  >
+                    {supervisorOptions.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.name}（{candidate.code}）
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            </Section>
+          )}
           {(!wizard || wizardStep === 1) && (
           <Section
-            number="01"
+            number={directInvoice ? "02" : "01"}
             title="客戶資料"
             action={
               <Button onClick={() => setCustomers(true)}>選擇現有客戶</Button>
             }
           >
-            <CustomerForm value={customer} onChange={setCustomer} />
+            <CustomerForm
+              value={customer}
+              onChange={setCustomer}
+              hideNotes={directInvoice}
+            />
           </Section>
           )}
           {(!wizard || wizardStep === 2) && (
@@ -1412,32 +1478,7 @@ export function QuoteEditor() {
             )}
             {wizard && (
               <div className="quote-step2-summary">
-                {directInvoice && (
-                  <div className="quote-step2-discount">
-                    <label>
-                      訂單分類
-                      <select
-                        aria-label="訂單分類"
-                        value={directCategory}
-                        onChange={(event) =>
-                          setDirectCategory(
-                            event.target.value as InvoiceCategory,
-                          )
-                        }
-                      >
-                        {(
-                          Object.keys(
-                            INVOICE_CATEGORY_NAMES,
-                          ) as InvoiceCategory[]
-                        ).map((value) => (
-                          <option key={value} value={value}>
-                            {INVOICE_CATEGORY_NAMES[value]}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                )}
+                {!directInvoice && (
                 <div className="quote-step2-discount">
                   <label>
                     全單折扣
@@ -1483,6 +1524,7 @@ export function QuoteEditor() {
                     </label>
                   )}
                 </div>
+                )}
                 <div className="quote-step2-total">
                   <span>成交金額</span>
                   <strong>{money(pricing.total)}</strong>
@@ -1490,6 +1532,76 @@ export function QuoteEditor() {
               </div>
             )}
           </Section>
+          )}
+          {directInvoice && wizardStep === 3 && (
+            <Section number="03" title="預覽發票">
+              <div className="direct-invoice-preview">
+                <header className="direct-invoice-preview-head">
+                  <img
+                    src="/company-logo.png"
+                    alt="好幫手家居裝修設計有限公司"
+                  />
+                  <div>
+                    <h2>發票</h2>
+                    <span>INVOICE</span>
+                  </div>
+                </header>
+                <div className="direct-invoice-preview-meta">
+                  <span>日期：{invoiceDate}</span>
+                  <span>
+                    銷售員：
+                    {salesOptions.find((item) => item.id === salesId)?.name ||
+                      "—"}
+                  </span>
+                  <span>
+                    主管：
+                    {supervisorOptions.find((item) => item.id === supervisorId)
+                      ?.name || "—"}
+                  </span>
+                </div>
+                <div className="direct-invoice-preview-customer">
+                  <strong>{customer.name || "待填客戶"}</strong>
+                  <span>{customer.phone}</span>
+                  <span>{customer.address || "待填地址"}</span>
+                </div>
+                <table className="document-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>工程項目</th>
+                      <th>數量</th>
+                      <th>單價</th>
+                      <th>金額</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lines.map((line, index) => {
+                      const amount =
+                        pricing.lineAmounts.find(
+                          (item) => item.id === line.id,
+                        )?.amount ?? 0;
+                      return (
+                        <tr key={line.id}>
+                          <td>{index + 1}</td>
+                          <td>
+                            <strong>{line.itemSnapshot.name}</strong>
+                          </td>
+                          <td>
+                            {line.quantity} {line.itemSnapshot.unit}
+                          </td>
+                          <td>{money(line.itemSnapshot.price)}</td>
+                          <td>{money(amount)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <div className="direct-invoice-preview-total">
+                  <span>發票總額</span>
+                  <strong>{money(pricing.total)}</strong>
+                </div>
+              </div>
+            </Section>
           )}
           {(base?.signature || clerkEditor) && !orderEdit && (
             <Section title="版本修改原因">
@@ -1613,14 +1725,16 @@ export function QuoteEditor() {
       </div>
       {wizard && !orderEdit && (
         <div className="quote-wizard-footer">
-          {wizardStep === 2 && (
-            <Button onClick={() => setWizardStep(1)}>上一步</Button>
+          {(wizardStep === 2 || wizardStep === 3) && (
+            <Button onClick={() => setWizardStep((wizardStep - 1) as 1 | 2)}>
+              上一步
+            </Button>
           )}
           {wizardStep === 1 ? (
             <Button variant="primary" onClick={() => setWizardStep(2)}>
               下一步 <ArrowRight size={18} />
             </Button>
-          ) : directInvoice ? (
+          ) : wizardStep === 2 && directInvoice ? (
             <Button
               variant="primary"
               disabled={
@@ -1630,9 +1744,13 @@ export function QuoteEditor() {
                 !customer.name.trim() ||
                 !customer.phone.trim()
               }
-              onClick={createDirectInvoice}
+              onClick={() => setWizardStep(3)}
             >
-              建立 Invoice <ArrowRight size={18} />
+              下一步：預覽發票 <ArrowRight size={18} />
+            </Button>
+          ) : wizardStep === 3 && directInvoice ? (
+            <Button variant="primary" onClick={createDirectInvoice}>
+              建立並列印 Invoice <ArrowRight size={18} />
             </Button>
           ) : (
             <Button

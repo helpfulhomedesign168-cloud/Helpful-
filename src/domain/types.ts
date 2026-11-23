@@ -978,6 +978,9 @@ export interface DirectInvoiceInput {
   items: DirectInvoiceItemInput[];
   category: InvoiceCategory;
   discount?: number;
+  salesId?: string;
+  supervisorId?: string;
+  date?: string;
 }
 export interface ExtraWorkInput {
   id?: string;

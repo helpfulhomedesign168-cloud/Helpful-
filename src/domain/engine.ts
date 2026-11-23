@@ -5381,12 +5381,26 @@ export class Engine {
         fail("工程成本資料不完整，未能直接開Invoice。");
       if (raw.blocked)
         fail("成交額不足以覆蓋成本及基本佣金，未能直接開Invoice。");
+      const sales = state.actors.find(
+        (candidate) => candidate.id === input.salesId,
+      );
+      if (input.salesId && (!sales || sales.role !== "sales"))
+        fail("請選擇有效的銷售員。");
+      const supervisor = state.actors.find(
+        (candidate) => candidate.id === input.supervisorId,
+      );
+      if (
+        input.supervisorId &&
+        (!supervisor ||
+          !["supervisor", "head"].includes(supervisor.role))
+      )
+        fail("請選擇有效的Sales主管。");
       const customer = this.syncCustomerProfile(
         state,
         actor,
         normaliseCustomer(input.customer),
-        actor.id,
-        actor.team ?? "B",
+        sales?.id ?? actor.id,
+        sales?.team ?? actor.team ?? "B",
       );
       const month = dateKey(DEMO_TODAY);
       const sequence = (state.monthlySequences[month] ?? 0) + 1;
@@ -5400,9 +5414,9 @@ export class Engine {
         lines: deepCopy(lines),
         discount: 1,
         netTotal: raw.total,
-        createdAt: NOW,
+        createdAt: input.date ? `${input.date}T09:00:00.000Z` : NOW,
         actorId: actor.id,
-        supervisorId: actor.id,
+        supervisorId: supervisor?.id ?? actor.id,
         category: input.category,
         paymentPlan: this.installmentPlan(input.category, raw.total),
         calculation: frozen(raw),
@@ -5419,7 +5433,7 @@ export class Engine {
             customer: deepCopy(customer),
             lines: deepCopy(lines),
             discount: 1,
-            createdAt: NOW,
+            createdAt: input.date ? `${input.date}T09:00:00.000Z` : NOW,
             reason: "直接開Invoice",
           },
         ],
@@ -5452,6 +5466,9 @@ export class Engine {
       lines: QuoteLine[];
       discount: number;
       category: InvoiceCategory;
+      salesId?: string;
+      supervisorId?: string;
+      date?: string;
     },
   ): Invoice {
     const actor = this.actor(actorInput);
@@ -5484,12 +5501,26 @@ export class Engine {
         fail("工程成本資料不完整，未能直接開Invoice。");
       if (raw.blocked)
         fail("成交額不足以覆蓋成本及基本佣金，未能直接開Invoice。");
+      const sales = state.actors.find(
+        (candidate) => candidate.id === input.salesId,
+      );
+      if (input.salesId && (!sales || sales.role !== "sales"))
+        fail("請選擇有效的銷售員。");
+      const supervisor = state.actors.find(
+        (candidate) => candidate.id === input.supervisorId,
+      );
+      if (
+        input.supervisorId &&
+        (!supervisor ||
+          !["supervisor", "head"].includes(supervisor.role))
+      )
+        fail("請選擇有效的Sales主管。");
       const customer = this.syncCustomerProfile(
         state,
         actor,
         normaliseCustomer(input.customer),
-        actor.id,
-        actor.team ?? "B",
+        sales?.id ?? actor.id,
+        sales?.team ?? actor.team ?? "B",
       );
       const month = dateKey(DEMO_TODAY);
       const sequence = (state.monthlySequences[month] ?? 0) + 1;
@@ -5503,9 +5534,9 @@ export class Engine {
         lines: deepCopy(lines),
         discount,
         netTotal: raw.total,
-        createdAt: NOW,
+        createdAt: input.date ? `${input.date}T09:00:00.000Z` : NOW,
         actorId: actor.id,
-        supervisorId: actor.id,
+        supervisorId: supervisor?.id ?? actor.id,
         category: input.category,
         paymentPlan: this.installmentPlan(input.category, raw.total),
         calculation: frozen(raw),
@@ -5513,8 +5544,8 @@ export class Engine {
       const quote: Quote = {
         id: uid("quote"),
         number: `DIRECT-${actor.code}-${yyMM()}-${String(state.quotes.length + 1).padStart(4, "0")}`,
-        ownerId: actor.id,
-        team: actor.team ?? "B",
+        ownerId: sales?.id ?? actor.id,
+        team: sales?.team ?? actor.team ?? "B",
         versions: [
           {
             id: uid("version"),
@@ -5522,7 +5553,7 @@ export class Engine {
             customer: deepCopy(customer),
             lines: deepCopy(lines),
             discount,
-            createdAt: NOW,
+            createdAt: input.date ? `${input.date}T09:00:00.000Z` : NOW,
             reason: "直接開Invoice",
           },
         ],
