@@ -4,6 +4,7 @@ export type Role =
   | "head"
   | "finance"
   | "clerk"
+  | "invoice_clerk"
   | "cs"
   | "cs_supervisor"
   | "finance_supervisor"
@@ -162,6 +163,8 @@ export interface QuoteLine {
   attachment?: Attachment;
   /** 客人已選的產品款式snapshot；價錢不由此欄計算。 */
   productStyle?: ProductStyleSnapshot;
+  /** 直接開單或手動加入，不是價目表項目。 */
+  manual?: boolean;
   /** 自訂工程尚待工程部報價；未可計入正式成交或列印。 */
   pricePending?: boolean;
   /** 由 Sales 加入的自訂工程，不是價目表項目。 */
@@ -241,6 +244,8 @@ export interface Quote {
   grantApprovedAt?: string;
   /** 更改訂單後，目前版本需要重新列印及簽署。 */
   orderRevision?: boolean;
+  /** 由直接開單員建立，沒有報價／Office submission。 */
+  directInvoice?: boolean;
   /** 首次簽署的佣金歸屬；改單／重簽都不可覆寫。 */
   commissionAttribution?: {
     signedDate: string;
@@ -962,6 +967,21 @@ export interface AssignmentInput {
   materialDeductionItem?: string;
   materialDeductionAmount?: number;
 }
+export interface DirectInvoiceItemInput {
+  name: string;
+  quantity: number;
+  unit: string;
+  amount: number;
+}
+export interface DirectInvoiceInput {
+  customer: Customer;
+  items: DirectInvoiceItemInput[];
+  category: InvoiceCategory;
+  discount?: number;
+  salesId?: string;
+  supervisorId?: string;
+  date?: string;
+}
 export interface ExtraWorkInput {
   id?: string;
   kind: ExtraWorkKind;
@@ -1005,6 +1025,7 @@ export const ROLE_NAMES: Record<Role, string> = {
   finance: "會計",
   finance_supervisor: "會計主管",
   clerk: "開單員",
+  invoice_clerk: "直接開單員",
   cs: "CS",
   cs_supervisor: "CS主管",
   admin: "Super Admin",

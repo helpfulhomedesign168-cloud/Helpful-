@@ -799,11 +799,15 @@ export function Invoices() {
         )
       );
     })
-    .sort((a, b) =>
-      dateOrder === "newest"
-        ? b.createdAt.localeCompare(a.createdAt)
-        : a.createdAt.localeCompare(b.createdAt),
-    );
+    .sort((a, b) => {
+      const byDate = b.createdAt.localeCompare(a.createdAt);
+      if (byDate !== 0)
+        return dateOrder === "newest" ? byDate : -byDate;
+      const byNumber = b.number.localeCompare(a.number, undefined, {
+        numeric: true,
+      });
+      return dateOrder === "newest" ? byNumber : -byNumber;
+    });
   const pager = usePagination(
     invoices,
     `${search}|${statusFilter}|${orderFilter}|${teamFilter}|${salesFilter}|${dateOrder}`,

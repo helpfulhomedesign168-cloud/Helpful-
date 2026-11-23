@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import { Engine } from "./domain/engine";
 import { Actor, Attachment } from "./domain/types";
+import { isRoleVisible } from "./features";
 export const engine = new Engine(window.localStorage);
 interface Notice {
   text: string;
@@ -28,10 +29,17 @@ const Ctx = createContext<Context | null>(null);
 export function Provider({ children }: { children: React.ReactNode }) {
   useSyncExternalStore(engine.subscribe, engine.getState, engine.getState);
   const [actorId, setId] = useState(
-    localStorage.getItem("homeflow-actor") || "sales-mm",
+    localStorage.getItem("homeflow-actor") || "invoice-clerk",
+  );
+  const allActors = engine.listActors();
+  const visibleActors = allActors.filter((candidate) =>
+    isRoleVisible(candidate.role),
   );
   const actor =
-    engine.listActors().find((a) => a.id === actorId) || engine.listActors()[0];
+    visibleActors.find((candidate) => candidate.id === actorId) ||
+    visibleActors.find((candidate) => candidate.id === "invoice-clerk") ||
+    visibleActors[0] ||
+    allActors[0];
   const [notice, setNotice] = useState<Notice | null>(
     engine.storageWarning ? { text: engine.storageWarning, error: true } : null,
   );

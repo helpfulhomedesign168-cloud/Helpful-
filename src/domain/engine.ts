@@ -20,6 +20,7 @@ import {
   type CustomWorkRequest,
   type CustomWorkRequestView,
   type DraftInput,
+  type DirectInvoiceInput,
   type Eligibility,
   type ExtraWork,
   type ExtraWorkInput,
@@ -573,7 +574,9 @@ const isCsActor = (actor: Actor): boolean =>
   actor.role === "cs" || actor.role === "cs_supervisor";
 
 const isClerkActor = (actor: Actor): boolean =>
-  actor.role === "clerk" || actor.role === "finance_supervisor";
+  actor.role === "clerk" ||
+  actor.role === "invoice_clerk" ||
+  actor.role === "finance_supervisor";
 
 const isAdminActor = (actor: Actor): boolean =>
   actor.role === "admin" || actor.role === "admin_staff";
@@ -613,6 +616,17 @@ function ensureDemoCsActors(state: AppState): void {
     if (!state.actors.some((candidate) => candidate.id === actor.id))
       state.actors.push(deepCopy(actor));
   });
+}
+const DIRECT_INVOICE_CLERK: Actor = {
+  id: "invoice-clerk",
+  name: "直接開單員",
+  code: "DINV",
+  role: "invoice_clerk",
+  grants: ["invoice.write", "finance.read", "handoff.read"],
+};
+function ensureDemoInvoiceClerk(state: AppState): void {
+  if (!state.actors.some((actor) => actor.id === DIRECT_INVOICE_CLERK.id))
+    state.actors.push(deepCopy(DIRECT_INVOICE_CLERK));
 }
 const DEMO_ACCOUNTING_ACTORS: Actor[] = [
   {
@@ -804,6 +818,7 @@ export class Engine {
           existing.feeAmount = resource.feeAmount;
       });
       ensureDemoCsActors(migrated);
+      ensureDemoInvoiceClerk(migrated);
       ensureDemoAccountingActors(migrated);
       const migrateCustomer = (customer: Customer) => {
         customer.street ??= "";
@@ -979,6 +994,7 @@ export class Engine {
   }
   private quoteReadable(actor: Actor, quote: Quote): boolean {
     if (this.isAdmin(actor)) return true;
+    if (actor.role === "invoice_clerk") return Boolean(quote.invoiceId);
     if (actor.role === "sales") return this.isOwner(actor, quote);
     if (actor.role === "head") return true;
     if (actor.role === "supervisor") return quote.team === "B";
@@ -1165,6 +1181,9 @@ export class Engine {
       "group-buy",
     ];
     return priority.find((category) => categories?.includes(category));
+  }
+  previewInstallmentPlan(category: InvoiceCategory, total: number) {
+    return this.installmentPlan(category, total);
   }
   private installmentPlan(
     category: InvoiceCategory,
@@ -2471,6 +2490,7 @@ export class Engine {
         "finance",
         "finance_supervisor",
         "clerk",
+        "invoice_clerk",
         "sales",
         "head",
         "supervisor",
@@ -5260,11 +5280,14 @@ export class Engine {
       const quote = this.findQuote(payment.quoteId, state);
       const version = currentVersion(quote);
       if (
-        !quote.submission ||
-        quote.submission.versionId !== payment.versionId ||
-        version.id !== payment.versionId
+        !quote.directInvoice &&
+        (!quote.submission ||
+          quote.submission.versionId !== payment.versionId ||
+          version.id !== payment.versionId)
       )
         fail("付款來源並非有效已交 Office 版本。");
+      if (quote.directInvoice && version.id !== payment.versionId)
+        fail("付款來源版本與直接開單版本不符。");
       if (!validPastDate(input.date)) fail("有效收款日期不可晚於原型今日。");
       if (input.reject) {
         payment.status = "rejected";
@@ -5299,6 +5322,265 @@ export class Engine {
         if (invoice) this.releaseToCsIfReady(state, invoice, actor.id);
       }
     });
+  }
+  createDirectInvoice(actorInput: Actor, input: DirectInvoiceInput): Invoice {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "invoice_clerk" && !this.isAdmin(actor))
+      fail("只有直接開單員或Super Admin可以直接開Invoice。");
+    let output!: Invoice;
+    this.mutate((state) => {
+      if (!Object.hasOwn(INVOICE_CATEGORY_NAMES, input.category))
+        fail("請選擇有效的訂單分類。");
+      if (!input.customer.name?.trim() || !input.customer.phone?.trim())
+        fail("請填寫客戶姓名及電話。");
+      if (!input.items.length) fail("請最少加入一項工程。");
+      const lines: QuoteLine[] = input.items.map((item, index) => {
+        const quantity = Number(item.quantity);
+        const amount = Number(item.amount);
+        if (!item.name?.trim()) fail(`第 ${index + 1} 項缺少工程名稱。`);
+        if (!Number.isFinite(quantity) || quantity <= 0)
+          fail(`第 ${index + 1} 項數量無效。`);
+        if (!Number.isFinite(amount) || amount < 0)
+          fail(`第 ${index + 1} 項金額無效。`);
+        const unit = item.unit?.trim() || "項";
+        const snapshot: ServiceItem = {
+          id: uid("direct-service"),
+          code: "DIRECT-" + String(index + 1).padStart(3, "0"),
+          name: item.name.trim(),
+          category: "直接開單項目",
+          scope: "",
+          details: "直接開單員輸入",
+          unit,
+          price: moneyValue(amount / quantity),
+          measure: "quantity",
+          minQty: 1,
+          minAmount: 0,
+          increment: 1,
+          minScope: "line",
+          execution: "contractor",
+          costMode: "ratio",
+          needsProductStyle: false,
+          options: [],
+          allowPending: false,
+          notes: "",
+          published: true,
+        };
+        return {
+          id: uid("line"),
+          itemId: snapshot.id,
+          itemSnapshot: snapshot,
+          position: "",
+          length: 0,
+          width: 0,
+          dimensionUnit: "呎",
+          quantity,
+          style: "",
+          notes: "",
+          manual: true,
+        };
+      });
+      const raw = calculatePricing(lines, 1, state.services, true);
+      if (raw.costIncomplete)
+        fail("工程成本資料不完整，未能直接開Invoice。");
+      if (raw.blocked)
+        fail("成交額不足以覆蓋成本及基本佣金，未能直接開Invoice。");
+      const sales = state.actors.find(
+        (candidate) => candidate.id === input.salesId,
+      );
+      if (input.salesId && (!sales || sales.role !== "sales"))
+        fail("請選擇有效的銷售員。");
+      const supervisor = state.actors.find(
+        (candidate) => candidate.id === input.supervisorId,
+      );
+      if (
+        input.supervisorId &&
+        (!supervisor ||
+          !["supervisor", "head"].includes(supervisor.role))
+      )
+        fail("請選擇有效的Sales主管。");
+      const customer = this.syncCustomerProfile(
+        state,
+        actor,
+        normaliseCustomer(input.customer),
+        sales?.id ?? actor.id,
+        sales?.team ?? actor.team ?? "B",
+      );
+      const month = dateKey(DEMO_TODAY);
+      const sequence = (state.monthlySequences[month] ?? 0) + 1;
+      state.monthlySequences[month] = sequence;
+      const invoice: Invoice = {
+        id: uid("invoice"),
+        number: `DINV${yyMM(DEMO_TODAY)}${String(sequence).padStart(4, "0")}`,
+        quoteId: "",
+        versionId: "",
+        customer: deepCopy(customer),
+        lines: deepCopy(lines),
+        discount: 1,
+        netTotal: raw.total,
+        createdAt: input.date ? `${input.date}T09:00:00.000Z` : NOW,
+        actorId: actor.id,
+        supervisorId: supervisor?.id ?? actor.id,
+        category: input.category,
+        paymentPlan: this.installmentPlan(input.category, raw.total),
+        calculation: frozen(raw),
+      };
+      const quote: Quote = {
+        id: uid("quote"),
+        number: `DIRECT-${actor.code}-${yyMM()}-${String(state.quotes.length + 1).padStart(4, "0")}`,
+        ownerId: actor.id,
+        team: actor.team ?? "B",
+        versions: [
+          {
+            id: uid("version"),
+            index: 1,
+            customer: deepCopy(customer),
+            lines: deepCopy(lines),
+            discount: 1,
+            createdAt: input.date ? `${input.date}T09:00:00.000Z` : NOW,
+            reason: "直接開Invoice",
+          },
+        ],
+        createdAt: NOW,
+        updatedAt: NOW,
+        archived: false,
+        officeCategory: input.category,
+        orderCategories: [input.category],
+        directInvoice: true,
+        invoiceId: invoice.id,
+      };
+      invoice.quoteId = quote.id;
+      invoice.versionId = quote.versions[0].id;
+      state.quotes.push(quote);
+      state.invoices.push(invoice);
+      this.audit(state, {
+        quoteId: quote.id,
+        actorId: actor.id,
+        action: "direct_invoice_created",
+        detail: `直接開Invoice ${invoice.number}`,
+      });
+      output = deepCopy(invoice);
+    });
+    return this.isAdmin(actor) ? output : sanitiseInvoice(output, false);
+  }
+  createDirectInvoiceFromLines(
+    actorInput: Actor,
+    input: {
+      customer: Customer;
+      lines: QuoteLine[];
+      discount: number;
+      category: InvoiceCategory;
+      salesId?: string;
+      supervisorId?: string;
+      date?: string;
+    },
+  ): Invoice {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "invoice_clerk" && !this.isAdmin(actor))
+      fail("只有直接開單員或Super Admin可以直接開Invoice。");
+    let output!: Invoice;
+    this.mutate((state) => {
+      if (!Object.hasOwn(INVOICE_CATEGORY_NAMES, input.category))
+        fail("請選擇有效的訂單分類。");
+      if (!input.customer.name?.trim() || !input.customer.phone?.trim())
+        fail("請填寫客戶姓名及電話。");
+      if (!input.lines.length) fail("請最少加入一項工程。");
+      if (input.lines.some((line) => line.pricePending))
+        fail("有工程仍待報價，未能直接開Invoice。");
+      const lines = input.lines.map((line) => {
+        const service = state.services.find(
+          (candidate) => candidate.id === line.itemId,
+        );
+        if (service)
+          return { ...deepCopy(line), itemSnapshot: deepCopy(service) };
+        if (line.manual) return { ...deepCopy(line), manual: true };
+        fail(`找不到工程項目「${line.itemSnapshot.name}」。`);
+      });
+      const discount =
+        Number.isFinite(input.discount) && input.discount > 0
+          ? Math.min(1, input.discount)
+          : 1;
+      const raw = calculatePricing(lines, discount, state.services, true);
+      if (raw.costIncomplete)
+        fail("工程成本資料不完整，未能直接開Invoice。");
+      if (raw.blocked)
+        fail("成交額不足以覆蓋成本及基本佣金，未能直接開Invoice。");
+      const sales = state.actors.find(
+        (candidate) => candidate.id === input.salesId,
+      );
+      if (input.salesId && (!sales || sales.role !== "sales"))
+        fail("請選擇有效的銷售員。");
+      const supervisor = state.actors.find(
+        (candidate) => candidate.id === input.supervisorId,
+      );
+      if (
+        input.supervisorId &&
+        (!supervisor ||
+          !["supervisor", "head"].includes(supervisor.role))
+      )
+        fail("請選擇有效的Sales主管。");
+      const customer = this.syncCustomerProfile(
+        state,
+        actor,
+        normaliseCustomer(input.customer),
+        sales?.id ?? actor.id,
+        sales?.team ?? actor.team ?? "B",
+      );
+      const month = dateKey(DEMO_TODAY);
+      const sequence = (state.monthlySequences[month] ?? 0) + 1;
+      state.monthlySequences[month] = sequence;
+      const invoice: Invoice = {
+        id: uid("invoice"),
+        number: `DINV${yyMM(DEMO_TODAY)}${String(sequence).padStart(4, "0")}`,
+        quoteId: "",
+        versionId: "",
+        customer: deepCopy(customer),
+        lines: deepCopy(lines),
+        discount,
+        netTotal: raw.total,
+        createdAt: input.date ? `${input.date}T09:00:00.000Z` : NOW,
+        actorId: actor.id,
+        supervisorId: supervisor?.id ?? actor.id,
+        category: input.category,
+        paymentPlan: this.installmentPlan(input.category, raw.total),
+        calculation: frozen(raw),
+      };
+      const quote: Quote = {
+        id: uid("quote"),
+        number: `DIRECT-${actor.code}-${yyMM()}-${String(state.quotes.length + 1).padStart(4, "0")}`,
+        ownerId: sales?.id ?? actor.id,
+        team: sales?.team ?? actor.team ?? "B",
+        versions: [
+          {
+            id: uid("version"),
+            index: 1,
+            customer: deepCopy(customer),
+            lines: deepCopy(lines),
+            discount,
+            createdAt: input.date ? `${input.date}T09:00:00.000Z` : NOW,
+            reason: "直接開Invoice",
+          },
+        ],
+        createdAt: NOW,
+        updatedAt: NOW,
+        archived: false,
+        officeCategory: input.category,
+        orderCategories: [input.category],
+        directInvoice: true,
+        invoiceId: invoice.id,
+      };
+      invoice.quoteId = quote.id;
+      invoice.versionId = quote.versions[0].id;
+      state.quotes.push(quote);
+      state.invoices.push(invoice);
+      this.audit(state, {
+        quoteId: quote.id,
+        actorId: actor.id,
+        action: "direct_invoice_created",
+        detail: `直接開Invoice ${invoice.number}`,
+      });
+      output = deepCopy(invoice);
+    });
+    return this.isAdmin(actor) ? output : sanitiseInvoice(output, false);
   }
   issueInvoice(actorInput: Actor, quoteId: string): Invoice {
     const actor = this.actor(actorInput);
@@ -6761,6 +7043,7 @@ export function createSeedState(): AppState {
     },
     ...DEMO_CS_ACTORS,
     ...DEMO_ACCOUNTING_ACTORS,
+    DIRECT_INVOICE_CLERK,
     {
       id: "admin",
       name: "SuperAdmin",

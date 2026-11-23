@@ -12022,3 +12022,187 @@ textarea::placeholder {
 .engineering-table td:nth-child(5) { width: 14%; }
 .engineering-table td:nth-child(6) { width: 12%; }
 .engineering-table td:nth-child(7) { width: 10%; }
+
+.direct-invoice-preview {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid #dde5f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #263244;
+}
+.direct-invoice-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #0d1f3a;
+}
+.direct-invoice-preview-head img {
+  width: 250px;
+  max-width: 55%;
+  height: auto;
+}
+.direct-invoice-preview-head > div {
+  text-align: right;
+}
+.direct-invoice-preview-head h2 {
+  margin: 0;
+  color: #17253b;
+  font-size: 28px;
+}
+.direct-invoice-preview-head span {
+  color: #6d7888;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+}
+.direct-invoice-preview-meta,
+.direct-invoice-preview-customer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  color: #566478;
+  font-size: 13px;
+}
+.direct-invoice-preview-customer {
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: #f6f8fb;
+}
+.direct-invoice-preview-customer strong {
+  color: #17253b;
+  font-size: 16px;
+}
+.direct-invoice-preview .document-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.direct-invoice-preview .document-table th,
+.direct-invoice-preview .document-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #e3e9f2;
+  font-size: 12px;
+  text-align: left;
+}
+.direct-invoice-preview .document-table th {
+  background: #f1f5fa;
+  color: #5f6c7e;
+  font-weight: 600;
+}
+.direct-invoice-preview .document-table td:nth-child(3),
+.direct-invoice-preview .document-table td:nth-child(4),
+.direct-invoice-preview .document-table td:nth-child(5),
+.direct-invoice-preview .document-table th:nth-child(3),
+.direct-invoice-preview .document-table th:nth-child(4),
+.direct-invoice-preview .document-table th:nth-child(5) {
+  text-align: right;
+}
+.direct-invoice-preview-total {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: #f6f8fb;
+}
+.direct-invoice-preview-total span {
+  color: #6a7687;
+  font-size: 13px;
+}
+.direct-invoice-preview-total strong {
+  color: #17253b;
+  font-size: 22px;
+}
+@media (max-width: 700px) {
+  .direct-invoice-preview-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .direct-invoice-preview-head > div {
+    text-align: left;
+  }
+}
+
+.quote-wizard-layout.wizard-step-3 {
+  grid-template-columns: minmax(0, 1fr);
+}
+.handoff-quote-preview .direct-invoice-paper {
+  min-width: 680px;
+  min-height: 100%;
+  padding: 28px;
+  background: #fff;
+}
+@media (max-width: 800px) {
+  .handoff-quote-preview .direct-invoice-paper {
+    min-width: 0;
+    padding: 16px;
+  }
+}
+
+.handoff-preview-title {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 11px 16px;
+  border-bottom: 1px solid #d9e1eb;
+  background: #fff;
+  color: #27364b;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.direct-invoice-document {
+  width: 100%;
+  max-width: none;
+  min-height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+.handoff-quote-preview .direct-invoice-document .quotation-head {
+  padding: 24px 28px 18px;
+}
+.handoff-quote-preview .direct-invoice-document .quotation-sheet .document-table,
+.handoff-quote-preview .direct-invoice-document .document-table {
+  width: calc(100% - 56px);
+  margin: 18px 28px 0;
+}
+.handoff-quote-preview .direct-invoice-document .document-totals {
+  width: 330px;
+  margin: 16px 28px 18px auto;
+}
+.handoff-quote-preview .direct-invoice-document .quotation-bank,
+.handoff-quote-preview .direct-invoice-document .document-terms,
+.handoff-quote-preview .direct-invoice-document .quotation-footer {
+  margin-left: 28px;
+  margin-right: 28px;
+}
+
+.direct-confirm-actions {
+  justify-content: flex-end;
+}
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .handoff-quote-preview,
+  .handoff-quote-preview * {
+    visibility: visible;
+  }
+  .handoff-quote-preview {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    border: 0;
+  }
+  .handoff-preview-title {
+    display: none;
+  }
+}

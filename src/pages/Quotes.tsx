@@ -14,6 +14,7 @@ import {
   Trash2,
   Check,
   Printer,
+  Download,
   PenLine,
   FileCheck2,
   Send,
@@ -22,6 +23,7 @@ import {
   Search as SearchIcon,
 } from "lucide-react";
 import { getAttachmentBlob, useApp } from "../context";
+import { exportDirectInvoiceExcel } from "../exportDirectInvoiceExcel";
 import {
   Customer,
   Quote,
@@ -494,9 +496,11 @@ export function Quotes() {
 export function CustomerForm({
   value,
   onChange,
+  hideNotes = false,
 }: {
   value: Customer;
   onChange: (v: Customer) => void;
+  hideNotes?: boolean;
 }) {
   const address = composeCustomerAddress(value);
   const set = (key: keyof Customer, val: string) => {
@@ -607,6 +611,7 @@ export function CustomerForm({
           {address || "請先填寫上方地址資料"}
         </output>
       </Field>
+      {!hideNotes && (
       <div className="form-grid two">
         <Field label="Sales備註">
           <textarea
@@ -627,6 +632,7 @@ export function CustomerForm({
           />
         </Field>
       </div>
+      )}
     </>
   );
 }
@@ -637,10 +643,23 @@ const QUOTE_WIZARD_STEPS = [
   ["4", "遞交office"],
 ];
 
-export function QuoteWizardProgress({ step }: { step: number }) {
+export function QuoteWizardProgress({
+  step,
+  directInvoice = false,
+}: {
+  step: number;
+  directInvoice?: boolean;
+}) {
+  const steps = directInvoice
+    ? [
+        ["1", "發票資料"],
+        ["2", "工程項目"],
+        ["3", "確認發票"],
+      ]
+    : QUOTE_WIZARD_STEPS;
   return (
     <div className="quote-wizard-progress">
-      {QUOTE_WIZARD_STEPS.map(([number, label], index) => {
+      {steps.map(([number, label], index) => {
         const done = step > index + 1;
         const active = step === index + 1;
         return (
@@ -664,7 +683,9 @@ export function QuoteEditor() {
   const nav = useNavigate();
   const resumeStep = searchParams.get("step");
   const orderEdit = searchParams.get("order") === "1";
-  const wizard = !id || orderEdit || resumeStep === "1" || resumeStep === "2";
+  const directInvoice = searchParams.get("direct") === "1";
+  const wizard =
+    !id || orderEdit || directInvoice || resumeStep === "1" || resumeStep === "2";
   let existing: Quote | undefined;
   try {
     if (id) existing = engine.getQuote(actor, id);
@@ -700,9 +721,22 @@ export function QuoteEditor() {
       : "custom",
   );
   const [reason, setReason] = useState("");
-  const [wizardStep, setWizardStep] = useState<1 | 2>(
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(
     orderEdit || resumeStep === "2" ? 2 : 1,
   );
+  const today = new Date();
+  const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const [invoiceDate, setInvoiceDate] = useState(todayValue);
+  const allActors = engine.listActors();
+  const salesOptions = allActors.filter((candidate) => candidate.role === "sales");
+  const supervisorOptions = allActors.filter((candidate) =>
+    ["supervisor", "head"].includes(candidate.role),
+  );
+  const [salesId, setSalesId] = useState(salesOptions[0]?.id ?? "");
+  const [supervisorId, setSupervisorId] = useState(
+    supervisorOptions[0]?.id ?? "",
+  );
+  const [exporting, setExporting] = useState(false);
   const [exitConfirm, setExitConfirm] = useState(false);
   const [picker, setPicker] = useState(false);
   const [customers, setCustomers] = useState(false);
@@ -757,14 +791,23 @@ export function QuoteEditor() {
   try {
     pricing = engine.preview(actor, lines, discount);
   } catch {}
+  const directPaymentPlan = directInvoice
+    ? engine.previewInstallmentPlan("self-pay", pricing.total)
+    : [];
+  const invoiceDateDisplay = invoiceDate
+    ? invoiceDate.split("-").reverse().join(" / ")
+    : "—";
   const clerkEditor = ["clerk", "finance_supervisor"].includes(actor.role);
   const own =
     salesRoles.includes(actor.role) &&
     (!existing || existing.ownerId === actor.id);
   const canEdit =
-    own || clerkEditor || ["admin", "admin_staff"].includes(actor.role);
+    own ||
+    clerkEditor ||
+    (directInvoice && actor.role === "invoice_clerk") ||
+    ["admin", "admin_staff"].includes(actor.role);
   useEffect(() => {
-    if (!wizard) {
+    if (!wizard || directInvoice) {
       setQuoteDraftGuard(null);
       return;
     }
@@ -791,6 +834,7 @@ export function QuoteEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     wizard,
+    directInvoice,
     wizardStep,
     customer,
     lines,
@@ -811,6 +855,50 @@ export function QuoteEditor() {
   const pendingCount = lines.filter((line) => line.pricePending).length;
   const onlyCustom =
     lines.length > 0 && lines.every((line) => line.customWork);
+  function createDirectInvoice() {
+    const invoice = run(
+      () =>
+        engine.createDirectInvoiceFromLines(actor, {
+          customer,
+          lines,
+          discount,
+          category: "self-pay",
+          salesId,
+          supervisorId,
+          date: invoiceDate,
+        }),
+      undefined,
+    );
+    if (!invoice) return;
+    run(() => invoice, `發票${invoice.number}已建立`);
+    setWizardStep(1);
+    setCustomer(structuredClone(EMPTY_CUSTOMER));
+    setLines([]);
+    setDiscountMode("none");
+    setDiscountValue(0);
+    setReason("");
+    setInvoiceDate(todayValue);
+    setSalesId(salesOptions[0]?.id ?? "");
+    setSupervisorId(supervisorOptions[0]?.id ?? "");
+  }
+  async function exportExcel() {
+    setExporting(true);
+    try {
+      await exportDirectInvoiceExcel({
+        date: invoiceDate,
+        customer,
+        lines,
+        pricing,
+        paymentPlan: directPaymentPlan,
+      });
+    } catch (error) {
+      window.alert(
+        error instanceof Error ? error.message : "Excel 匯出失敗。",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
   function save(destination: "draft" | "deal" | "handoff") {
     const q = run(
       () =>
@@ -1013,11 +1101,31 @@ export function QuoteEditor() {
   return (
     <>
       <PageHead
-        title={orderEdit ? "修改報價" : wizard ? "建立報價" : "修改報價"}
+        title={
+          directInvoice
+            ? "建立 Invoice"
+            : orderEdit
+              ? "修改報價"
+              : wizard
+                ? "建立報價"
+                : "修改報價"
+        }
         actions={
           <>
             <Button
               onClick={() => {
+                if (directInvoice) {
+                  if (wizardStep === 3) {
+                    setWizardStep(2);
+                    return;
+                  }
+                  if (wizardStep === 2) {
+                    setWizardStep(1);
+                    return;
+                  }
+                  nav("/direct-invoices");
+                  return;
+                }
                 if (orderEdit) {
                   nav(`/quotes/${id}`);
                   return;
@@ -1039,7 +1147,7 @@ export function QuoteEditor() {
               <Button variant="primary" onClick={saveOrder}>
                 儲存修改
               </Button>
-            ) : (
+            ) : directInvoice ? null : (
               <Button
                 variant={clerkEditor ? "primary" : "secondary"}
                 onClick={() => save("draft")}
@@ -1057,7 +1165,12 @@ export function QuoteEditor() {
           </>
         }
       />
-      {wizard && !orderEdit && <QuoteWizardProgress step={wizardStep} />}
+      {wizard && !orderEdit && (
+        <QuoteWizardProgress
+          step={wizardStep}
+          directInvoice={directInvoice}
+        />
+      )}
       {clerkEditor && (
         <p className="inline-warning">
           開單員更正模式：儲存後會建立新版本，項目及價錢會更新；原版本保留，
@@ -1068,15 +1181,59 @@ export function QuoteEditor() {
         className={`editor-layout ${wizard ? `quote-wizard-layout wizard-step-${wizardStep}` : ""}`}
       >
         <div className="editor-main">
+          {(!wizard || wizardStep === 1) && directInvoice && (
+            <Section number="01" title="銷售員資料">
+              <div className="form-grid three">
+                <Field label="發票日期" required>
+                  <input
+                    aria-label="發票日期"
+                    type="date"
+                    value={invoiceDate}
+                    onChange={(event) => setInvoiceDate(event.target.value)}
+                  />
+                </Field>
+                <Field label="銷售員" required>
+                  <select
+                    aria-label="銷售員"
+                    value={salesId}
+                    onChange={(event) => setSalesId(event.target.value)}
+                  >
+                    {salesOptions.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.name}（{candidate.code}）
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Sales主管" required>
+                  <select
+                    aria-label="Sales主管"
+                    value={supervisorId}
+                    onChange={(event) => setSupervisorId(event.target.value)}
+                  >
+                    {supervisorOptions.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.name}（{candidate.code}）
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+            </Section>
+          )}
           {(!wizard || wizardStep === 1) && (
           <Section
-            number="01"
+            number={directInvoice ? "02" : "01"}
             title="客戶資料"
             action={
               <Button onClick={() => setCustomers(true)}>選擇現有客戶</Button>
             }
           >
-            <CustomerForm value={customer} onChange={setCustomer} />
+            <CustomerForm
+              value={customer}
+              onChange={setCustomer}
+              hideNotes={directInvoice}
+            />
           </Section>
           )}
           {(!wizard || wizardStep === 2) && (
@@ -1358,6 +1515,7 @@ export function QuoteEditor() {
             )}
             {wizard && (
               <div className="quote-step2-summary">
+                {!directInvoice && (
                 <div className="quote-step2-discount">
                   <label>
                     全單折扣
@@ -1403,6 +1561,7 @@ export function QuoteEditor() {
                     </label>
                   )}
                 </div>
+                )}
                 <div className="quote-step2-total">
                   <span>成交金額</span>
                   <strong>{money(pricing.total)}</strong>
@@ -1410,6 +1569,231 @@ export function QuoteEditor() {
               </div>
             )}
           </Section>
+          )}
+          {directInvoice && wizardStep === 3 && (
+            <>
+              <h2 className="quote-step-title">3. 確認發票</h2>
+              <div className="handoff-actions direct-confirm-actions">
+                <Button
+                  variant="primary"
+                  onClick={() => window.print()}
+                >
+                  <Printer size={18} /> 列印
+                </Button>
+                <Button onClick={() => setWizardStep(2)}>修改</Button>
+                <Button
+                  onClick={exportExcel}
+                  disabled={exporting}
+                >
+                  <Download size={18} /> {exporting ? "匯出中…" : "匯出"}
+                </Button>
+              </div>
+              <div className="handoff-print-grid">
+                <div className="handoff-print-settings">
+                  <h3>發票摘要</h3>
+                  <Field label="發票日期">
+                    <input type="date" value={invoiceDate} readOnly />
+                  </Field>
+                  <Field label="銷售員">
+                    <input
+                      value={
+                        salesOptions.find((item) => item.id === salesId)?.name ||
+                        "—"
+                      }
+                      readOnly
+                    />
+                  </Field>
+                  <Field label="Sales主管">
+                    <input
+                      value={
+                        supervisorOptions.find(
+                          (item) => item.id === supervisorId,
+                        )?.name || "—"
+                      }
+                      readOnly
+                    />
+                  </Field>
+                  <div className="handoff-prepared">
+                    <span>正式發票號</span>
+                    <strong>建立後產生</strong>
+                    <span>列印日期</span>
+                    <strong>{invoiceDate}</strong>
+                    <span>銷售員</span>
+                    <strong>
+                      {salesOptions.find((item) => item.id === salesId)?.name ||
+                        "—"}
+                    </strong>
+                    <span>Sales主管</span>
+                    <strong>
+                      {supervisorOptions.find(
+                        (item) => item.id === supervisorId,
+                      )?.name || "—"}
+                    </strong>
+                  </div>
+                  <p className="handoff-note">
+                    預覽後按「確定建立發票」正式建立發票；此步驟不設報價單或客戶簽署。
+                  </p>
+                </div>
+                <div
+                  className="handoff-quote-preview"
+                  id="direct-invoice-preview"
+                >
+                  <div className="handoff-preview-title">預覽發票</div>
+                  <article className="quotation-sheet invoice-sheet direct-invoice-document">
+                    <header className="quotation-head">
+                      <div className="quotation-brand">
+                        <img
+                          src="/company-logo.png"
+                          alt="好幫手家居裝修設計有限公司"
+                        />
+                      </div>
+                      <div className="quotation-contact">
+                        <span>
+                          九龍荔枝角長義街 2-4 號新昌工業大廈 2 樓 202A 室
+                        </span>
+                        <span>info@helpfulhomedesign.com.hk</span>
+                        <span>
+                          +852 6600 2878 · +852 3615 0180 · 3615 0198
+                        </span>
+                      </div>
+                    </header>
+                    <div className="quotation-title">
+                      <h1>工程Invoice</h1>
+                      <span>INVOICE</span>
+                    </div>
+                    <div className="quotation-meta-line">
+                      <div>
+                        No. <strong className="document-number">待建立</strong>
+                      </div>
+                      <div>
+                        日期：<strong>{invoiceDateDisplay}</strong>
+                      </div>
+                    </div>
+                    <div className="quotation-customer-lines">
+                      <div>
+                        <span>客戶姓名：</span>
+                        <strong>{customer.name || "待填客戶"}</strong>
+                        <span className="quotation-phone-label">
+                          聯絡電話：
+                        </span>
+                        <strong>{customer.phone}</strong>
+                      </div>
+                      <div>
+                        <span>客戶地址：</span>
+                        <strong>{customer.address || "待填地址"}</strong>
+                      </div>
+                    </div>
+                    <table className="document-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>工程項目</th>
+                          <th>實際範圍</th>
+                          <th className="numeric">單價</th>
+                          <th className="numeric">金額</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lines.map((line, index) => {
+                          const amount =
+                            pricing.lineAmounts.find(
+                              (item) => item.id === line.id,
+                            )?.amount ?? 0;
+                          const range =
+                            line.itemSnapshot.measure === "area"
+                              ? `${line.length} × ${line.width} ${line.dimensionUnit}`
+                              : line.itemSnapshot.measure === "length"
+                                ? `${line.length} ${line.dimensionUnit}`
+                                : line.itemSnapshot.measure === "fixed"
+                                  ? "一式"
+                                  : `${line.quantity} ${line.itemSnapshot.unit}`;
+                          return (
+                            <tr key={line.id}>
+                              <td>{index + 1}</td>
+                              <td>
+                                <strong>{line.itemSnapshot.name}</strong>
+                                <small>
+                                  {line.position}
+                                  {line.style ? " · " + line.style : ""}
+                                </small>
+                              </td>
+                              <td>
+                                {range}
+                                {pricing.lineAmounts.find(
+                                  (item) => item.id === line.id,
+                                )?.minApplied && (
+                                  <small>按最低收費計算</small>
+                                )}
+                              </td>
+                              <td className="numeric">
+                                {money(line.itemSnapshot.price)}
+                                <small>／{line.itemSnapshot.unit}</small>
+                              </td>
+                              <td className="numeric">{money(amount)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    <div className="document-totals">
+                      <div>
+                        <span>工程小計</span>
+                        <strong>{money(pricing.subtotal)}</strong>
+                      </div>
+                      <div>
+                        <span>折扣 原價</span>
+                        <strong>−HK$0.00</strong>
+                      </div>
+                      <div className="total">
+                        <span>成交總額</span>
+                        <strong>{money(pricing.total)}</strong>
+                      </div>
+                      {directPaymentPlan.map((stage) => (
+                        <div key={stage.installment}>
+                          <span>
+                            第{stage.installment}期 · {stage.label}{" "}
+                            {stage.percentage}%
+                          </span>
+                          <strong>{money(stage.amount)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="quotation-bank">
+                      <div>
+                        <span>客戶入帳戶口</span>
+                        <strong>HELPFUL HOME DESIGN LIMITED</strong>
+                      </div>
+                      <div>
+                        <span>中國銀行</span>
+                        <strong>012 866 2028 1718</strong>
+                      </div>
+                      <div>
+                        <span>匯豐銀行</span>
+                        <strong>004 521 363952 838</strong>
+                      </div>
+                      <div>
+                        <span>富邦銀行</span>
+                        <strong>128 865 02105259</strong>
+                      </div>
+                    </div>
+                    <div className="document-terms">
+                      <h3>付款及收款資料</h3>
+                      <p>
+                        此 Invoice 按已確認的報價版本發出；收款計劃及期款以開單員確認的付款安排為準。
+                      </p>
+                      <p>
+                        此工程單經客戶確認簽署後正式生效，表示客戶同意清楚明白報價單所有維修項目內容不能減少。如客戶要求取消工程，所付之訂金將不獲退還。如需更改工程日期，請於工程前兩星期通知，否則公司將有機會收取客人港幣 $1,500 行政費用。
+                      </p>
+                      <p>本報價單不等同收據；收款後將另行發出收據。</p>
+                    </div>
+                    <footer className="quotation-footer">
+                      <span>好幫手家居裝修設計有限公司</span>
+                      <span>工程 Invoice · 待建立</span>
+                    </footer>
+                  </article>
+                </div>
+              </div>
+            </>
           )}
           {(base?.signature || clerkEditor) && !orderEdit && (
             <Section title="版本修改原因">
@@ -1533,12 +1917,32 @@ export function QuoteEditor() {
       </div>
       {wizard && !orderEdit && (
         <div className="quote-wizard-footer">
-          {wizardStep === 2 && (
-            <Button onClick={() => setWizardStep(1)}>上一步</Button>
+          {(wizardStep === 2 || wizardStep === 3) && (
+            <Button onClick={() => setWizardStep((wizardStep - 1) as 1 | 2)}>
+              上一步
+            </Button>
           )}
           {wizardStep === 1 ? (
             <Button variant="primary" onClick={() => setWizardStep(2)}>
               下一步 <ArrowRight size={18} />
+            </Button>
+          ) : wizardStep === 2 && directInvoice ? (
+            <Button
+              variant="primary"
+              disabled={
+                pendingCount > 0 ||
+                onlyCustom ||
+                !lines.length ||
+                !customer.name.trim() ||
+                !customer.phone.trim()
+              }
+              onClick={() => setWizardStep(3)}
+            >
+              下一步：預覽發票 <ArrowRight size={18} />
+            </Button>
+          ) : wizardStep === 3 && directInvoice ? (
+            <Button variant="primary" onClick={createDirectInvoice}>
+              確定建立發票 <ArrowRight size={18} />
             </Button>
           ) : (
             <Button

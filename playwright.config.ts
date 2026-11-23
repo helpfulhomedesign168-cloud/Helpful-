@@ -5,6 +5,18 @@ export default defineConfig({
   workers: 1,
   use: {
     baseURL: "http://127.0.0.1:3000",
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: "http://127.0.0.1:3000",
+          localStorage: [
+            { name: "homeflow-sales-workspace", value: "1" },
+            { name: "homeflow-legacy-clerk", value: "1" },
+          ],
+        },
+      ],
+    },
     headless: true,
     viewport: { width: 1440, height: 1000 },
     trace: "retain-on-failure",
