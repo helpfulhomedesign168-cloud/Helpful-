@@ -1182,6 +1182,9 @@ export class Engine {
     ];
     return priority.find((category) => categories?.includes(category));
   }
+  previewInstallmentPlan(category: InvoiceCategory, total: number) {
+    return this.installmentPlan(category, total);
+  }
   private installmentPlan(
     category: InvoiceCategory,
     total: number,

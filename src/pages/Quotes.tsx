@@ -652,7 +652,7 @@ export function QuoteWizardProgress({
     ? [
         ["1", "發票資料"],
         ["2", "工程項目"],
-        ["3", "列印發票"],
+        ["3", "確認發票"],
       ]
     : QUOTE_WIZARD_STEPS;
   return (
@@ -788,6 +788,12 @@ export function QuoteEditor() {
   try {
     pricing = engine.preview(actor, lines, discount);
   } catch {}
+  const directPaymentPlan = directInvoice
+    ? engine.previewInstallmentPlan("self-pay", pricing.total)
+    : [];
+  const invoiceDateDisplay = invoiceDate
+    ? invoiceDate.split("-").reverse().join(" / ")
+    : "—";
   const clerkEditor = ["clerk", "finance_supervisor"].includes(actor.role);
   const own =
     salesRoles.includes(actor.role) &&
@@ -1535,14 +1541,10 @@ export function QuoteEditor() {
           )}
           {directInvoice && wizardStep === 3 && (
             <>
-              <h2 className="quote-step-title">3. 列印發票</h2>
+              <h2 className="quote-step-title">3. 確認發票</h2>
               <div className="handoff-actions">
                 <Button variant="primary" onClick={createDirectInvoice}>
                   <Printer size={18} /> 列印發票
-                </Button>
-                <Button onClick={() => setWizardStep(2)}>修改發票</Button>
-                <Button onClick={() => nav("/direct-invoices")}>
-                  返回直接開單
                 </Button>
               </div>
               <div className="handoff-print-grid">
@@ -1588,7 +1590,7 @@ export function QuoteEditor() {
                     </strong>
                   </div>
                   <p className="handoff-note">
-                    預覽後按「建立並列印 Invoice」正式建立發票；此步驟不設報價單或客戶簽署。
+                    預覽後按「確定建立發票」正式建立發票；此步驟不設報價單或客戶簽署。
                   </p>
                   <Button
                     className="full-width"
@@ -1607,44 +1609,58 @@ export function QuoteEditor() {
                   id="direct-invoice-preview"
                 >
                   <div className="handoff-preview-title">預覽發票</div>
-                  <div className="direct-invoice-paper">
-                    <header className="direct-invoice-preview-head">
-                      <img
-                        src="/company-logo.png"
-                        alt="好幫手家居裝修設計有限公司"
-                      />
-                      <div>
-                        <h2>發票</h2>
-                        <span>INVOICE</span>
+                  <article className="quotation-sheet invoice-sheet direct-invoice-document">
+                    <header className="quotation-head">
+                      <div className="quotation-brand">
+                        <img
+                          src="/company-logo.png"
+                          alt="好幫手家居裝修設計有限公司"
+                        />
+                      </div>
+                      <div className="quotation-contact">
+                        <span>
+                          九龍荔枝角長義街 2-4 號新昌工業大廈 2 樓 202A 室
+                        </span>
+                        <span>info@helpfulhomedesign.com.hk</span>
+                        <span>
+                          +852 6600 2878 · +852 3615 0180 · 3615 0198
+                        </span>
                       </div>
                     </header>
-                    <div className="direct-invoice-preview-meta">
-                      <span>日期：{invoiceDate}</span>
-                      <span>
-                        銷售員：
-                        {salesOptions.find((item) => item.id === salesId)
-                          ?.name || "—"}
-                      </span>
-                      <span>
-                        主管：
-                        {supervisorOptions.find(
-                          (item) => item.id === supervisorId,
-                        )?.name || "—"}
-                      </span>
+                    <div className="quotation-title">
+                      <h1>工程Invoice</h1>
+                      <span>INVOICE</span>
                     </div>
-                    <div className="direct-invoice-preview-customer">
-                      <strong>{customer.name || "待填客戶"}</strong>
-                      <span>{customer.phone}</span>
-                      <span>{customer.address || "待填地址"}</span>
+                    <div className="quotation-meta-line">
+                      <div>
+                        No. <strong className="document-number">待建立</strong>
+                      </div>
+                      <div>
+                        日期：<strong>{invoiceDateDisplay}</strong>
+                      </div>
+                    </div>
+                    <div className="quotation-customer-lines">
+                      <div>
+                        <span>客戶姓名：</span>
+                        <strong>{customer.name || "待填客戶"}</strong>
+                        <span className="quotation-phone-label">
+                          聯絡電話：
+                        </span>
+                        <strong>{customer.phone}</strong>
+                      </div>
+                      <div>
+                        <span>客戶地址：</span>
+                        <strong>{customer.address || "待填地址"}</strong>
+                      </div>
                     </div>
                     <table className="document-table">
                       <thead>
                         <tr>
                           <th>#</th>
                           <th>工程項目</th>
-                          <th>數量</th>
-                          <th>單價</th>
-                          <th>金額</th>
+                          <th>實際範圍</th>
+                          <th className="numeric">單價</th>
+                          <th className="numeric">金額</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1653,27 +1669,98 @@ export function QuoteEditor() {
                             pricing.lineAmounts.find(
                               (item) => item.id === line.id,
                             )?.amount ?? 0;
+                          const range =
+                            line.itemSnapshot.measure === "area"
+                              ? `${line.length} × ${line.width} ${line.dimensionUnit}`
+                              : line.itemSnapshot.measure === "length"
+                                ? `${line.length} ${line.dimensionUnit}`
+                                : line.itemSnapshot.measure === "fixed"
+                                  ? "一式"
+                                  : `${line.quantity} ${line.itemSnapshot.unit}`;
                           return (
                             <tr key={line.id}>
                               <td>{index + 1}</td>
                               <td>
                                 <strong>{line.itemSnapshot.name}</strong>
+                                <small>
+                                  {line.position}
+                                  {line.style ? " · " + line.style : ""}
+                                </small>
                               </td>
                               <td>
-                                {line.quantity} {line.itemSnapshot.unit}
+                                {range}
+                                {pricing.lineAmounts.find(
+                                  (item) => item.id === line.id,
+                                )?.minApplied && (
+                                  <small>按最低收費計算</small>
+                                )}
                               </td>
-                              <td>{money(line.itemSnapshot.price)}</td>
-                              <td>{money(amount)}</td>
+                              <td className="numeric">
+                                {money(line.itemSnapshot.price)}
+                                <small>／{line.itemSnapshot.unit}</small>
+                              </td>
+                              <td className="numeric">{money(amount)}</td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
-                    <div className="direct-invoice-preview-total">
-                      <span>發票總額</span>
-                      <strong>{money(pricing.total)}</strong>
+                    <div className="document-totals">
+                      <div>
+                        <span>工程小計</span>
+                        <strong>{money(pricing.subtotal)}</strong>
+                      </div>
+                      <div>
+                        <span>折扣 原價</span>
+                        <strong>−HK$0.00</strong>
+                      </div>
+                      <div className="total">
+                        <span>成交總額</span>
+                        <strong>{money(pricing.total)}</strong>
+                      </div>
+                      {directPaymentPlan.map((stage) => (
+                        <div key={stage.installment}>
+                          <span>
+                            第{stage.installment}期 · {stage.label}{" "}
+                            {stage.percentage}%
+                          </span>
+                          <strong>{money(stage.amount)}</strong>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                    <div className="quotation-bank">
+                      <div>
+                        <span>客戶入帳戶口</span>
+                        <strong>HELPFUL HOME DESIGN LIMITED</strong>
+                      </div>
+                      <div>
+                        <span>中國銀行</span>
+                        <strong>012 866 2028 1718</strong>
+                      </div>
+                      <div>
+                        <span>匯豐銀行</span>
+                        <strong>004 521 363952 838</strong>
+                      </div>
+                      <div>
+                        <span>富邦銀行</span>
+                        <strong>128 865 02105259</strong>
+                      </div>
+                    </div>
+                    <div className="document-terms">
+                      <h3>付款及收款資料</h3>
+                      <p>
+                        此 Invoice 按已確認的報價版本發出；收款計劃及期款以開單員確認的付款安排為準。
+                      </p>
+                      <p>
+                        此工程單經客戶確認簽署後正式生效，表示客戶同意清楚明白報價單所有維修項目內容不能減少。如客戶要求取消工程，所付之訂金將不獲退還。如需更改工程日期，請於工程前兩星期通知，否則公司將有機會收取客人港幣 $1,500 行政費用。
+                      </p>
+                      <p>本報價單不等同收據；收款後將另行發出收據。</p>
+                    </div>
+                    <footer className="quotation-footer">
+                      <span>好幫手家居裝修設計有限公司</span>
+                      <span>工程 Invoice · 待建立</span>
+                    </footer>
+                  </article>
                 </div>
               </div>
             </>
@@ -1825,7 +1912,7 @@ export function QuoteEditor() {
             </Button>
           ) : wizardStep === 3 && directInvoice ? (
             <Button variant="primary" onClick={createDirectInvoice}>
-              建立並列印 Invoice <ArrowRight size={18} />
+              確定建立發票 <ArrowRight size={18} />
             </Button>
           ) : (
             <Button

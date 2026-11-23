@@ -12156,3 +12156,29 @@ textarea::placeholder {
   font-weight: 600;
   text-align: center;
 }
+
+.direct-invoice-document {
+  width: 100%;
+  max-width: none;
+  min-height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+.handoff-quote-preview .direct-invoice-document .quotation-head {
+  padding: 24px 28px 18px;
+}
+.handoff-quote-preview .direct-invoice-document .quotation-sheet .document-table,
+.handoff-quote-preview .direct-invoice-document .document-table {
+  width: calc(100% - 56px);
+  margin: 18px 28px 0;
+}
+.handoff-quote-preview .direct-invoice-document .document-totals {
+  width: 330px;
+  margin: 16px 28px 18px auto;
+}
+.handoff-quote-preview .direct-invoice-document .quotation-bank,
+.handoff-quote-preview .direct-invoice-document .document-terms,
+.handoff-quote-preview .direct-invoice-document .quotation-footer {
+  margin-left: 28px;
+  margin-right: 28px;
+}
