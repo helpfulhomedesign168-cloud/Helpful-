@@ -12182,3 +12182,27 @@ textarea::placeholder {
   margin-left: 28px;
   margin-right: 28px;
 }
+
+.direct-confirm-actions {
+  justify-content: flex-end;
+}
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .handoff-quote-preview,
+  .handoff-quote-preview * {
+    visibility: visible;
+  }
+  .handoff-quote-preview {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    border: 0;
+  }
+  .handoff-preview-title {
+    display: none;
+  }
+}

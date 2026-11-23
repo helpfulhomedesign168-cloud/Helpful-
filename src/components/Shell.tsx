@@ -58,7 +58,7 @@ export const roleHome = (role: string) =>
     : role === "finance_supervisor"
       ? "/accounting-dashboard"
       : role === "invoice_clerk"
-      ? "/direct-invoices"
+      ? "/quotes/new?direct=1"
       : role === "clerk"
         ? "/submissions"
       : role === "cs" || role === "cs_supervisor"
@@ -129,7 +129,7 @@ export function Shell() {
           ]
         : actor.role === "invoice_clerk"
         ? [
-            ["/direct-invoices", "直接開單", Receipt],
+            ["/quotes/new?direct=1", "建立發票", Receipt],
             ["/invoices", "單據管理", Files],
             ["/customers", "客戶", Users],
             ["/municipal-orders", "市政單", FileText],

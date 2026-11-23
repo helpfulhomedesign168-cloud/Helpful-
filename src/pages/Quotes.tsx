@@ -864,9 +864,19 @@ export function QuoteEditor() {
           supervisorId,
           date: invoiceDate,
         }),
-      "Invoice已建立。",
+      undefined,
     );
-    if (invoice) nav("/documents/invoice/" + invoice.id);
+    if (!invoice) return;
+    run(() => invoice, `發票${invoice.number}已建立`);
+    setWizardStep(1);
+    setCustomer(structuredClone(EMPTY_CUSTOMER));
+    setLines([]);
+    setDiscountMode("none");
+    setDiscountValue(0);
+    setReason("");
+    setInvoiceDate(todayValue);
+    setSalesId(salesOptions[0]?.id ?? "");
+    setSupervisorId(supervisorOptions[0]?.id ?? "");
   }
   function save(destination: "draft" | "deal" | "handoff") {
     const q = run(
@@ -1542,10 +1552,14 @@ export function QuoteEditor() {
           {directInvoice && wizardStep === 3 && (
             <>
               <h2 className="quote-step-title">3. 確認發票</h2>
-              <div className="handoff-actions">
-                <Button variant="primary" onClick={createDirectInvoice}>
-                  <Printer size={18} /> 列印發票
+              <div className="handoff-actions direct-confirm-actions">
+                <Button
+                  variant="primary"
+                  onClick={() => window.print()}
+                >
+                  <Printer size={18} /> 列印
                 </Button>
+                <Button onClick={() => setWizardStep(2)}>修改</Button>
               </div>
               <div className="handoff-print-grid">
                 <div className="handoff-print-settings">
@@ -1592,17 +1606,6 @@ export function QuoteEditor() {
                   <p className="handoff-note">
                     預覽後按「確定建立發票」正式建立發票；此步驟不設報價單或客戶簽署。
                   </p>
-                  <Button
-                    className="full-width"
-                    variant="primary"
-                    onClick={() =>
-                      document
-                        .getElementById("direct-invoice-preview")
-                        ?.scrollIntoView({ behavior: "smooth" })
-                    }
-                  >
-                    預覽發票
-                  </Button>
                 </div>
                 <div
                   className="handoff-quote-preview"

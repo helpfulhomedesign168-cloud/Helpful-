@@ -8,11 +8,6 @@ async function switchRole(page: import("@playwright/test").Page, name: string) {
 test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }) => {
   await page.goto("/");
   await switchRole(page, "直接開單員");
-  await expect(page).toHaveURL(/\/direct-invoices$/);
-  await expect(
-    page.getByRole("heading", { name: "直接開 Invoice", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "新增 Invoice", exact: true }).first().click();
   await expect(page).toHaveURL(/\/quotes\/new\?direct=1$/);
   await expect(
     page.getByRole("heading", { name: "銷售員資料", exact: false }),
@@ -47,7 +42,9 @@ test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }
   await expect(page.getByText("預覽發票", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("INVOICE", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /確定建立發票/ }).click();
-  await expect(page).toHaveURL(/\/documents\/invoice\//);
-  await expect(page.getByText("直開測試客戶", { exact: false })).toBeVisible();
-  await expect(page.getByText(/DINV/).first()).toBeVisible();
+  await expect(page).toHaveURL(/\/quotes\/new\?direct=1$/);
+  await expect(page.getByText(/發票DINV\d+已建立/)).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "銷售員資料", exact: false }),
+  ).toBeVisible();
 });
