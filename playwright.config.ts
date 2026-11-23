@@ -12,6 +12,7 @@ export default defineConfig({
           origin: "http://127.0.0.1:3000",
           localStorage: [
             { name: "homeflow-sales-workspace", value: "1" },
+            { name: "homeflow-legacy-clerk", value: "1" },
           ],
         },
       ],
