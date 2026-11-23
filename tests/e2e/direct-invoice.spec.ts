@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { statSync } from "node:fs";
 
 async function switchRole(page: import("@playwright/test").Page, name: string) {
   await page.locator(".actor-button").click();
@@ -41,6 +42,13 @@ test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }
   ).toBeVisible();
   await expect(page.getByText("預覽發票", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("INVOICE", { exact: true })).toBeVisible();
+  const downloadPromise = page.waitForEvent("download", { timeout: 30000 });
+  await page.getByRole("button", { name: "匯出", exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.xlsx$/);
+  const downloadPath = await download.path();
+  expect(downloadPath).not.toBeNull();
+  expect(statSync(downloadPath!).size).toBeGreaterThan(1000);
   await page.getByRole("button", { name: /確定建立發票/ }).click();
   await expect(page).toHaveURL(/\/quotes\/new\?direct=1$/);
   await expect(page.getByText(/發票DINV\d+已建立/)).toBeVisible();

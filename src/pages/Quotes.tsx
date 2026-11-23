@@ -14,6 +14,7 @@ import {
   Trash2,
   Check,
   Printer,
+  Download,
   PenLine,
   FileCheck2,
   Send,
@@ -22,6 +23,7 @@ import {
   Search as SearchIcon,
 } from "lucide-react";
 import { getAttachmentBlob, useApp } from "../context";
+import { exportDirectInvoiceExcel } from "../exportDirectInvoiceExcel";
 import {
   Customer,
   Quote,
@@ -734,6 +736,7 @@ export function QuoteEditor() {
   const [supervisorId, setSupervisorId] = useState(
     supervisorOptions[0]?.id ?? "",
   );
+  const [exporting, setExporting] = useState(false);
   const [exitConfirm, setExitConfirm] = useState(false);
   const [picker, setPicker] = useState(false);
   const [customers, setCustomers] = useState(false);
@@ -877,6 +880,24 @@ export function QuoteEditor() {
     setInvoiceDate(todayValue);
     setSalesId(salesOptions[0]?.id ?? "");
     setSupervisorId(supervisorOptions[0]?.id ?? "");
+  }
+  async function exportExcel() {
+    setExporting(true);
+    try {
+      await exportDirectInvoiceExcel({
+        date: invoiceDate,
+        customer,
+        lines,
+        pricing,
+        paymentPlan: directPaymentPlan,
+      });
+    } catch (error) {
+      window.alert(
+        error instanceof Error ? error.message : "Excel 匯出失敗。",
+      );
+    } finally {
+      setExporting(false);
+    }
   }
   function save(destination: "draft" | "deal" | "handoff") {
     const q = run(
@@ -1560,6 +1581,12 @@ export function QuoteEditor() {
                   <Printer size={18} /> 列印
                 </Button>
                 <Button onClick={() => setWizardStep(2)}>修改</Button>
+                <Button
+                  onClick={exportExcel}
+                  disabled={exporting}
+                >
+                  <Download size={18} /> {exporting ? "匯出中…" : "匯出"}
+                </Button>
               </div>
               <div className="handoff-print-grid">
                 <div className="handoff-print-settings">
