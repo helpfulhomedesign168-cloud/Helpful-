@@ -967,7 +967,11 @@ export function Invoices() {
                       <td>
                         <CategoryChips
                           categories={
-                            invoice.category ? [invoice.category] : []
+                            invoice.categories?.length
+                              ? invoice.categories
+                              : invoice.category
+                                ? [invoice.category]
+                                : []
                           }
                         />
                       </td>

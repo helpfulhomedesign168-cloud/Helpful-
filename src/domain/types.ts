@@ -314,6 +314,8 @@ export interface Invoice {
   actorId: string;
   supervisorId: string;
   category?: InvoiceCategory;
+  /** 直接開單可同時選多個單種；category 仍為付款計劃的 effective 分類。 */
+  categories?: InvoiceCategory[];
   /** 分類當刻的期數與金額快照，不會因日後付款政策改寫。 */
   paymentPlan?: InvoiceInstallment[];
   calculation?: FrozenCalculation;

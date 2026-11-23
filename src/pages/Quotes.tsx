@@ -739,8 +739,9 @@ export function QuoteEditor() {
     supervisorOptions[0]?.id ?? "",
   );
   const [exporting, setExporting] = useState(false);
-  const [directCategory, setDirectCategory] =
-    useState<InvoiceCategory>("self-pay");
+  const [directCategories, setDirectCategories] = useState<InvoiceCategory[]>([
+    "self-pay",
+  ]);
   const [exitConfirm, setExitConfirm] = useState(false);
   const [picker, setPicker] = useState(false);
   const [customers, setCustomers] = useState(false);
@@ -795,6 +796,11 @@ export function QuoteEditor() {
   try {
     pricing = engine.preview(actor, lines, discount);
   } catch {}
+  const directCategory = directCategories.includes("self-pay")
+    ? "self-pay"
+    : directCategories.includes("grant-80k")
+      ? "grant-80k"
+      : "group-buy";
   const directPaymentPlan = directInvoice
     ? engine.previewInstallmentPlan(directCategory, pricing.total)
     : [];
@@ -867,6 +873,7 @@ export function QuoteEditor() {
           lines,
           discount,
           category: directCategory,
+          categories: directCategories,
           salesId,
           supervisorId,
           date: invoiceDate,
@@ -1641,9 +1648,21 @@ export function QuoteEditor() {
                           type="button"
                           key={category}
                           className={
-                            directCategory === category ? "selected" : ""
+                            directCategories.includes(category)
+                              ? "selected"
+                              : ""
                           }
-                          onClick={() => setDirectCategory(category)}
+                          onClick={() =>
+                            setDirectCategories((current) =>
+                              current.includes(category)
+                                ? current.length === 1
+                                  ? current
+                                  : current.filter(
+                                      (item) => item !== category,
+                                    )
+                                : [...current, category],
+                            )
+                          }
                         >
                           {INVOICE_CATEGORY_NAMES[category]}
                         </button>
@@ -1672,7 +1691,7 @@ export function QuoteEditor() {
                   </p>
                 </div>
                 <div
-                  className="handoff-quote-preview"
+                  className={`handoff-quote-preview ${directInvoice ? "direct-preview" : ""}`}
                   id="direct-invoice-preview"
                 >
                   <div className="handoff-preview-title">預覽發票</div>
