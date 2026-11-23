@@ -5277,11 +5277,14 @@ export class Engine {
       const quote = this.findQuote(payment.quoteId, state);
       const version = currentVersion(quote);
       if (
-        !quote.submission ||
-        quote.submission.versionId !== payment.versionId ||
-        version.id !== payment.versionId
+        !quote.directInvoice &&
+        (!quote.submission ||
+          quote.submission.versionId !== payment.versionId ||
+          version.id !== payment.versionId)
       )
         fail("付款來源並非有效已交 Office 版本。");
+      if (quote.directInvoice && version.id !== payment.versionId)
+        fail("付款來源版本與直接開單版本不符。");
       if (!validPastDate(input.date)) fail("有效收款日期不可晚於原型今日。");
       if (input.reject) {
         payment.status = "rejected";
@@ -5425,6 +5428,110 @@ export class Engine {
         archived: false,
         officeCategory: input.category,
         orderCategories: [input.category],
+        directInvoice: true,
+        invoiceId: invoice.id,
+      };
+      invoice.quoteId = quote.id;
+      invoice.versionId = quote.versions[0].id;
+      state.quotes.push(quote);
+      state.invoices.push(invoice);
+      this.audit(state, {
+        quoteId: quote.id,
+        actorId: actor.id,
+        action: "direct_invoice_created",
+        detail: `直接開Invoice ${invoice.number}`,
+      });
+      output = deepCopy(invoice);
+    });
+    return this.isAdmin(actor) ? output : sanitiseInvoice(output, false);
+  }
+  createDirectInvoiceFromLines(
+    actorInput: Actor,
+    input: {
+      customer: Customer;
+      lines: QuoteLine[];
+      discount: number;
+      category: InvoiceCategory;
+    },
+  ): Invoice {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "invoice_clerk" && !this.isAdmin(actor))
+      fail("只有直接開單員或Super Admin可以直接開Invoice。");
+    let output!: Invoice;
+    this.mutate((state) => {
+      if (!Object.hasOwn(INVOICE_CATEGORY_NAMES, input.category))
+        fail("請選擇有效的訂單分類。");
+      if (!input.customer.name?.trim() || !input.customer.phone?.trim())
+        fail("請填寫客戶姓名及電話。");
+      if (!input.lines.length) fail("請最少加入一項工程。");
+      if (input.lines.some((line) => line.pricePending))
+        fail("有工程仍待報價，未能直接開Invoice。");
+      const lines = input.lines.map((line) => {
+        const service = state.services.find(
+          (candidate) => candidate.id === line.itemId,
+        );
+        if (service)
+          return { ...deepCopy(line), itemSnapshot: deepCopy(service) };
+        if (line.manual) return { ...deepCopy(line), manual: true };
+        fail(`找不到工程項目「${line.itemSnapshot.name}」。`);
+      });
+      const discount =
+        Number.isFinite(input.discount) && input.discount > 0
+          ? Math.min(1, input.discount)
+          : 1;
+      const raw = calculatePricing(lines, discount, state.services, true);
+      if (raw.costIncomplete)
+        fail("工程成本資料不完整，未能直接開Invoice。");
+      if (raw.blocked)
+        fail("成交額不足以覆蓋成本及基本佣金，未能直接開Invoice。");
+      const customer = this.syncCustomerProfile(
+        state,
+        actor,
+        normaliseCustomer(input.customer),
+        actor.id,
+        actor.team ?? "B",
+      );
+      const month = dateKey(DEMO_TODAY);
+      const sequence = (state.monthlySequences[month] ?? 0) + 1;
+      state.monthlySequences[month] = sequence;
+      const invoice: Invoice = {
+        id: uid("invoice"),
+        number: `DINV${yyMM(DEMO_TODAY)}${String(sequence).padStart(4, "0")}`,
+        quoteId: "",
+        versionId: "",
+        customer: deepCopy(customer),
+        lines: deepCopy(lines),
+        discount,
+        netTotal: raw.total,
+        createdAt: NOW,
+        actorId: actor.id,
+        supervisorId: actor.id,
+        category: input.category,
+        paymentPlan: this.installmentPlan(input.category, raw.total),
+        calculation: frozen(raw),
+      };
+      const quote: Quote = {
+        id: uid("quote"),
+        number: `DIRECT-${actor.code}-${yyMM()}-${String(state.quotes.length + 1).padStart(4, "0")}`,
+        ownerId: actor.id,
+        team: actor.team ?? "B",
+        versions: [
+          {
+            id: uid("version"),
+            index: 1,
+            customer: deepCopy(customer),
+            lines: deepCopy(lines),
+            discount,
+            createdAt: NOW,
+            reason: "直接開Invoice",
+          },
+        ],
+        createdAt: NOW,
+        updatedAt: NOW,
+        archived: false,
+        officeCategory: input.category,
+        orderCategories: [input.category],
+        directInvoice: true,
         invoiceId: invoice.id,
       };
       invoice.quoteId = quote.id;

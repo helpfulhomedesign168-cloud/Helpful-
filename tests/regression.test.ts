@@ -1,5 +1,6 @@
 import { it, expect } from "vitest";
 import { Engine, createSeedState } from "../src/domain/engine";
+import { EMPTY_CUSTOMER } from "../src/domain/types";
 const actor = (e: Engine, id: string) =>
   e.listActors().find((a) => a.id === id)!;
 it("CS可讀Invoice而不可讀原Q；已簽價及期款不被Admin加價反改", () => {
@@ -541,4 +542,35 @@ it("CS工程單可讀8萬資助批核摘要，但不讀原報價", () => {
     approvedAmount: 82000,
   });
   expect(() => e.getQuote(csLead, order.quoteId)).toThrow("工程CS不可讀取原報價");
+});
+
+it("直接開Invoice版本可直接核對付款", () => {
+  const e = new Engine(undefined, createSeedState());
+  const direct = actor(e, "invoice-clerk");
+  const invoice = e.createDirectInvoice(direct, {
+    customer: {
+      ...EMPTY_CUSTOMER,
+      name: "直開付款測試",
+      phone: "91230001",
+    },
+    category: "self-pay",
+    items: [{ name: "石屎剷落", quantity: 1, unit: "項", amount: 21000 }],
+  });
+  const payment = e.recordInstallmentPayment(direct, invoice.id, 1, {
+    amount: 6300,
+    method: "fps",
+    date: "2026-10-22",
+    custody: "company",
+    reference: "DIRECT-TEST",
+    notes: "",
+    cleared: true,
+  });
+  e.validatePayment(direct, payment.id, {
+    date: "2026-10-22",
+    cleared: true,
+    notes: "直開核對",
+  });
+  expect(
+    e.listPayments(direct).find((item) => item.id === payment.id)?.status,
+  ).toBe("valid");
 });
