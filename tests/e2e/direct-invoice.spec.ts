@@ -59,4 +59,17 @@ test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }
     invoiceNumber!,
   );
   await expect(page.locator("tbody tr").first()).toContainText("8萬");
+  await page
+    .locator("tbody tr")
+    .first()
+    .getByRole("button", { name: "待收足訂金", exact: true })
+    .click();
+  await page.getByRole("button", { name: /登記第1期/ }).click();
+  const payment = page.getByRole("dialog", { name: "登記第1期款" });
+  await payment
+    .getByLabel("我已核實公司銀行收到這筆款項", { exact: true })
+    .check();
+  await payment.getByRole("button", { name: "確認收款", exact: true }).click();
+  await expect(page.getByText("收款已確認。")).toBeVisible();
+  await expect(page.getByText("已核", { exact: false }).first()).toBeVisible();
 });

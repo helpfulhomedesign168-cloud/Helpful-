@@ -1020,6 +1020,7 @@ export function InvoiceDetail() {
   const [date, setDate] = useState(DEMO_TODAY);
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
   const [activePayment, setActivePayment] = useState<Payment | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -1068,6 +1069,7 @@ export function InvoiceDetail() {
     setDate(DEMO_TODAY);
     setReference("");
     setNotes("");
+    setConfirmed(false);
   };
   const stageLabel = (stage: (typeof status.installments)[number]) =>
     `第${stage.installment}期 · ${stage.label}`;
@@ -1283,7 +1285,7 @@ export function InvoiceDetail() {
           onClose={() => setPaymentStage(null)}
         >
           <p className="muted">
-            上載付款證明後先保存為待核對款項；核實銀行入帳或支票兌現後，才算有效收款。
+            上載付款證明並核對金額後，可直接按「確認收款」；如要交會計覆核，可儲存為待核對期款。
           </p>
           <div className="form-grid two">
             <Field label="本次收款金額" required>
@@ -1341,10 +1343,21 @@ export function InvoiceDetail() {
               placeholder="例如付款人、銀行備註"
             />
           </Field>
+          <label className="checkbox-label payment-confirm-check">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.target.checked)}
+            />
+            {method === "cash"
+              ? "我已點算並確認現金收款"
+              : method === "cheque"
+                ? "支票已成功兌現"
+                : "我已核實公司銀行收到這筆款項"}
+          </label>
           <div className="dialog-actions">
             <Button onClick={() => setPaymentStage(null)}>取消</Button>
             <Button
-              variant="primary"
               onClick={() => {
                 const payment = run(
                   () =>
@@ -1369,6 +1382,43 @@ export function InvoiceDetail() {
               }}
             >
               儲存待核對期款
+            </Button>
+            <Button
+              variant="primary"
+              disabled={!confirmed || amount <= 0}
+              onClick={() => {
+                const payment = run(
+                  () =>
+                    engine.recordInstallmentPayment(
+                      actor,
+                      invoice!.id,
+                      paymentStage,
+                      {
+                        amount,
+                        method,
+                        date,
+                        custody: "company",
+                        reference,
+                        notes,
+                        proof,
+                        cleared: true,
+                      },
+                    ),
+                  undefined,
+                );
+                if (!payment) return;
+                const done = run(() => {
+                  engine.validatePayment(actor, payment.id, {
+                    date,
+                    cleared: true,
+                    notes,
+                  });
+                  return true;
+                }, "收款已確認。");
+                if (done) setPaymentStage(null);
+              }}
+            >
+              確認收款
             </Button>
           </div>
         </Dialog>
