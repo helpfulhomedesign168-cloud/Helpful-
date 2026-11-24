@@ -865,6 +865,24 @@ export function QuoteEditor() {
   const pendingCount = lines.filter((line) => line.pricePending).length;
   const onlyCustom =
     lines.length > 0 && lines.every((line) => line.customWork);
+  function saveCustomerToModule() {
+    const sales = allActors.find((candidate) => candidate.id === salesId);
+    const profile = run(
+      () =>
+        engine.saveCustomerProfile(
+          actor,
+          customer,
+          sales?.id,
+          sales?.team,
+        ),
+      "客戶已儲存到客戶模組。",
+    );
+    if (profile)
+      setCustomer((current) => ({
+        ...current,
+        id: profile.customer.id,
+      }));
+  }
   function createDirectInvoice() {
     const invoice = run(
       () =>
@@ -1229,7 +1247,19 @@ export function QuoteEditor() {
             number={directInvoice ? "02" : "01"}
             title="客戶資料"
             action={
-              <Button onClick={() => setCustomers(true)}>選擇現有客戶</Button>
+              <div className="section-actions">
+                <Button onClick={() => setCustomers(true)}>
+                  選擇現有客戶
+                </Button>
+                {directInvoice && (
+                  <Button
+                    disabled={!customer.name.trim() || !customer.phone.trim()}
+                    onClick={saveCustomerToModule}
+                  >
+                    儲存到客戶模組
+                  </Button>
+                )}
+              </div>
             }
           >
             <CustomerForm

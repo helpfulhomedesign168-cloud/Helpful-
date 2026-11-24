@@ -1034,6 +1034,15 @@ export class Engine {
     if (this.isAdmin(actor)) return true;
     if (isCsActor(actor)) {
       if (!order.csReleasedAt) return false;
+      if (!order.csOwnerId) {
+        const quote = this.state.quotes.find(
+          (candidate) => candidate.id === order.quoteId,
+        );
+        // Direct invoices must be assigned through 工程單 before they enter
+        // 工程管理; legacy/Sales orders keep their historical visibility.
+        if (quote?.directInvoice) return false;
+        return actor.role === "cs_supervisor";
+      }
       return actor.role === "cs_supervisor" || order.csOwnerId === actor.id;
     }
     return (
@@ -1075,7 +1084,11 @@ export class Engine {
       fail("此電話已屬於另一位客戶主檔，請先由 Admin 核對。");
     const existing = selected ?? phoneMatch;
     if (existing) {
-      if (existing.ownerId !== ownerId && !this.isAdmin(actor))
+      if (
+        existing.ownerId !== ownerId &&
+        !this.isAdmin(actor) &&
+        !this.isClerk(actor)
+      )
         fail("此電話已由其他 Sales 建立，請 Admin 核對客戶資料。");
       const filled = Object.fromEntries(
         Object.entries(normalised).filter(
@@ -1440,6 +1453,10 @@ export class Engine {
     actorId: string,
   ): void {
     this.ensureGrantOrders(state, invoice, actorId);
+    const direct = state.quotes.find(
+      (quote) => quote.id === invoice.quoteId,
+    )?.directInvoice;
+    const eventAt = direct ? invoice.createdAt : NOW;
     const status = this.paymentStatusRaw(invoice, state);
     if (status.validPaid < status.csReleaseDue) return;
     let order = state.orders.find((item) => item.invoiceId === invoice.id);
@@ -1455,7 +1472,7 @@ export class Engine {
         versionId: invoice.versionId,
         customer: deepCopy(invoice.customer),
         lines: deepCopy(invoice.lines),
-        createdAt: NOW,
+        createdAt: eventAt,
         startDate,
         endDate: addMonthsClamped(
           startDate,
@@ -1466,7 +1483,7 @@ export class Engine {
       };
       state.orders.push(order);
     }
-    order.csReleasedAt = NOW;
+    order.csReleasedAt = eventAt;
     this.audit(state, {
       quoteId: invoice.quoteId,
       workOrderId: order.id,
@@ -1752,6 +1769,47 @@ export class Engine {
     return this.isAdmin(actor)
       ? output
       : { ...output, customer: sanitiseCustomer(output.customer) };
+  }
+  saveCustomerProfile(
+    actorInput: Actor,
+    input: Customer,
+    ownerId?: string,
+    team?: "A" | "B",
+  ): CustomerProfile {
+    const actor = this.actor(actorInput);
+    if (
+      !this.canWriteQuote(actor) &&
+      !this.isClerk(actor) &&
+      !this.isAdmin(actor)
+    )
+      fail("你沒有儲存客戶主檔的權限。");
+    const customer = normaliseCustomer(input);
+    const missing = validCustomer(customer);
+    if (missing.length) fail(`請先補齊客戶資料：${missing.join("、")}`);
+    let output!: CustomerProfile;
+    this.mutate((state) => {
+      this.syncCustomerProfile(
+        state,
+        actor,
+        customer,
+        ownerId ?? actor.id,
+        team ?? actor.team ?? "B",
+      );
+      output =
+        state.customers.find(
+          (profile) =>
+            normalizePhone(profile.customer.phone) ===
+            normalizePhone(customer.phone),
+        ) ?? fail("客戶主檔儲存失敗。");
+      this.audit(state, {
+        actorId: actor.id,
+        action: "customer_saved",
+        detail: `儲存客戶主檔 ${output.customer.name}`,
+      });
+    });
+    return this.isAdmin(actor)
+      ? deepCopy(output)
+      : { ...deepCopy(output), customer: sanitiseCustomer(output.customer) };
   }
   listServiceCategories(actorInput: Actor): string[] {
     const actor = this.actor(actorInput);
@@ -2341,11 +2399,13 @@ export class Engine {
       fail("你沒有查看 Office 交接的權限。");
     return this.state.quotes.flatMap((quote) => {
       const version = currentVersion(quote);
+      const direct = Boolean(quote.directInvoice);
+      if (!quote.invoiceId) return [];
       if (
-        !quote.submission ||
-        quote.submission.versionId !== version.id ||
-        !quoteVersionIsSigned(version) ||
-        !quote.invoiceId
+        !direct &&
+        (!quote.submission ||
+          quote.submission.versionId !== version.id ||
+          !quoteVersionIsSigned(version))
       )
         return [];
       const owner = this.state.actors.find(

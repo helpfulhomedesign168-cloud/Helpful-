@@ -22,6 +22,8 @@ test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }
   await page.getByLabel(/^屋苑／大廈/).fill("直開苑");
   await page.getByLabel(/^樓層/).fill("8");
   await page.getByLabel(/^單位/).fill("A");
+  await page.getByRole("button", { name: "儲存到客戶模組", exact: true }).click();
+  await expect(page.getByText("客戶已儲存到客戶模組。")).toBeVisible();
   await page.getByRole("button", { name: /^下一步/ }).click();
   await page.getByRole("button", { name: "新增工程", exact: true }).click();
   const picker = page.getByRole("dialog", { name: "新增工程項目" });
@@ -72,4 +74,28 @@ test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }
   await payment.getByRole("button", { name: "確認收款", exact: true }).click();
   await expect(page.getByText("收款已確認。")).toBeVisible();
   await expect(page.getByText("已核", { exact: false }).first()).toBeVisible();
+  await page.getByRole("button", { name: /登記第2期/ }).click();
+  const secondPayment = page.getByRole("dialog", { name: "登記第2期款" });
+  await secondPayment
+    .getByLabel("我已核實公司銀行收到這筆款項", { exact: true })
+    .check();
+  await secondPayment
+    .getByRole("button", { name: "確認收款", exact: true })
+    .click();
+  await expect(page.getByText("收款已確認。")).toBeVisible();
+  // The new order must be visible to the CS supervisor by default.
+  await page.locator(".actor-button").click();
+  await page.locator(".role-option").filter({ hasText: "阿花" }).first().click();
+  await page.getByRole("link", { name: "工程單" }).click();
+  await expect(
+    page
+      .locator(".handoff-table tbody tr")
+      .filter({ hasText: invoiceNumber! })
+      .first(),
+  ).toBeVisible();
+  // It must not appear in 工程管理 until CS has assigned an owner.
+  await page.getByRole("link", { name: "工程管理" }).click();
+  await expect(
+    page.locator(".order-rail-row").filter({ hasText: invoiceNumber! }),
+  ).toHaveCount(0);
 });
