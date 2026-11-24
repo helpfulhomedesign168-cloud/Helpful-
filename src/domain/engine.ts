@@ -4655,10 +4655,15 @@ export class Engine {
         this.isClerk(actor) &&
         Boolean(quote?.submission) &&
         !quote?.invoiceId;
+      const invoiceAmendment =
+        actor.role === "invoice_clerk" &&
+        Boolean(quote?.invoiceId) &&
+        Boolean(input.changeOrder);
       if (
         !this.canWriteQuote(actor, quote) &&
         !this.isAdmin(actor) &&
-        !clerkCorrection
+        !clerkCorrection &&
+        !invoiceAmendment
       )
         fail("你沒有儲存此報價草稿的權限。");
       if (quote?.archived) fail("已封存報價不可修改。");
@@ -4840,6 +4845,45 @@ export class Engine {
             payment.versionId = nextVersion.id;
           });
         quote.updatedAt = NOW;
+        if (quote.invoiceId) {
+          const invoice = state.invoices.find(
+            (item) => item.id === quote.invoiceId,
+          );
+          if (invoice) {
+            const amendedPricing = calculatePricing(
+              rebuilt,
+              selectedDiscount.discount,
+              state.services,
+              true,
+            );
+            invoice.customer = deepCopy(customer);
+            invoice.lines = deepCopy(rebuilt);
+            invoice.versionId = nextVersion.id;
+            invoice.discount = selectedDiscount.discount;
+            invoice.discountMode = selectedDiscount.mode;
+            invoice.discountValue = selectedDiscount.value;
+            invoice.netTotal = amendedPricing.total;
+            invoice.calculation = frozen(amendedPricing);
+            invoice.paymentPlan = this.installmentPlan(
+              invoice.category ?? "self-pay",
+              amendedPricing.total,
+            );
+            const order = state.orders.find(
+              (item) => item.invoiceId === invoice.id,
+            );
+            if (order) {
+              order.customer = deepCopy(customer);
+              order.lines = deepCopy(rebuilt);
+              order.versionId = nextVersion.id;
+            }
+            this.audit(state, {
+              quoteId: quote.id,
+              actorId: actor.id,
+              action: "invoice_amended",
+              detail: `修改單 ${invoice.number}，同步版本 ${nextVersion.index}`,
+            });
+          }
+        }
         this.audit(state, {
           quoteId: quote.id,
           actorId: actor.id,

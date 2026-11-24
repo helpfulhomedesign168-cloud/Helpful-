@@ -12387,3 +12387,13 @@ textarea::placeholder {
     flex-direction: column;
   }
 }
+
+.invoice-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.invoice-row-actions .btn {
+  white-space: nowrap;
+}

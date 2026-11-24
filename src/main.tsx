@@ -115,7 +115,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/quotes/:id/edit"
               element={
-                <Guard roles={[...sales, "clerk", "finance_supervisor", "admin", "admin_staff"]}>
+                <Guard roles={[...sales, "clerk", "invoice_clerk", "finance_supervisor", "admin", "admin_staff"]}>
                   <QuoteEditor />
                 </Guard>
               }

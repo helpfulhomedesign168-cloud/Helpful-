@@ -976,18 +976,29 @@ export function Invoices() {
                         />
                       </td>
                       <td>
-                        <Button
-                          variant={
-                            engineering === "已退訂"
-                              ? "danger"
-                              : engineering === "已完成工程"
-                                ? "primary"
-                                : "secondary"
-                          }
-                          onClick={() => nav("/invoices/" + invoice.id)}
-                        >
-                          {engineering}
-                        </Button>
+                        <div className="invoice-row-actions">
+                          <Button
+                            variant={
+                              engineering === "已退訂"
+                                ? "danger"
+                                : engineering === "已完成工程"
+                                  ? "primary"
+                                  : "secondary"
+                            }
+                            onClick={() => nav("/invoices/" + invoice.id)}
+                          >
+                            {engineering}
+                          </Button>
+                          <Button
+                            onClick={() =>
+                              nav(
+                                `/quotes/${invoice.quoteId}/edit?order=1`,
+                              )
+                            }
+                          >
+                            修改單
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );

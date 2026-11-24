@@ -815,6 +815,7 @@ export function QuoteEditor() {
     own ||
     clerkEditor ||
     (directInvoice && actor.role === "invoice_clerk") ||
+    (orderEdit && actor.role === "invoice_clerk") ||
     ["admin", "admin_staff"].includes(actor.role);
   useEffect(() => {
     if (!wizard || directInvoice) {
@@ -965,7 +966,7 @@ export function QuoteEditor() {
         }),
       "訂單已更新；請重新列印及上載已簽文件。",
     );
-    if (q) nav(`/quotes/${q.id}`);
+    if (q) nav(existing?.invoiceId ? "/invoices" : `/quotes/${q.id}`);
   }
   function addCustomWork() {
     const name = customWork.trim();
@@ -1126,7 +1127,9 @@ export function QuoteEditor() {
           directInvoice
             ? "建立 Invoice"
             : orderEdit
-              ? "修改報價"
+              ? existing?.invoiceId
+                ? "修改單"
+                : "修改報價"
               : wizard
                 ? "建立報價"
                 : "修改報價"
