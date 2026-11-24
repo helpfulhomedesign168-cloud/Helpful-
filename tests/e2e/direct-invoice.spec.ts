@@ -93,6 +93,14 @@ test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }
       .filter({ hasText: invoiceNumber! })
       .first(),
   ).toBeVisible();
+  await page
+    .locator(".handoff-table tbody tr")
+    .filter({ hasText: invoiceNumber! })
+    .first()
+    .getByRole("button", { name: /預覽 Invoice/ })
+    .click();
+  await expect(page).toHaveURL(/\/documents\/invoice\//);
+  await page.goBack();
   // It must not appear in 工程管理 until CS has assigned an owner.
   await page.getByRole("link", { name: "工程管理" }).click();
   await expect(
