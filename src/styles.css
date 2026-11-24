@@ -12456,3 +12456,23 @@ textarea::placeholder {
 .invoice-list-table td:nth-child(7) { width: 17%; }
 .invoice-list-table th:nth-child(8),
 .invoice-list-table td:nth-child(8) { width: 5%; }
+
+.handoff-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.handoff-invoice-link {
+  display: block;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: 11px;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}

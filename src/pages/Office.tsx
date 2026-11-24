@@ -1507,6 +1507,7 @@ export function InvoiceDetail() {
 
 export function Handoff() {
   const { actor, engine, run } = useApp();
+  const nav = useNavigate();
   const [search, setSearch] = useState("");
   const [monthFilter, setMonthFilter] = useState("all");
   const [salesFilter, setSalesFilter] = useState("all");
@@ -1623,7 +1624,7 @@ export function Handoff() {
             <table className="handoff-table">
               <thead>
                 <tr>
-                  <th scope="col">工程單</th>
+                  <th scope="col">工程單號</th>
                   <th scope="col">客戶</th>
                   <th scope="col">聯絡電話</th>
                   <th scope="col">Sales</th>
@@ -1639,7 +1640,16 @@ export function Handoff() {
                       <strong className="source-link">
                         {row.workOrderNumber}
                       </strong>
-                      <small>INV {row.invoiceNumber}</small>
+                      <button
+                        type="button"
+                        className="handoff-invoice-link"
+                        onClick={() => {
+                          if (row.invoiceId)
+                            nav("/documents/invoice/" + row.invoiceId);
+                        }}
+                      >
+                        INV {row.invoiceNumber}
+                      </button>
                     </td>
                     <td>
                       <strong>{row.customerName}</strong>
@@ -1652,20 +1662,34 @@ export function Handoff() {
                     </td>
                     <td>{row.csOwnerName || "未安排"}</td>
                     <td>
-                      {canAssign && row.workOrderId ? (
+                      <div className="handoff-row-actions">
                         <Button
-                          variant={row.csOwnerName ? "secondary" : "primary"}
+                          variant="ghost"
+                          disabled={!row.invoiceId}
                           onClick={() => {
-                            setSelectedCs(row.csOwnerId ?? "");
-                            setAssigning(row);
+                            if (row.invoiceId)
+                              nav("/documents/invoice/" + row.invoiceId);
                           }}
                         >
-                          {row.csOwnerName ? "更改安排" : "安排工程"}{" "}
-                          <ArrowRight size={18} />
+                          <FileText size={17} /> 預覽 Invoice
                         </Button>
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
+                        {canAssign && row.workOrderId ? (
+                          <Button
+                            variant={
+                              row.csOwnerName ? "secondary" : "primary"
+                            }
+                            onClick={() => {
+                              setSelectedCs(row.csOwnerId ?? "");
+                              setAssigning(row);
+                            }}
+                          >
+                            {row.csOwnerName ? "更改安排" : "安排工程"}{" "}
+                            <ArrowRight size={18} />
+                          </Button>
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
