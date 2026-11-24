@@ -820,6 +820,28 @@ export class Engine {
       ensureDemoCsActors(migrated);
       ensureDemoInvoiceClerk(migrated);
       ensureDemoAccountingActors(migrated);
+      migrated.orders.forEach((order) => {
+        if (/^D\d{5}$/.test(order.number)) return;
+        const invoice = migrated.invoices.find(
+          (item) => item.id === order.invoiceId,
+        );
+        if (!invoice) return;
+        const quote = migrated.quotes.find(
+          (item) => item.id === invoice.quoteId,
+        );
+        const categories = quote?.orderCategories?.length
+          ? quote.orderCategories
+          : invoice.category
+            ? [invoice.category]
+            : [];
+        if (!categories.includes("grant-80k")) return;
+        order.number = nextWorkOrderNumber(migrated);
+        migrated.municipalOrders
+          .filter((item) => item.principalOrderId === order.id)
+          .forEach((item) => {
+            item.principalOrderNumber = order.number;
+          });
+      });
       const migrateCustomer = (customer: Customer) => {
         customer.street ??= "";
         customer.address = composeAddress(customer);
@@ -1371,7 +1393,7 @@ export class Engine {
     const startDate = addDays(DEMO_TODAY, 10);
     const principal: WorkOrder = {
       id: uid("workorder"),
-      number: `${base}A`,
+      number: nextWorkOrderNumber(state),
       quoteId: invoice.quoteId,
       invoiceId: invoice.id,
       groupId: `group-${invoice.quoteId}`,

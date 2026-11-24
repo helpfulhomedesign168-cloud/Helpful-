@@ -87,12 +87,14 @@ test("直接開單員可以建立 Invoice，不需要報價單", async ({ page }
   await page.locator(".actor-button").click();
   await page.locator(".role-option").filter({ hasText: "阿花" }).first().click();
   await page.getByRole("link", { name: "工程單" }).click();
-  await expect(
-    page
-      .locator(".handoff-table tbody tr")
-      .filter({ hasText: invoiceNumber! })
-      .first(),
-  ).toBeVisible();
+  const handoffRow = page
+    .locator(".handoff-table tbody tr")
+    .filter({ hasText: invoiceNumber! })
+    .first();
+  await expect(handoffRow).toBeVisible();
+  await expect(handoffRow.locator("td").first().locator("strong")).toHaveText(
+    /^D\d{6,7}$/,
+  );
   await page
     .locator(".handoff-table tbody tr")
     .filter({ hasText: invoiceNumber! })
