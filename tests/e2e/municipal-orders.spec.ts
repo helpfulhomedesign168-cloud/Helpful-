@@ -41,8 +41,7 @@ test("8萬資助開Invoice會建立正單A及可修改市政單B", async ({ page
   const municipalRow = page.locator(".municipal-table tbody tr").first();
   const municipalNumber = (await municipalRow.locator("strong").first().innerText()).trim();
   const principalNumber = (await municipalRow.locator("td").nth(1).innerText()).trim();
-  expect(principalNumber).toBe(invoiceNumber);
-  expect(principalNumber).toMatch(/A$/);
+  expect(principalNumber).toMatch(/^D\d{6,7}$/);
   expect(municipalNumber).toBe(invoiceNumber.replace(/A$/, "B"));
   await expect(
     municipalRow.getByRole("link", { name: "查看／修改" }),

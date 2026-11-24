@@ -1648,7 +1648,7 @@ export function Handoff() {
                             nav("/documents/invoice/" + row.invoiceId);
                         }}
                       >
-                        INV {row.invoiceNumber}
+                        INV-{row.invoiceNumber}
                       </button>
                     </td>
                     <td>
