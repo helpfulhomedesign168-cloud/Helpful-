@@ -752,7 +752,7 @@ export function QuoteEditor() {
   );
   const [reason, setReason] = useState("");
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(
-    orderEdit || resumeStep === "2" ? 2 : 1,
+    editingInvoice || orderEdit || resumeStep === "2" ? 2 : 1,
   );
   const today = new Date();
   const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;

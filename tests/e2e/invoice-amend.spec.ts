@@ -22,9 +22,8 @@ test("單據管理每張Invoice有修改單入口", async ({ page }) => {
     page.getByRole("heading", { name: "修改單", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "銷售員資料", exact: false }),
+    page.getByRole("heading", { name: "工程項目", exact: false }),
   ).toBeVisible();
-  await page.getByRole("button", { name: /^下一步/ }).click();
   await expect(
     page.getByRole("button", { name: "儲存修改", exact: true }),
   ).toBeVisible();
