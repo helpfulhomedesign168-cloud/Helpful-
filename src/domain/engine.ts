@@ -5577,6 +5577,8 @@ export class Engine {
       salesId?: string;
       supervisorId?: string;
       date?: string;
+      grantApplicationNumber?: string;
+      grantApprovedAmount?: number;
     },
   ): Invoice {
     const actor = this.actor(actorInput);
@@ -5684,6 +5686,14 @@ export class Engine {
         archived: false,
         officeCategory: effectiveCategory,
         orderCategories: selectedCategories,
+        grantApplicationNumber: selectedCategories.includes("grant-80k")
+          ? input.grantApplicationNumber?.trim() || undefined
+          : undefined,
+        grantApprovedAmount:
+          selectedCategories.includes("grant-80k") &&
+          Number(input.grantApprovedAmount) > 0
+            ? moneyValue(input.grantApprovedAmount!)
+            : undefined,
         directInvoice: true,
         invoiceId: invoice.id,
       };
@@ -5711,6 +5721,8 @@ export class Engine {
       salesId?: string;
       supervisorId?: string;
       categories?: InvoiceCategory[];
+      grantApplicationNumber?: string;
+      grantApprovedAmount?: number;
     },
   ): Invoice {
     const actor = this.actor(actorInput);
@@ -5803,6 +5815,14 @@ export class Engine {
       quote.team = sales?.team ?? quote.team;
       quote.officeCategory = effectiveCategory;
       quote.orderCategories = selectedCategories;
+      quote.grantApplicationNumber = selectedCategories.includes("grant-80k")
+        ? input.grantApplicationNumber?.trim() || undefined
+        : undefined;
+      quote.grantApprovedAmount =
+        selectedCategories.includes("grant-80k") &&
+        Number(input.grantApprovedAmount) > 0
+          ? moneyValue(input.grantApprovedAmount!)
+          : undefined;
       quote.orderRevision = true;
       quote.updatedAt = NOW;
       invoice.customer = deepCopy(customer);
