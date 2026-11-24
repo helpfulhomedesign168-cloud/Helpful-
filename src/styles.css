@@ -12387,3 +12387,25 @@ textarea::placeholder {
     flex-direction: column;
   }
 }
+
+
+/* Invoice list: keep the operation column visible without horizontal clipping */
+.invoice-list-table {
+  min-width: 1040px;
+}
+.invoice-list-table th:nth-child(1),
+.invoice-list-table td:nth-child(1) { width: 17%; }
+.invoice-list-table th:nth-child(2),
+.invoice-list-table td:nth-child(2) { width: 11%; }
+.invoice-list-table th:nth-child(3),
+.invoice-list-table td:nth-child(3) { width: 14%; }
+.invoice-list-table th:nth-child(4),
+.invoice-list-table td:nth-child(4) { width: 10%; }
+.invoice-list-table th:nth-child(5),
+.invoice-list-table td:nth-child(5) { width: 18%; }
+.invoice-list-table th:nth-child(6),
+.invoice-list-table td:nth-child(6) { width: 8%; }
+.invoice-list-table th:nth-child(7),
+.invoice-list-table td:nth-child(7) { width: 17%; }
+.invoice-list-table th:nth-child(8),
+.invoice-list-table td:nth-child(8) { width: 5%; }

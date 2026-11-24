@@ -47,6 +47,7 @@ test("單據管理顯示收款status bar、單類filter及已發工程部狀態"
     "收款進度",
     "分類",
     "狀態",
+    "操作",
   ]);
   await expect(
     page.getByRole("button", { name: /Invoice單|^Sales|^狀態/ }),

@@ -901,6 +901,7 @@ export function Invoices() {
                   <th>收款進度</th>
                   <th>分類</th>
                   <th>狀態</th>
+                  <th className="numeric">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -987,6 +988,20 @@ export function Invoices() {
                           onClick={() => nav("/invoices/" + invoice.id)}
                         >
                           {engineering}
+                        </Button>
+                      </td>
+                      <td className="numeric">
+                        <Button
+                          variant="ghost"
+                          aria-label={`修改${invoice.number}`}
+                          title="修改單"
+                          onClick={() =>
+                            nav(
+                              `/quotes/${invoice.quoteId}/edit?invoice=1`,
+                            )
+                          }
+                        >
+                          <PenLine size={19} />
                         </Button>
                       </td>
                     </tr>

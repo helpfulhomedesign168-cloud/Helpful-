@@ -4655,10 +4655,15 @@ export class Engine {
         this.isClerk(actor) &&
         Boolean(quote?.submission) &&
         !quote?.invoiceId;
+      const invoiceAmendment =
+        actor.role === "invoice_clerk" &&
+        Boolean(quote?.invoiceId) &&
+        Boolean(input.changeOrder);
       if (
         !this.canWriteQuote(actor, quote) &&
         !this.isAdmin(actor) &&
-        !clerkCorrection
+        !clerkCorrection &&
+        !invoiceAmendment
       )
         fail("你沒有儲存此報價草稿的權限。");
       if (quote?.archived) fail("已封存報價不可修改。");
@@ -4840,6 +4845,45 @@ export class Engine {
             payment.versionId = nextVersion.id;
           });
         quote.updatedAt = NOW;
+        if (quote.invoiceId) {
+          const invoice = state.invoices.find(
+            (item) => item.id === quote.invoiceId,
+          );
+          if (invoice) {
+            const amendedPricing = calculatePricing(
+              rebuilt,
+              selectedDiscount.discount,
+              state.services,
+              true,
+            );
+            invoice.customer = deepCopy(customer);
+            invoice.lines = deepCopy(rebuilt);
+            invoice.versionId = nextVersion.id;
+            invoice.discount = selectedDiscount.discount;
+            invoice.discountMode = selectedDiscount.mode;
+            invoice.discountValue = selectedDiscount.value;
+            invoice.netTotal = amendedPricing.total;
+            invoice.calculation = frozen(amendedPricing);
+            invoice.paymentPlan = this.installmentPlan(
+              invoice.category ?? "self-pay",
+              amendedPricing.total,
+            );
+            const order = state.orders.find(
+              (item) => item.invoiceId === invoice.id,
+            );
+            if (order) {
+              order.customer = deepCopy(customer);
+              order.lines = deepCopy(rebuilt);
+              order.versionId = nextVersion.id;
+            }
+            this.audit(state, {
+              quoteId: quote.id,
+              actorId: actor.id,
+              action: "invoice_amended",
+              detail: `修改單 ${invoice.number}，同步版本 ${nextVersion.index}`,
+            });
+          }
+        }
         this.audit(state, {
           quoteId: quote.id,
           actorId: actor.id,
@@ -5656,6 +5700,146 @@ export class Engine {
       output = deepCopy(invoice);
     });
     return this.isAdmin(actor) ? output : sanitiseInvoice(output, false);
+  }
+  amendDirectInvoice(
+    actorInput: Actor,
+    invoiceId: string,
+    input: {
+      customer: Customer;
+      lines: QuoteLine[];
+      date: string;
+      salesId?: string;
+      supervisorId?: string;
+      categories?: InvoiceCategory[];
+    },
+  ): Invoice {
+    const actor = this.actor(actorInput);
+    if (actor.role !== "invoice_clerk" && !this.isAdmin(actor))
+      fail("只有直接開單員或Super Admin可以修改Invoice。");
+    let output!: Invoice;
+    this.mutate((state) => {
+      const invoice =
+        state.invoices.find((item) => item.id === invoiceId) ??
+        fail("找不到Invoice。");
+      if (invoice.voided) fail("已退訂Invoice不可修改。");
+      const quote =
+        state.quotes.find((item) => item.id === invoice.quoteId) ??
+        fail("找不到Invoice來源。");
+      if (!input.customer.name?.trim() || !input.customer.phone?.trim())
+        fail("請填寫客戶姓名及電話。");
+      if (!input.lines.length) fail("請最少加入一項工程。");
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(input.date) ||
+        Number.isNaN(Date.parse(`${input.date}T00:00:00Z`))
+      )
+        fail("請填寫有效發票日期。");
+      const lines = input.lines.map((line) => {
+        const service = state.services.find(
+          (candidate) => candidate.id === line.itemId,
+        );
+        if (service)
+          return { ...deepCopy(line), itemSnapshot: deepCopy(service) };
+        if (line.manual) return { ...deepCopy(line), manual: true };
+        fail(`找不到工程項目「${line.itemSnapshot.name}」。`);
+      });
+      const raw = calculatePricing(lines, invoice.discount || 1, state.services, true);
+      if (raw.costIncomplete)
+        fail("工程成本資料不完整，未能修改Invoice。");
+      if (raw.blocked)
+        fail("成交額不足以覆蓋成本及基本佣金，未能修改Invoice。");
+      const sales = state.actors.find(
+        (candidate) => candidate.id === input.salesId,
+      );
+      if (input.salesId && (!sales || sales.role !== "sales"))
+        fail("請選擇有效的銷售員。");
+      const supervisor = state.actors.find(
+        (candidate) => candidate.id === input.supervisorId,
+      );
+      if (
+        input.supervisorId &&
+        (!supervisor || !["supervisor", "head"].includes(supervisor.role))
+      )
+        fail("請選擇有效的Sales主管。");
+      const selectedCategories = [
+        ...new Set(
+          input.categories?.length
+            ? input.categories
+            : invoice.categories?.length
+              ? invoice.categories
+              : [invoice.category ?? "self-pay"],
+        ),
+      ];
+      if (
+        selectedCategories.some(
+          (category) => !Object.hasOwn(INVOICE_CATEGORY_NAMES, category),
+        )
+      )
+        fail("請選擇有效的單種。");
+      const effectiveCategory =
+        this.effectiveOrderCategory(selectedCategories) ??
+        invoice.category ??
+        "self-pay";
+      const customer = this.syncCustomerProfile(
+        state,
+        actor,
+        normaliseCustomer(input.customer),
+        sales?.id ?? quote.ownerId,
+        sales?.team ?? quote.team ?? "B",
+      );
+      const version = currentVersion(quote);
+      const nextVersion: QuoteVersion = {
+        id: uid("version"),
+        index: version.index + 1,
+        customer: deepCopy(customer),
+        lines: deepCopy(lines),
+        discount: invoice.discount || 1,
+        discountMode: invoice.discountMode,
+        discountValue: invoice.discountValue,
+        createdAt: `${input.date}T09:00:00.000Z`,
+        reason: "修改單",
+      };
+      quote.versions.push(nextVersion);
+      quote.ownerId = sales?.id ?? quote.ownerId;
+      quote.team = sales?.team ?? quote.team;
+      quote.officeCategory = effectiveCategory;
+      quote.orderCategories = selectedCategories;
+      quote.orderRevision = true;
+      quote.updatedAt = NOW;
+      invoice.customer = deepCopy(customer);
+      invoice.lines = deepCopy(lines);
+      invoice.versionId = nextVersion.id;
+      invoice.netTotal = raw.total;
+      invoice.calculation = frozen(raw);
+      invoice.category = effectiveCategory;
+      invoice.categories = selectedCategories;
+      invoice.supervisorId = supervisor?.id ?? invoice.supervisorId;
+      invoice.createdAt = `${input.date}T09:00:00.000Z`;
+      invoice.paymentPlan = this.installmentPlan(effectiveCategory, raw.total);
+      state.payments
+        .filter((payment) => payment.quoteId === quote.id)
+        .forEach((payment) => {
+          payment.versionId = nextVersion.id;
+        });
+      const order = state.orders.find(
+        (item) => item.invoiceId === invoice.id,
+      );
+      if (order) {
+        order.customer = deepCopy(customer);
+        order.lines = deepCopy(lines);
+        order.versionId = nextVersion.id;
+        order.quoteId = quote.id;
+      }
+      this.audit(state, {
+        quoteId: quote.id,
+        actorId: actor.id,
+        action: "invoice_amended",
+        detail: `修改單 ${invoice.number}，版本 ${nextVersion.index}`,
+      });
+      output = deepCopy(invoice);
+    });
+    return this.isAdmin(actor)
+      ? output
+      : sanitiseInvoice(output, false);
   }
   issueInvoice(actorInput: Actor, quoteId: string): Invoice {
     const actor = this.actor(actorInput);
