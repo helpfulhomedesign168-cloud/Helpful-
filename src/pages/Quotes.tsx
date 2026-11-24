@@ -782,6 +782,14 @@ export function QuoteEditor() {
         ? [existingInvoice.category]
         : ["self-pay"],
   );
+  const [grantApplicationNumber, setGrantApplicationNumber] = useState(
+    existing?.grantApplicationNumber ?? "",
+  );
+  const [grantApprovedAmount, setGrantApprovedAmount] = useState(
+    existing?.grantApprovedAmount
+      ? String(existing.grantApprovedAmount)
+      : "",
+  );
   const [exitConfirm, setExitConfirm] = useState(false);
   const [picker, setPicker] = useState(false);
   const [customers, setCustomers] = useState(false);
@@ -936,6 +944,8 @@ export function QuoteEditor() {
           salesId,
           supervisorId,
           categories: directCategories,
+          grantApplicationNumber,
+          grantApprovedAmount: Number(grantApprovedAmount) || undefined,
         }),
       `發票${existingInvoice.number}已更新。`,
     );
@@ -953,6 +963,8 @@ export function QuoteEditor() {
           salesId,
           supervisorId,
           date: invoiceDate,
+          grantApplicationNumber,
+          grantApprovedAmount: Number(grantApprovedAmount) || undefined,
         }),
       undefined,
     );
@@ -1343,6 +1355,32 @@ export function QuoteEditor() {
                   </div>
                 </Field>
               )}
+              {editingInvoice && directCategories.includes("grant-80k") && (
+                <div className="form-grid two municipal-grant-fields">
+                  <Field label="8萬申請編號">
+                    <input
+                      aria-label="8萬申請編號"
+                      value={grantApplicationNumber}
+                      onChange={(event) =>
+                        setGrantApplicationNumber(event.target.value)
+                      }
+                      placeholder="例如：M24902103"
+                    />
+                  </Field>
+                  <Field label="批核金額">
+                    <input
+                      aria-label="批核金額"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={grantApprovedAmount}
+                      onChange={(event) =>
+                        setGrantApprovedAmount(event.target.value)
+                      }
+                    />
+                  </Field>
+                </div>
+              )}
             </Section>
           )}
           {(!wizard || wizardStep === 1) && (
@@ -1350,19 +1388,23 @@ export function QuoteEditor() {
             number={directInvoice ? "02" : "01"}
             title="客戶資料"
             action={
-              <div className="section-actions">
-                <Button onClick={() => setCustomers(true)}>
-                  選擇現有客戶
-                </Button>
-                {directInvoice && (
-                  <Button
-                    disabled={!customer.name.trim() || !customer.phone.trim()}
-                    onClick={saveCustomerToModule}
-                  >
-                    儲存到客戶模組
+              editingInvoice ? undefined : (
+                <div className="section-actions">
+                  <Button onClick={() => setCustomers(true)}>
+                    選擇現有客戶
                   </Button>
-                )}
-              </div>
+                  {directInvoice && (
+                    <Button
+                      disabled={
+                        !customer.name.trim() || !customer.phone.trim()
+                      }
+                      onClick={saveCustomerToModule}
+                    >
+                      儲存到客戶模組
+                    </Button>
+                  )}
+                </div>
+              )
             }
           >
             <CustomerForm
@@ -1802,6 +1844,32 @@ export function QuoteEditor() {
                       ))}
                     </div>
                   </Field>
+                  {directCategories.includes("grant-80k") && (
+                    <div className="form-grid two municipal-grant-fields">
+                      <Field label="8萬申請編號">
+                        <input
+                          aria-label="8萬申請編號"
+                          value={grantApplicationNumber}
+                          onChange={(event) =>
+                            setGrantApplicationNumber(event.target.value)
+                          }
+                          placeholder="例如：M24902103"
+                        />
+                      </Field>
+                      <Field label="批核金額">
+                        <input
+                          aria-label="批核金額"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={grantApprovedAmount}
+                          onChange={(event) =>
+                            setGrantApprovedAmount(event.target.value)
+                          }
+                        />
+                      </Field>
+                    </div>
+                  )}
                   <div className="handoff-prepared">
                     <span>正式發票號</span>
                     <strong>建立後產生</strong>

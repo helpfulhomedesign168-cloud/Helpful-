@@ -11,6 +11,10 @@ test("單據管理每張Invoice有修改單入口", async ({ page }) => {
   await page.goto("/invoices");
   const row = page.locator(".invoice-list-table tbody tr").first();
   const invoiceNumber = (await row.locator("strong").first().innerText()).trim();
+  await row.locator("td").nth(2).click();
+  await expect(page).toHaveURL(/\/invoices\/[^/]+$/);
+  await page.goBack();
+  await page.waitForTimeout(200);
   await expect(
     row.getByRole("button", { name: `修改${invoiceNumber}`, exact: true }),
   ).toBeVisible();

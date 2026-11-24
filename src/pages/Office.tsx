@@ -914,7 +914,18 @@ export function Invoices() {
                   const order = orderByInvoice.get(invoice.id);
                   const engineering = engineeringLabel(invoice);
                   return (
-                    <tr key={invoice.id}>
+                    <tr
+                      key={invoice.id}
+                      className="invoice-clickable-row"
+                      tabIndex={0}
+                      onClick={() => nav("/invoices/" + invoice.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          nav("/invoices/" + invoice.id);
+                        }
+                      }}
+                    >
                       <td>
                         <div
                           className={`invoice-number-cell ${
@@ -995,11 +1006,12 @@ export function Invoices() {
                           variant="ghost"
                           aria-label={`修改${invoice.number}`}
                           title="修改單"
-                          onClick={() =>
+                          onClick={(event) => {
+                            event.stopPropagation();
                             nav(
                               `/quotes/${invoice.quoteId}/edit?invoice=1`,
-                            )
-                          }
+                            );
+                          }}
                         >
                           <PenLine size={19} />
                         </Button>
