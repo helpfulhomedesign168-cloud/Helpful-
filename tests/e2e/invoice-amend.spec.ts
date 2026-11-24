@@ -10,12 +10,21 @@ test("單據管理每張Invoice有修改單入口", async ({ page }) => {
     .click();
   await page.goto("/invoices");
   const row = page.locator(".invoice-list-table tbody tr").first();
-  await expect(row.getByRole("button", { name: "修改單", exact: true })).toBeVisible();
-  await row.getByRole("button", { name: "修改單", exact: true }).click();
-  await expect(page).toHaveURL(/\/quotes\/[^/]+\/edit\?order=1$/);
+  const invoiceNumber = (await row.locator("strong").first().innerText()).trim();
+  await expect(
+    row.getByRole("button", { name: `修改${invoiceNumber}`, exact: true }),
+  ).toBeVisible();
+  await row
+    .getByRole("button", { name: `修改${invoiceNumber}`, exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/quotes\/[^/]+\/edit\?invoice=1$/);
   await expect(
     page.getByRole("heading", { name: "修改單", exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "銷售員資料", exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /^下一步/ }).click();
   await expect(
     page.getByRole("button", { name: "儲存修改", exact: true }),
   ).toBeVisible();

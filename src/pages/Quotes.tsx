@@ -26,6 +26,7 @@ import { getAttachmentBlob, useApp } from "../context";
 import { exportDirectInvoiceExcel } from "../exportDirectInvoiceExcel";
 import {
   Customer,
+  Invoice,
   Quote,
   QuoteLine,
   ServiceItem,
@@ -646,16 +647,23 @@ const QUOTE_WIZARD_STEPS = [
 export function QuoteWizardProgress({
   step,
   directInvoice = false,
+  editInvoice = false,
 }: {
   step: number;
   directInvoice?: boolean;
+  editInvoice?: boolean;
 }) {
   const steps = directInvoice
-    ? [
-        ["1", "發票資料"],
-        ["2", "工程項目"],
-        ["3", "確認發票"],
-      ]
+    ? editInvoice
+      ? [
+          ["1", "發票資料"],
+          ["2", "工程項目"],
+        ]
+      : [
+          ["1", "發票資料"],
+          ["2", "工程項目"],
+          ["3", "確認發票"],
+        ]
     : QUOTE_WIZARD_STEPS;
   return (
     <div
@@ -684,14 +692,26 @@ export function QuoteEditor() {
   const [searchParams] = useSearchParams();
   const nav = useNavigate();
   const resumeStep = searchParams.get("step");
+  const invoiceEdit = searchParams.get("invoice") === "1";
   const orderEdit = searchParams.get("order") === "1";
-  const directInvoice = searchParams.get("direct") === "1";
+  const directInvoice = searchParams.get("direct") === "1" || invoiceEdit;
   const wizard =
-    !id || orderEdit || directInvoice || resumeStep === "1" || resumeStep === "2";
+    !id ||
+    orderEdit ||
+    invoiceEdit ||
+    directInvoice ||
+    resumeStep === "1" ||
+    resumeStep === "2";
   let existing: Quote | undefined;
   try {
     if (id) existing = engine.getQuote(actor, id);
   } catch {}
+  let existingInvoice: Invoice | undefined;
+  try {
+    if (invoiceEdit && existing?.invoiceId)
+      existingInvoice = engine.getInvoice(actor, existing.invoiceId);
+  } catch {}
+  const editingInvoice = Boolean(existingInvoice);
   const base = existing ? currentVersion(existing) : undefined;
   let masterCustomer = base?.customer;
   try {
@@ -701,19 +721,27 @@ export function QuoteEditor() {
     // A removed master profile must not prevent the Sales from seeing this historical draft.
   }
   const [customer, setCustomer] = useState<Customer>(
-    masterCustomer
-      ? structuredClone(masterCustomer)
-      : structuredClone(EMPTY_CUSTOMER),
+    existingInvoice
+      ? structuredClone(existingInvoice.customer)
+      : masterCustomer
+        ? structuredClone(masterCustomer)
+        : structuredClone(EMPTY_CUSTOMER),
   );
   const [lines, setLines] = useState<QuoteLine[]>(
-    base ? structuredClone(base.lines) : [],
+    existingInvoice
+      ? structuredClone(existingInvoice.lines)
+      : base
+        ? structuredClone(base.lines)
+        : [],
   );
   const [discountMode, setDiscountMode] = useState<DiscountMode>(
-    base?.discountMode ??
+    existingInvoice?.discountMode ??
+      base?.discountMode ??
       (base?.discount && base.discount < 1 ? "rate" : "none"),
   );
   const [discountValue, setDiscountValue] = useState(
-    base?.discountValue ??
+    existingInvoice?.discountValue ??
+      base?.discountValue ??
       (base?.discount && base.discount < 1 ? base.discount * 100 : 0),
   );
   const [ratePreset, setRatePreset] = useState<"95" | "custom">(
@@ -728,20 +756,32 @@ export function QuoteEditor() {
   );
   const today = new Date();
   const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const [invoiceDate, setInvoiceDate] = useState(todayValue);
+  const [invoiceDate, setInvoiceDate] = useState(
+    existingInvoice?.createdAt.slice(0, 10) ?? todayValue,
+  );
   const allActors = engine.listActors();
   const salesOptions = allActors.filter((candidate) => candidate.role === "sales");
   const supervisorOptions = allActors.filter((candidate) =>
     ["supervisor", "head"].includes(candidate.role),
   );
-  const [salesId, setSalesId] = useState(salesOptions[0]?.id ?? "");
+  const [salesId, setSalesId] = useState(
+    existing?.ownerId ?? salesOptions[0]?.id ?? "",
+  );
   const [supervisorId, setSupervisorId] = useState(
-    supervisorOptions[0]?.id ?? "",
+    supervisorOptions.find(
+      (candidate) => candidate.id === existingInvoice?.supervisorId,
+    )?.id ??
+      supervisorOptions[0]?.id ??
+      "",
   );
   const [exporting, setExporting] = useState(false);
-  const [directCategories, setDirectCategories] = useState<InvoiceCategory[]>([
-    "self-pay",
-  ]);
+  const [directCategories, setDirectCategories] = useState<InvoiceCategory[]>(
+    existingInvoice?.categories?.length
+      ? existingInvoice.categories
+      : existingInvoice?.category
+        ? [existingInvoice.category]
+        : ["self-pay"],
+  );
   const [exitConfirm, setExitConfirm] = useState(false);
   const [picker, setPicker] = useState(false);
   const [customers, setCustomers] = useState(false);
@@ -816,6 +856,7 @@ export function QuoteEditor() {
     clerkEditor ||
     (directInvoice && actor.role === "invoice_clerk") ||
     (orderEdit && actor.role === "invoice_clerk") ||
+    (editingInvoice && actor.role === "invoice_clerk") ||
     ["admin", "admin_staff"].includes(actor.role);
   useEffect(() => {
     if (!wizard || directInvoice) {
@@ -883,6 +924,22 @@ export function QuoteEditor() {
         ...current,
         id: profile.customer.id,
       }));
+  }
+  function saveInvoiceAmendment() {
+    if (!existingInvoice) return;
+    const updated = run(
+      () =>
+        engine.amendDirectInvoice(actor, existingInvoice.id, {
+          customer,
+          lines,
+          date: invoiceDate,
+          salesId,
+          supervisorId,
+          categories: directCategories,
+        }),
+      `發票${existingInvoice.number}已更新。`,
+    );
+    if (updated) nav("/invoices");
   }
   function createDirectInvoice() {
     const invoice = run(
@@ -1124,20 +1181,28 @@ export function QuoteEditor() {
     <>
       <PageHead
         title={
-          directInvoice
-            ? "建立 Invoice"
-            : orderEdit
-              ? existing?.invoiceId
-                ? "修改單"
-                : "修改報價"
-              : wizard
-                ? "建立報價"
-                : "修改報價"
+          editingInvoice
+            ? "修改單"
+            : directInvoice
+              ? "建立 Invoice"
+              : orderEdit
+                ? "修改報價"
+                : wizard
+                  ? "建立報價"
+                  : "修改報價"
         }
         actions={
           <>
             <Button
               onClick={() => {
+                if (editingInvoice) {
+                  if (wizardStep === 2) {
+                    setWizardStep(1);
+                    return;
+                  }
+                  nav("/invoices");
+                  return;
+                }
                 if (directInvoice) {
                   if (wizardStep === 3) {
                     setWizardStep(2);
@@ -1193,6 +1258,7 @@ export function QuoteEditor() {
         <QuoteWizardProgress
           step={wizardStep}
           directInvoice={directInvoice}
+          editInvoice={editingInvoice}
         />
       )}
       {clerkEditor && (
@@ -1243,6 +1309,40 @@ export function QuoteEditor() {
                   </select>
                 </Field>
               </div>
+              {editingInvoice && (
+                <Field label="單種">
+                  <div className="order-category-chips">
+                    {(
+                      Object.keys(
+                        INVOICE_CATEGORY_NAMES,
+                      ) as InvoiceCategory[]
+                    ).map((category) => (
+                      <button
+                        type="button"
+                        key={category}
+                        className={
+                          directCategories.includes(category)
+                            ? "selected"
+                            : ""
+                        }
+                        onClick={() =>
+                          setDirectCategories((current) =>
+                            current.includes(category)
+                              ? current.length === 1
+                                ? current
+                                : current.filter(
+                                    (item) => item !== category,
+                                  )
+                              : [...current, category],
+                          )
+                        }
+                      >
+                        {INVOICE_CATEGORY_NAMES[category]}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+              )}
             </Section>
           )}
           {(!wizard || wizardStep === 1) && (
@@ -2016,19 +2116,35 @@ export function QuoteEditor() {
               下一步 <ArrowRight size={18} />
             </Button>
           ) : wizardStep === 2 && directInvoice ? (
-            <Button
-              variant="primary"
-              disabled={
-                pendingCount > 0 ||
-                onlyCustom ||
-                !lines.length ||
-                !customer.name.trim() ||
-                !customer.phone.trim()
-              }
-              onClick={() => setWizardStep(3)}
-            >
-              下一步：預覽發票 <ArrowRight size={18} />
-            </Button>
+            editingInvoice ? (
+              <Button
+                variant="primary"
+                disabled={
+                  pendingCount > 0 ||
+                  onlyCustom ||
+                  !lines.length ||
+                  !customer.name.trim() ||
+                  !customer.phone.trim()
+                }
+                onClick={saveInvoiceAmendment}
+              >
+                儲存修改 <Check size={18} />
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                disabled={
+                  pendingCount > 0 ||
+                  onlyCustom ||
+                  !lines.length ||
+                  !customer.name.trim() ||
+                  !customer.phone.trim()
+                }
+                onClick={() => setWizardStep(3)}
+              >
+                下一步：預覽發票 <ArrowRight size={18} />
+              </Button>
+            )
           ) : wizardStep === 3 && directInvoice ? (
             <Button variant="primary" onClick={createDirectInvoice}>
               確定建立發票 <ArrowRight size={18} />
