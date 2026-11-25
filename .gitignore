@@ -7,3 +7,7 @@ test-results/
 playwright-report/
 first-preview.png
 *.log
+.vercel
+.env*
+.vercel/
+.vercel-cli/

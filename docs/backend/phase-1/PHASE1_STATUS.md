@@ -111,6 +111,11 @@ curl http://127.0.0.1:8787/api/v1/health
   - Admin `/users` = 200
   - Admin `/feature-flags` = 200
 - Temporary QA auth user deleted
+- Vercel environment variables added to Production + Preview via CLI
+- Preview API routing verified:
+  - `/api/v1/health` = 200
+  - `/api/v1/health/ready` = 200 (DB connected)
+  - `/api/v1/me` = 401 without token
 
 ## Verified endpoints (2026-11-25)
 
@@ -125,6 +130,14 @@ curl http://127.0.0.1:8787/api/v1/health
 | `GET /feature-flags` as Admin | ✅ 200 |
 | QA auth user cleanup | ✅ 0 remaining |
 
+## API routing note
+
+Vercel's catch-all API route did not match nested paths reliably. The API is deployed as:
+
+- `api/v1/index.ts` concrete function
+- `vercel.json` rewrites `/api/v1/(.*)` to `/api/v1?path=$1`
+- Server app is bundled to `api/v1/_server.mjs` to avoid Vercel module tracing issues
+
 ## Next gate
 
 Phase 1 is **not complete** until:
@@ -132,5 +145,5 @@ Phase 1 is **not complete** until:
 1. Migration applied to staging. ✅
 2. A real Supabase user can log in and call `/me`. ✅
 3. Server-side permission test passes for at least invoice_clerk, CS, finance and admin. ✅ (CS/Admin verified; invoice_clerk/finance matrix unit-tested)
-4. Staging deployment uses Vercel env. ⏳
+4. Staging deployment uses Vercel env. ✅ (preview verified)
 5. Frontend has a login/session foundation. ⏳
