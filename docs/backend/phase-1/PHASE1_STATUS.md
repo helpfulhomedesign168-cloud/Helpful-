@@ -112,10 +112,20 @@ curl http://127.0.0.1:8787/api/v1/health
   - Admin `/feature-flags` = 200
 - Temporary QA auth user deleted
 - Vercel environment variables added to Production + Preview via CLI
+- Frontend AuthGate added:
+  - production build requires login by default
+  - local Vite demo/E2E bypasses auth unless `VITE_LIVE_AUTH=1`
+  - login calls server-side `/auth/login` BFF (service key never reaches browser)
+  - session refresh, logout and role mapping implemented
 - Preview API routing verified:
   - `/api/v1/health` = 200
   - `/api/v1/health/ready` = 200 (DB connected)
   - `/api/v1/me` = 401 without token
+- Frontend login verified in Chromium:
+  - login page → `/services` for Admin
+  - topbar shows authenticated user
+  - logout control present
+  - screenshots saved in `docs/design/screens/global/`
 
 ## Verified endpoints (2026-11-25)
 
@@ -138,6 +148,13 @@ Vercel's catch-all API route did not match nested paths reliably. The API is dep
 - `vercel.json` rewrites `/api/v1/(.*)` to `/api/v1?path=$1`
 - Server app is bundled to `api/v1/_server.mjs` to avoid Vercel module tracing issues
 
+## Known Phase 1 limitations
+
+- `/auth/login` uses the server-side service key as the Supabase Auth gateway; rate limiting / lockout is not yet implemented.
+- Logout clears the client session; server-side token revocation is not yet implemented.
+- Frontend still reads demo/local domain data; API data integration starts in Phase 2.
+- Production is not deployed until PR #80 is merged.
+
 ## Next gate
 
 Phase 1 is **not complete** until:
@@ -146,4 +163,4 @@ Phase 1 is **not complete** until:
 2. A real Supabase user can log in and call `/me`. ✅
 3. Server-side permission test passes for at least invoice_clerk, CS, finance and admin. ✅ (CS/Admin verified; invoice_clerk/finance matrix unit-tested)
 4. Staging deployment uses Vercel env. ✅ (preview verified)
-5. Frontend has a login/session foundation. ⏳
+5. Frontend has a login/session foundation. ✅ (local Chromium verified; Vercel preview pending)

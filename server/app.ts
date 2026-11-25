@@ -7,6 +7,7 @@ import { customersRoute } from "./routes/customers";
 import { servicesRoute } from "./routes/services";
 import { usersRoute } from "./routes/users";
 import { featureFlagsRoute } from "./routes/featureFlags";
+import { authRoute } from "./routes/auth";
 
 export const app = new Hono<AppEnv>().basePath("/api/v1");
 
@@ -18,6 +19,7 @@ app.use("*", async (c, next) => {
 });
 
 app.route("/health", health);
+app.route("/auth", authRoute);
 app.route("/me", me);
 app.route("/customers", customersRoute);
 app.route("/services", servicesRoute);

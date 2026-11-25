@@ -35117,6 +35117,104 @@ featureFlagsRoute.patch(
   }
 );
 
+// server/routes/auth.ts
+var loginSchema = external_exports.object({
+  email: external_exports.string().trim().email(),
+  password: external_exports.string().min(1)
+});
+var refreshSchema = external_exports.object({
+  refresh_token: external_exports.string().min(1)
+});
+var authError = (message2 = "Email \u6216\u5BC6\u78BC\u4E0D\u6B63\u78BA\u3002") => ({
+  error: { code: "INVALID_CREDENTIALS", message: message2 }
+});
+async function supabaseToken(body) {
+  const env = getEnv();
+  const serviceKey = getOptionalEnv().serviceRoleKey;
+  if (!serviceKey) {
+    return Response.json(
+      { error: { code: "AUTH_NOT_CONFIGURED", message: "\u767B\u5165\u670D\u52D9\u672A\u8A2D\u5B9A\u3002" } },
+      { status: 503 }
+    );
+  }
+  const response = await fetch(
+    `${env.SUPABASE_URL}/auth/v1/token?grant_type=${encodeURIComponent(body.grant_type)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15e3)
+    }
+  );
+  if (!response.ok) return Response.json(authError(), { status: 401 });
+  return await response.json();
+}
+var authRoute = new Hono3();
+authRoute.post("/login", async (c2) => {
+  const parsed = loginSchema.safeParse(await c2.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c2.json(
+      {
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "\u8ACB\u8F38\u5165\u6709\u6548\u7684 Email \u53CA\u5BC6\u78BC\u3002"
+        }
+      },
+      400
+    );
+  }
+  const session = await supabaseToken({
+    grant_type: "password",
+    email: parsed.data.email,
+    password: parsed.data.password
+  });
+  if (session instanceof Response) return session;
+  const env = getEnv();
+  const response = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      apikey: getOptionalEnv().serviceRoleKey,
+      Authorization: `Bearer ${session.access_token}`
+    },
+    signal: AbortSignal.timeout(1e4)
+  });
+  if (!response.ok) return c2.json(authError(), 401);
+  const authUser = await response.json();
+  const rows = await getDb().select({ id: users.id, email: users.email, name: users.name, role: users.role, active: users.active }).from(users).where(eq(users.id, authUser.id)).limit(1);
+  if (!rows[0] || !rows[0].active) {
+    return c2.json(
+      { error: { code: "ACCOUNT_DISABLED", message: "\u6B64\u5E33\u6236\u672A\u958B\u901A\u6216\u5DF2\u505C\u7528\u3002" } },
+      403
+    );
+  }
+  return c2.json({
+    ...session,
+    user: {
+      id: rows[0].id,
+      email: rows[0].email,
+      name: rows[0].name,
+      role: rows[0].role
+    }
+  });
+});
+authRoute.post("/refresh", async (c2) => {
+  const parsed = refreshSchema.safeParse(await c2.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c2.json(
+      { error: { code: "VALIDATION_ERROR", message: "Refresh token \u7121\u6548\u3002" } },
+      400
+    );
+  }
+  const session = await supabaseToken({
+    grant_type: "refresh_token",
+    refresh_token: parsed.data.refresh_token
+  });
+  if (session instanceof Response) return session;
+  return c2.json(session);
+});
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -35126,6 +35224,7 @@ app.use("*", async (c2, next) => {
   await next();
 });
 app.route("/health", health);
+app.route("/auth", authRoute);
 app.route("/me", me);
 app.route("/customers", customersRoute);
 app.route("/services", servicesRoute);

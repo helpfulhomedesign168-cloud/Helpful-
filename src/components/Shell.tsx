@@ -32,6 +32,7 @@ import { useApp } from "../context";
 import { ROLE_NAMES } from "../domain/types";
 import { notificationTarget } from "../notificationTarget";
 import { isRoleVisible } from "../features";
+import { useAuth } from "../auth";
 import { Button, Dialog, Notice } from "./ui";
 
 const NAV_ICON: Record<string, string> = {
@@ -78,6 +79,7 @@ export function Shell() {
   const nav = useNavigate();
   const location = useLocation();
   const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const { live, user: authUser, logout } = useAuth();
   const [roles, setRoles] = useState(false);
   const [notifications, setNotifications] = useState(false);
   const [mobile, setMobile] = useState(false);
@@ -213,14 +215,27 @@ export function Shell() {
             <Bell size={22} />
             {unread > 0 && <span className="notification-count">{unread}</span>}
           </button>
-          <button className="actor-button" onClick={() => setRoles(true)}>
-            <span className="avatar">{actor.name.slice(0, 1)}</span>
-            <span className="actor-copy">
-              {actor.name}
-              <small>{ROLE_NAMES[actor.role]}</small>
-            </span>
-            <ChevronDown size={18} />
-          </button>
+          {live ? (
+            <div className="actor-button actor-static">
+              <span className="avatar">{(authUser?.name || actor.name).slice(0, 1)}</span>
+              <span className="actor-copy">
+                {authUser?.name || actor.name}
+                <small>{ROLE_NAMES[actor.role]}</small>
+              </span>
+              <button className="actor-logout" onClick={logout} aria-label="登出">
+                <LogOut size={18} />
+              </button>
+            </div>
+          ) : (
+            <button className="actor-button" onClick={() => setRoles(true)}>
+              <span className="avatar">{actor.name.slice(0, 1)}</span>
+              <span className="actor-copy">
+                {actor.name}
+                <small>{ROLE_NAMES[actor.role]}</small>
+              </span>
+              <ChevronDown size={18} />
+            </button>
+          )}
         </div>
       </header>
       <aside
@@ -283,12 +298,14 @@ export function Shell() {
           })}
         </nav>
         <div className="sidebar-bottom">
-          <button className="prototype-tools" onClick={() => setTools(true)}>
-            <SlidersHorizontal size={19} />
-            原型工具
-          </button>
-          <span className="demo-label">流程原型 · Demo資料</span>
-          <span className="build-label">初階版本 0.1</span>
+          {!live && (
+            <button className="prototype-tools" onClick={() => setTools(true)}>
+              <SlidersHorizontal size={19} />
+              原型工具
+            </button>
+          )}
+          <span className="demo-label">{live ? "Phase 1 · 登入測試" : "流程原型 · Demo資料"}</span>
+          <span className="build-label">{live ? "Backend v0.1" : "初階版本 0.1"}</span>
         </div>
       </aside>
       {mobile && (
@@ -343,7 +360,7 @@ export function Shell() {
           </div>
         </Dialog>
       )}
-      {roles && (
+      {!live && roles && (
         <Dialog title="切換測試角色" onClose={() => setRoles(false)}>
           <p className="muted">切換角色後，保留同一張單的最新進度。</p>
           <div className="role-list">

@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Provider, useApp } from "./context";
+import { AuthGate, AuthProvider } from "./auth";
 import { Shell, roleHome } from "./components/Shell";
 import { QuoteEditor, Quotes } from "./pages/Quotes";
 import { QuoteView } from "./pages/SubmittedQuote";
@@ -82,8 +83,10 @@ class Boundary extends React.Component<
 const sales = ["sales", "head", "supervisor"];
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <Boundary>
-    <Provider>
-      <BrowserRouter>
+    <AuthProvider>
+      <AuthGate>
+        <Provider>
+          <BrowserRouter>
         <Routes>
           <Route path="/documents/:kind/:id" element={<Documents />} />
           <Route element={<Shell />}>
@@ -341,7 +344,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route path="*" element={<Home />} />
           </Route>
         </Routes>
-      </BrowserRouter>
-    </Provider>
+          </BrowserRouter>
+        </Provider>
+      </AuthGate>
+    </AuthProvider>
   </Boundary>,
 );
