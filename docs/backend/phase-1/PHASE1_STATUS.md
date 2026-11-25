@@ -44,9 +44,9 @@
 
 | Item | Blocker |
 |---|---|
-| Apply migration to real Postgres | Need Supabase project + `DATABASE_URL` |
-| End-to-end `/me` | Need Supabase Auth user + JWT |
-| Seed admin / flags | Need DB |
+| Apply migration to real Postgres | ✅ Applied to Supabase `fijjpbkrsooltxkgrxvf` |
+| Seed admin / flags | ✅ Flags seeded; admin public user created |
+| End-to-end `/me` | Need a real Supabase session / service role test |
 | Admin users / feature flags endpoints | Next scaffold step |
 | File upload presign | Need Supabase Storage project |
 | Frontend login integration | Need Supabase URL + anon key |
@@ -92,6 +92,18 @@ curl http://127.0.0.1:8787/api/v1/health
 - `api/[...route].ts`
 - `drizzle.config.ts`
 - `.env.example`
+
+## Provisioning update (2026-11-25)
+
+- Supabase project: `Helpful-home-staging` (Singapore, Healthy)
+- 19 tables applied
+- Feature flags seeded:
+  - `direct_invoice = true`
+  - `sales_workspace = false`
+  - `legacy_clerk = false`
+- First admin user created in `auth.users` and `public.users`
+- DB connection verified with `select 1`
+- `/me` still pending a real JWT session
 
 ## Next gate
 
