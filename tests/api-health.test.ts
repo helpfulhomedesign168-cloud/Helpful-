@@ -17,10 +17,17 @@ describe("API foundation", () => {
     expect(body.error.code).toBe("NOT_FOUND");
   });
 
+  it("admin routes reject unauthenticated requests", async () => {
+    expect((await app.request("/api/v1/users")).status).toBe(401);
+    expect((await app.request("/api/v1/feature-flags")).status).toBe(401);
+  });
+
   it("permissions separate invoice clerk from CS", () => {
     expect(hasCapability("invoice_clerk", "invoice.create")).toBe(true);
     expect(hasCapability("cs", "invoice.create")).toBe(false);
     expect(hasCapability("cs_supervisor", "workorder.assign")).toBe(true);
     expect(hasCapability("finance", "payment.validate")).toBe(true);
+    expect(hasCapability("admin", "user.manage")).toBe(true);
+    expect(hasCapability("admin_staff", "user.manage")).toBe(false);
   });
 });

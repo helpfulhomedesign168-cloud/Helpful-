@@ -5,6 +5,8 @@ import { health } from "./routes/health";
 import { me } from "./routes/me";
 import { customersRoute } from "./routes/customers";
 import { servicesRoute } from "./routes/services";
+import { usersRoute } from "./routes/users";
+import { featureFlagsRoute } from "./routes/featureFlags";
 
 export const app = new Hono<AppEnv>().basePath("/api/v1");
 
@@ -19,6 +21,8 @@ app.route("/health", health);
 app.route("/me", me);
 app.route("/customers", customersRoute);
 app.route("/services", servicesRoute);
+app.route("/users", usersRoute);
+app.route("/feature-flags", featureFlagsRoute);
 
 app.notFound((c) =>
   c.json(

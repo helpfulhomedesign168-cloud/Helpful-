@@ -27,6 +27,8 @@
   - `GET /api/v1/me` (Supabase JWT)
   - `GET/POST /api/v1/customers`
   - `GET /api/v1/services`
+  - `GET /api/v1/users` + `PATCH /api/v1/users/:id` (admin)
+  - `GET /api/v1/feature-flags` + `PATCH /api/v1/feature-flags` (admin)
 - Server-side permission matrix:
   - invoice_clerk / finance / finance_supervisor
   - CS / CS supervisor
@@ -47,7 +49,7 @@
 | Apply migration to real Postgres | ✅ Applied to Supabase `fijjpbkrsooltxkgrxvf` |
 | Seed admin / flags | ✅ Flags seeded; admin public user created |
 | End-to-end `/me` | Need a real Supabase session / service role test |
-| Admin users / feature flags endpoints | Next scaffold step |
+| Admin users / feature flags endpoints | ✅ scaffolded; need authenticated e2e test |
 | File upload presign | Need Supabase Storage project |
 | Frontend login integration | Need Supabase URL + anon key |
 | Staging deploy | Need Vercel env + Supabase access |
