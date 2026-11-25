@@ -1,6 +1,6 @@
 # Phase 1 Foundation — Status
 
-**Status:** In progress — scaffold complete; cloud provisioning pending  
+**Status:** Backend foundation verified on staging DB; frontend/Vercel env pending  
 **Date:** 2026-11-25  
 **Baseline:** PRD v1.0 / Phase 0 approved D1–D8
 
@@ -105,14 +105,32 @@ curl http://127.0.0.1:8787/api/v1/health
   - `legacy_clerk = false`
 - First admin user created in `auth.users` and `public.users`
 - DB connection verified with `select 1`
-- `/me` still pending a real JWT session
+- `/me` verified with a real Supabase JWT (200)
+- Server-side permission verified:
+  - CS `/users` = 403
+  - Admin `/users` = 200
+  - Admin `/feature-flags` = 200
+- Temporary QA auth user deleted
+
+## Verified endpoints (2026-11-25)
+
+| Check | Result |
+|---|---|
+| `select 1` via pooler | ✅ |
+| Migration / 19 tables | ✅ |
+| Real Supabase login | ✅ |
+| `GET /me` as CS | ✅ 200, CS permissions |
+| `GET /users` as CS | ✅ 403 |
+| `GET /users` as Admin | ✅ 200 |
+| `GET /feature-flags` as Admin | ✅ 200 |
+| QA auth user cleanup | ✅ 0 remaining |
 
 ## Next gate
 
 Phase 1 is **not complete** until:
 
-1. Migration applied to staging.
-2. A real Supabase user can log in and call `/me`.
-3. Server-side permission test passes for at least invoice_clerk, CS, finance and admin.
-4. Staging deployment uses Vercel env.
-5. Frontend has a login/session foundation.
+1. Migration applied to staging. ✅
+2. A real Supabase user can log in and call `/me`. ✅
+3. Server-side permission test passes for at least invoice_clerk, CS, finance and admin. ✅ (CS/Admin verified; invoice_clerk/finance matrix unit-tested)
+4. Staging deployment uses Vercel env. ⏳
+5. Frontend has a login/session foundation. ⏳
