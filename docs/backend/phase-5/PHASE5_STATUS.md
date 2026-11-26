@@ -56,18 +56,16 @@
 
 ## Not yet done
 
-- Live Invoice edit/amend form
-- Live payment registration/validation UI
-- Live receipt document ✅
+- Live payment pending validation for finance
 - CS work order frontend
 - Remove local demo data path in production
 - Optimistic refresh / cache invalidation
 - API error handling for expired token
+- Vercel preview deployment verification
 
 ## Next
 
-1. Live invoice create
-2. Live invoice amendment
-3. Payment UI
-4. CS work order UI
-5. Staging E2E
+1. CS work order UI
+2. Live finance pending validation
+3. Staging E2E
+4. Production cutover checklist
