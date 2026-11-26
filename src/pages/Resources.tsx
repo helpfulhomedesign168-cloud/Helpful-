@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, PenLine, ArrowUpRight, Check, Trash2, X } from "lucide-react";
 import { useApp } from "../context";
+import { useAuth } from "../auth";
+import { LiveCustomers } from "./LiveCustomers";
 import {
   Badge,
   Button,
@@ -592,6 +594,11 @@ export function Services() {
   );
 }
 export function Customers() {
+  const { live } = useAuth();
+  return live ? <LiveCustomers /> : <DemoCustomers />;
+}
+
+function DemoCustomers() {
   const { actor, engine, run } = useApp();
   const [search, setSearch] = useState("");
   const [salesFilter, setSalesFilter] = useState("all");
