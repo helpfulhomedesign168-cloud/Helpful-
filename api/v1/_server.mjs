@@ -36868,6 +36868,19 @@ photosRoute.delete(
 );
 
 // server/routes/municipal.ts
+var updateSchema2 = external_exports.object({
+  lines: external_exports.array(
+    external_exports.object({
+      name: external_exports.string().trim().min(1).max(200),
+      description: external_exports.string().trim().max(500).optional(),
+      position: external_exports.string().trim().max(120).optional(),
+      quantity: external_exports.number().positive().max(1e5),
+      unit: external_exports.string().trim().min(1).max(40),
+      unitPriceCents: external_exports.number().int().nonnegative(),
+      amountCents: external_exports.number().int().nonnegative()
+    })
+  ).min(1).max(300)
+});
 var municipalRoute = new Hono3();
 municipalRoute.get(
   "/",
@@ -36929,13 +36942,19 @@ municipalRoute.get(
     if (!order2) {
       return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5E02\u653F\u55AE\u3002" } }, 404);
     }
-    const version3 = await getDb().select().from(invoiceVersions).where(
-      and(
-        eq(invoiceVersions.invoiceId, order2.invoice.id),
-        eq(invoiceVersions.versionNo, order2.invoice.currentVersion)
-      )
-    ).limit(1);
-    const lines = version3[0] ? await getDb().select().from(invoiceLines).where(eq(invoiceLines.versionId, version3[0].id)) : [];
+    const currentMunicipalLines = await getDb().select().from(municipalOrderLines).where(eq(municipalOrderLines.municipalOrderId, order2.id));
+    let lines;
+    if (currentMunicipalLines.length) {
+      lines = currentMunicipalLines;
+    } else {
+      const version3 = await getDb().select().from(invoiceVersions).where(
+        and(
+          eq(invoiceVersions.invoiceId, order2.invoice.id),
+          eq(invoiceVersions.versionNo, order2.invoice.currentVersion)
+        )
+      ).limit(1);
+      lines = version3[0] ? await getDb().select().from(invoiceLines).where(eq(invoiceLines.versionId, version3[0].id)) : [];
+    }
     return c2.json({
       ...order2,
       lines: lines.map((line2) => ({
@@ -36948,6 +36967,55 @@ municipalRoute.get(
         amountCents: line2.amountCents
       }))
     });
+  }
+);
+municipalRoute.patch(
+  "/:id",
+  requireAuth,
+  requireCapability("municipal.write"),
+  async (c2) => {
+    const parsed = updateSchema2.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "\u5E02\u653F\u55AE\u9805\u76EE\u4E0D\u6B63\u78BA\u3002",
+            fields: parsed.error.flatten().fieldErrors
+          }
+        },
+        400
+      );
+    }
+    const [order2] = await getDb().select().from(municipalOrders).where(eq(municipalOrders.id, c2.req.param("id"))).limit(1);
+    if (!order2) {
+      return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5E02\u653F\u55AE\u3002" } }, 404);
+    }
+    await getDb().transaction(async (tx) => {
+      await tx.delete(municipalOrderLines).where(eq(municipalOrderLines.municipalOrderId, order2.id));
+      await tx.insert(municipalOrderLines).values(
+        parsed.data.lines.map((line2) => ({
+          municipalOrderId: order2.id,
+          name: line2.name,
+          description: line2.description,
+          position: line2.position,
+          quantity: String(line2.quantity),
+          unit: line2.unit,
+          unitPriceCents: line2.unitPriceCents,
+          amountCents: line2.amountCents
+        }))
+      );
+      await tx.update(municipalOrders).set({ updatedAt: /* @__PURE__ */ new Date() }).where(eq(municipalOrders.id, order2.id));
+      await tx.insert(auditLogs).values({
+        actorId: c2.get("user").id,
+        action: "municipal_order_updated",
+        entityType: "municipal_order",
+        entityId: order2.id,
+        after: { lines: parsed.data.lines.length },
+        requestId: c2.get("requestId")
+      });
+    });
+    return c2.json({ ok: true });
   }
 );
 

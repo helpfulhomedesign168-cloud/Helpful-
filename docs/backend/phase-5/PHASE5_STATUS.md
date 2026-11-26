@@ -52,7 +52,8 @@
   - `GET /api/v1/municipal-orders`
   - `GET /api/v1/municipal-orders/:id`
   - live list/detail with principal, Invoice, grant data and lines
-  - read-only (municipal editing still pending)
+  - `PATCH /api/v1/municipal-orders/:id` edits lines
+  - live detail editable for invoice_clerk/admin
 - Live services catalogue:
   - backend seeded with 38 current catalogue items
   - `/services` live list/search/category

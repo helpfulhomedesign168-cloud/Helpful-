@@ -89,16 +89,56 @@ export function LiveMunicipalOrders() {
 
 export function LiveMunicipalOrderDetail() {
   const { id = "" } = useParams();
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const nav = useNavigate();
   const [order, setOrder] = useState<MunicipalDetail | null>(null);
+  const [lines, setLines] = useState<MunicipalDetail["lines"]>([]);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState("");
+  const canEdit = ["invoice_clerk", "admin", "admin_staff"].includes(user?.role ?? "");
 
   useEffect(() => {
     apiRequest<MunicipalDetail>(`/municipal-orders/${id}`, accessToken)
-      .then(setOrder)
+      .then((data) => {
+        setOrder(data);
+        setLines(data.lines);
+      })
       .catch((e) => setError(e instanceof ApiError ? e.message : "未能讀取市政單。"));
   }, [accessToken, id]);
+
+  function updateLine(lineId: string, patch: Partial<MunicipalDetail["lines"][number]>) {
+    setLines((current) => current.map((line) => (line.id === lineId ? { ...line, ...patch } : line)));
+  }
+
+  async function save() {
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await apiRequest(`/municipal-orders/${id}`, accessToken, {
+        method: "PATCH",
+        body: JSON.stringify({
+          lines: lines.map((line) => ({
+            name: line.name,
+            position: line.position || undefined,
+            quantity: Number(line.quantity) || 0,
+            unit: line.unit,
+            unitPriceCents: Math.round((line.unitPriceCents / 100) * 100),
+            amountCents: Math.round((Number(line.quantity) || 0) * line.unitPriceCents),
+          })),
+        }),
+      });
+      const refreshed = await apiRequest<MunicipalDetail>(`/municipal-orders/${id}`, accessToken);
+      setOrder(refreshed);
+      setLines(refreshed.lines);
+      setNotice("市政單已更新。");
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "未能更新市政單。");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   if (error) return <Empty title="未能讀取市政單" description={error} />;
   if (!order) return <p className="muted">正在讀取市政單…</p>;
@@ -125,11 +165,33 @@ export function LiveMunicipalOrderDetail() {
         </div>
         <h2 className="section-title">工程項目</h2>
         <div className="table-scroll">
-          <table className="invoice-list-table live-work-table">
-            <thead><tr><th>項目</th><th>位置</th><th>數量</th><th>單價</th><th>金額</th></tr></thead>
-            <tbody>{order.lines.map((line) => <tr key={line.id}><td>{line.name}</td><td>{line.position || "—"}</td><td>{line.quantity} {line.unit}</td><td>{money(line.unitPriceCents / 100)}</td><td>{money(line.amountCents / 100)}</td></tr>)}</tbody>
+          <table className="invoice-list-table live-work-table live-line-table">
+            <thead><tr><th>項目</th><th>位置</th><th>數量</th><th>單位</th><th>單價</th><th>金額</th>{canEdit && <th />}</tr></thead>
+            <tbody>
+              {lines.map((line) => {
+                const amount = Math.round((Number(line.quantity) || 0) * line.unitPriceCents);
+                return (
+                  <tr key={line.id}>
+                    <td>{canEdit ? <input value={line.name} onChange={(e) => updateLine(line.id, { name: e.target.value })} /> : line.name}</td>
+                    <td>{canEdit ? <input value={line.position ?? ""} onChange={(e) => updateLine(line.id, { position: e.target.value })} /> : (line.position || "—")}</td>
+                    <td>{canEdit ? <input type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} /> : line.quantity}</td>
+                    <td>{canEdit ? <input value={line.unit} onChange={(e) => updateLine(line.id, { unit: e.target.value })} /> : line.unit}</td>
+                    <td>{canEdit ? <input type="number" min="0" step="0.01" value={line.unitPriceCents / 100} onChange={(e) => updateLine(line.id, { unitPriceCents: Math.round((Number(e.target.value) || 0) * 100) })} /> : money(line.unitPriceCents / 100)}</td>
+                    <td>{money(amount / 100)}</td>
+                    {canEdit && <td><button type="button" className="icon-button" aria-label="移除項目" onClick={() => setLines((current) => current.filter((item) => item.id !== line.id))}>×</button></td>}
+                  </tr>
+                );
+              })}
+            </tbody>
           </table>
         </div>
+        {canEdit && (
+          <div className="dialog-actions live-form-actions">
+            <Button type="button" onClick={() => setLines((current) => [...current, { id: crypto.randomUUID(), name: "", position: "", quantity: "1", unit: "項", unitPriceCents: 0, amountCents: 0 }])}>新增項目</Button>
+            <Button type="button" variant="primary" disabled={saving} onClick={save}>{saving ? "儲存中…" : "儲存市政單"}</Button>
+          </div>
+        )}
+        {notice && <p className="muted">{notice}</p>}
         <p className="muted">市政單只作 8萬資助申請用途，不影響 Invoice、會計及正單。</p>
       </div>
     </>

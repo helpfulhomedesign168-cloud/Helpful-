@@ -6,12 +6,32 @@ import {
   invoiceLines,
   invoiceVersions,
   invoices,
+  auditLogs,
+  municipalOrderLines,
   municipalOrders,
   workOrders,
 } from "../db/schema";
+import { z } from "zod";
 import type { AppEnv } from "../auth";
 import { requireAuth } from "../auth";
 import { requireCapability } from "../guards";
+
+const updateSchema = z.object({
+  lines: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(200),
+        description: z.string().trim().max(500).optional(),
+        position: z.string().trim().max(120).optional(),
+        quantity: z.number().positive().max(100000),
+        unit: z.string().trim().min(1).max(40),
+        unitPriceCents: z.number().int().nonnegative(),
+        amountCents: z.number().int().nonnegative(),
+      }),
+    )
+    .min(1)
+    .max(300),
+});
 
 export const municipalRoute = new Hono<AppEnv>();
 
@@ -89,22 +109,39 @@ municipalRoute.get(
     if (!order) {
       return c.json({ error: { code: "NOT_FOUND", message: "找不到市政單。" } }, 404);
     }
-    const version = await getDb()
+    const currentMunicipalLines = await getDb()
       .select()
-      .from(invoiceVersions)
-      .where(
-        and(
-          eq(invoiceVersions.invoiceId, order.invoice.id),
-          eq(invoiceVersions.versionNo, order.invoice.currentVersion),
-        ),
-      )
-      .limit(1);
-    const lines = version[0]
-      ? await getDb()
-          .select()
-          .from(invoiceLines)
-          .where(eq(invoiceLines.versionId, version[0].id))
-      : [];
+      .from(municipalOrderLines)
+      .where(eq(municipalOrderLines.municipalOrderId, order.id));
+    let lines: {
+      id: string;
+      name: string;
+      position: string | null;
+      quantity: string;
+      unit: string;
+      unitPriceCents: number;
+      amountCents: number;
+    }[];
+    if (currentMunicipalLines.length) {
+      lines = currentMunicipalLines;
+    } else {
+      const version = await getDb()
+        .select()
+        .from(invoiceVersions)
+        .where(
+          and(
+            eq(invoiceVersions.invoiceId, order.invoice.id),
+            eq(invoiceVersions.versionNo, order.invoice.currentVersion),
+          ),
+        )
+        .limit(1);
+      lines = version[0]
+        ? await getDb()
+            .select()
+            .from(invoiceLines)
+            .where(eq(invoiceLines.versionId, version[0].id))
+        : [];
+    }
     return c.json({
       ...order,
       lines: lines.map((line) => ({
@@ -117,5 +154,64 @@ municipalRoute.get(
         amountCents: line.amountCents,
       })),
     });
+  },
+);
+
+municipalRoute.patch(
+  "/:id",
+  requireAuth,
+  requireCapability("municipal.write"),
+  async (c) => {
+    const parsed = updateSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "市政單項目不正確。",
+            fields: parsed.error.flatten().fieldErrors,
+          },
+        },
+        400,
+      );
+    }
+    const [order] = await getDb()
+      .select()
+      .from(municipalOrders)
+      .where(eq(municipalOrders.id, c.req.param("id")))
+      .limit(1);
+    if (!order) {
+      return c.json({ error: { code: "NOT_FOUND", message: "找不到市政單。" } }, 404);
+    }
+    await getDb().transaction(async (tx) => {
+      await tx
+        .delete(municipalOrderLines)
+        .where(eq(municipalOrderLines.municipalOrderId, order.id));
+      await tx.insert(municipalOrderLines).values(
+        parsed.data.lines.map((line) => ({
+          municipalOrderId: order.id,
+          name: line.name,
+          description: line.description,
+          position: line.position,
+          quantity: String(line.quantity),
+          unit: line.unit,
+          unitPriceCents: line.unitPriceCents,
+          amountCents: line.amountCents,
+        })),
+      );
+      await tx
+        .update(municipalOrders)
+        .set({ updatedAt: new Date() })
+        .where(eq(municipalOrders.id, order.id));
+      await tx.insert(auditLogs).values({
+        actorId: c.get("user").id,
+        action: "municipal_order_updated",
+        entityType: "municipal_order",
+        entityId: order.id,
+        after: { lines: parsed.data.lines.length },
+        requestId: c.get("requestId"),
+      });
+    });
+    return c.json({ ok: true });
   },
 );
