@@ -18,6 +18,11 @@
   - discount-adjusted line amounts
   - grant fields mapped to cents
   - returns to live list
+- Live Invoice payment:
+  - register payment from live detail
+  - confirm one-step payment
+  - reload Invoice and payment list
+  - issue receipt button
 - Live Invoice detail:
   - reads `/api/v1/invoices/:id`
   - reads `/api/v1/invoices/:id/payments`

@@ -3,8 +3,23 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../auth";
 import { apiRequest, ApiError, type ApiPayment, type InvoiceDetailData, type InvoiceSummary } from "../api/client";
-import { Badge, CategoryChips, Empty, PageHead, Search } from "../components/ui";
+import {
+  Badge,
+  Button,
+  CategoryChips,
+  Dialog,
+  Empty,
+  Field,
+  PageHead,
+  Search,
+  Section,
+} from "../components/ui";
 import { METHOD_NAMES, money } from "../domain/types";
+
+function todayLocal() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
 
 const STATUS_LABELS: Record<string, string> = {
   issued: "待收足訂金",
@@ -138,11 +153,18 @@ export function LiveInvoices() {
 
 export function LiveInvoiceDetail() {
   const { id = "" } = useParams();
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const nav = useNavigate();
   const [invoice, setInvoice] = useState<InvoiceDetailData | null>(null);
   const [payments, setPayments] = useState<ApiPayment[]>([]);
   const [error, setError] = useState("");
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("fps");
+  const [paymentDate, setPaymentDate] = useState(todayLocal);
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const [paymentNotice, setPaymentNotice] = useState("");
+  const [receipts, setReceipts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -162,6 +184,57 @@ export function LiveInvoiceDetail() {
       cancelled = true;
     };
   }, [accessToken, id]);
+
+  async function reload() {
+    const [detail, paymentRows] = await Promise.all([
+      apiRequest<InvoiceDetailData>(`/invoices/${id}`, accessToken),
+      apiRequest<ApiPayment[]>(`/invoices/${id}/payments`, accessToken),
+    ]);
+    setInvoice(detail);
+    setPayments(paymentRows);
+  }
+
+  async function registerPayment(event: React.FormEvent) {
+    event.preventDefault();
+    if (!accessToken) return;
+    setPaymentSaving(true);
+    setPaymentNotice("");
+    try {
+      await apiRequest(`/invoices/${id}/payments`, accessToken, {
+        method: "POST",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({
+          installment: payments.length + 1,
+          amountCents: Math.round(Number(paymentAmount) * 100),
+          method: paymentMethod,
+          paidAt: paymentDate,
+          confirm: true,
+        }),
+      });
+      setPaymentOpen(false);
+      setPaymentAmount("");
+      await reload();
+      setPaymentNotice("付款已確認，Invoice 已更新。");
+    } catch (e) {
+      setPaymentNotice(e instanceof ApiError ? e.message : "付款登記失敗。");
+    } finally {
+      setPaymentSaving(false);
+    }
+  }
+
+  async function issueReceipt(paymentId: string) {
+    if (!accessToken) return;
+    try {
+      const receipt = await apiRequest<{ number: string }>(
+        `/invoices/${id}/payments/${paymentId}/receipt`,
+        accessToken,
+        { method: "POST" },
+      );
+      setReceipts((current) => ({ ...current, [paymentId]: receipt.number }));
+    } catch (e) {
+      setPaymentNotice(e instanceof ApiError ? e.message : "未能出收據。");
+    }
+  }
 
   if (error) return <Empty title="未能讀取發票" description={error} action={<button className="btn" onClick={() => nav("/invoices")}>返回</button>} />;
   if (!invoice) return <p className="muted">正在讀取發票…</p>;
@@ -204,19 +277,89 @@ export function LiveInvoiceDetail() {
             </tbody>
           </table>
         </div>
-        <h2 className="section-title">付款記錄</h2>
-        {payments.length === 0 ? <p className="muted">尚未登記付款。</p> : (
-          <div className="payment-ledger">
-            {payments.map((payment) => (
-              <div className="payment-row" key={payment.id}>
-                <div>
-                  <strong>{money(payment.amountCents / 100)}</strong>
-                  <small>第{payment.installment}期 · {payment.paidAt} · {METHOD_NAMES[payment.method as keyof typeof METHOD_NAMES] || payment.method} · {payment.reference || "未填參考"}</small>
+        <Section
+          title="付款記錄"
+          action={
+            (user?.role === "invoice_clerk" || user?.role === "admin") &&
+            invoice.validPaidCents < invoice.totalCents ? (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setPaymentAmount(
+                    String((invoice.totalCents - invoice.validPaidCents) / 100),
+                  );
+                  setPaymentDate(todayLocal());
+                  setPaymentNotice("");
+                  setPaymentOpen(true);
+                }}
+              >
+                登記付款
+              </Button>
+            ) : undefined
+          }
+        >
+          {paymentNotice && <p className="muted">{paymentNotice}</p>}
+          {payments.length === 0 ? <p className="muted">尚未登記付款。</p> : (
+            <div className="payment-ledger">
+              {payments.map((payment) => (
+                <div className="payment-row" key={payment.id}>
+                  <div>
+                    <strong>{money(payment.amountCents / 100)}</strong>
+                    <small>第{payment.installment}期 · {payment.paidAt} · {METHOD_NAMES[payment.method as keyof typeof METHOD_NAMES] || payment.method} · {payment.reference || "未填參考"}</small>
+                  </div>
+                  <div className="table-actions">
+                    <Badge strong={payment.status === "valid"}>{payment.status === "valid" ? "已核" : payment.status === "pending" ? "待核對" : "已退回"}</Badge>
+                    {payment.status === "valid" && !receipts[payment.id] && (
+                      <Button variant="ghost" onClick={() => issueReceipt(payment.id)}>
+                        出收據
+                      </Button>
+                    )}
+                    {receipts[payment.id] && <small>{receipts[payment.id]}</small>}
+                  </div>
                 </div>
-                <Badge strong={payment.status === "valid"}>{payment.status === "valid" ? "已核" : payment.status === "pending" ? "待核對" : "已退回"}</Badge>
+              ))}
+            </div>
+          )}
+        </Section>
+        {paymentOpen && (
+          <Dialog title="登記付款" onClose={() => setPaymentOpen(false)}>
+            <form onSubmit={registerPayment}>
+              <div className="form-grid two">
+                <Field label="付款金額" required>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    required
+                  />
+                </Field>
+                <Field label="付款日期" required>
+                  <input
+                    type="date"
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    required
+                  />
+                </Field>
+                <Field label="付款方式" required>
+                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                    <option value="fps">FPS</option>
+                    <option value="transfer">銀行轉賬</option>
+                    <option value="cash">現金</option>
+                    <option value="cheque">支票</option>
+                  </select>
+                </Field>
               </div>
-            ))}
-          </div>
+              <div className="dialog-actions">
+                <Button type="button" onClick={() => setPaymentOpen(false)}>取消</Button>
+                <Button type="submit" variant="primary" disabled={paymentSaving}>
+                  {paymentSaving ? "儲存中…" : "確認收款"}
+                </Button>
+              </div>
+            </form>
+          </Dialog>
         )}
       </div>
     </>
