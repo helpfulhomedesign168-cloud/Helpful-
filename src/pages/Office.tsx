@@ -23,6 +23,7 @@ import {
 import { useAuth } from "../auth";
 import { LiveInvoiceDetail, LiveInvoices } from "./LiveInvoices";
 import { LiveWorkOrderDetail, LiveWorkOrders } from "./LiveWorkOrders";
+import { LiveFinance } from "./LiveFinance";
 import {
   Badge,
   Button,
@@ -174,6 +175,11 @@ function ProofThumb({ attachment }: { attachment: Attachment }) {
   );
 }
 export function Finance() {
+  const { live } = useAuth();
+  return live ? <LiveFinance /> : <DemoFinance />;
+}
+
+function DemoFinance() {
   const { actor, engine, run } = useApp();
   const [tab, setTab] = useState("pending");
   const [search, setSearch] = useState("");

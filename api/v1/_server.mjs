@@ -36212,6 +36212,31 @@ staffRoute.get("/", requireAuth, async (c2) => {
   return c2.json(rows);
 });
 
+// server/routes/finance.ts
+var financeRoute = new Hono3();
+financeRoute.get(
+  "/pending",
+  requireAuth,
+  requireCapability("payment.validate"),
+  async (c2) => {
+    const rows = await getDb().select({
+      id: payments.id,
+      invoiceId: invoices.id,
+      invoiceNumber: invoices.number,
+      installment: payments.installment,
+      amountCents: payments.amountCents,
+      method: payments.method,
+      paidAt: payments.paidAt,
+      reference: payments.reference,
+      notes: payments.notes,
+      createdAt: payments.createdAt,
+      customerName: customers.name,
+      customerPhone: customers.phone
+    }).from(payments).innerJoin(invoices, eq(payments.invoiceId, invoices.id)).innerJoin(customers, eq(invoices.customerId, customers.id)).where(and(eq(payments.status, "pending"))).orderBy(desc(payments.createdAt));
+    return c2.json(rows);
+  }
+);
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -36232,6 +36257,7 @@ app.route("/invoices", paymentsRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/receipts", receiptsRoute);
 app.route("/staff", staffRoute);
+app.route("/payments", financeRoute);
 app.notFound(
   (c2) => c2.json(
     {

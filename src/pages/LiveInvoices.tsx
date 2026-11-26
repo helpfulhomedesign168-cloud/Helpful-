@@ -209,8 +209,11 @@ export function LiveInvoiceDetail() {
     setPayments(paymentRows);
   }
 
-  async function registerPayment(event: React.FormEvent) {
-    event.preventDefault();
+  async function registerPayment(
+    event: React.FormEvent | null,
+    confirm = true,
+  ) {
+    event?.preventDefault();
     if (!accessToken) return;
     setPaymentSaving(true);
     setPaymentNotice("");
@@ -223,13 +226,17 @@ export function LiveInvoiceDetail() {
           amountCents: Math.round(Number(paymentAmount) * 100),
           method: paymentMethod,
           paidAt: paymentDate,
-          confirm: true,
+          confirm,
         }),
       });
       setPaymentOpen(false);
       setPaymentAmount("");
       await reload();
-      setPaymentNotice("付款已確認，Invoice 已更新。");
+      setPaymentNotice(
+        confirm
+          ? "付款已確認，Invoice 已更新。"
+          : "已儲存待核對，會計核對後才計入有效收款。",
+      );
     } catch (e) {
       setPaymentNotice(e instanceof ApiError ? e.message : "付款登記失敗。");
     } finally {
@@ -350,7 +357,7 @@ export function LiveInvoiceDetail() {
         </Section>
         {paymentOpen && (
           <Dialog title="登記付款" onClose={() => setPaymentOpen(false)}>
-            <form onSubmit={registerPayment}>
+            <form onSubmit={(event) => registerPayment(event, true)}>
               <div className="form-grid two">
                 <Field label="付款金額" required>
                   <input
@@ -381,6 +388,13 @@ export function LiveInvoiceDetail() {
               </div>
               <div className="dialog-actions">
                 <Button type="button" onClick={() => setPaymentOpen(false)}>取消</Button>
+                <Button
+                  type="button"
+                  onClick={() => registerPayment(null, false)}
+                  disabled={paymentSaving}
+                >
+                  儲存待核對
+                </Button>
                 <Button type="submit" variant="primary" disabled={paymentSaving}>
                   {paymentSaving ? "儲存中…" : "確認收款"}
                 </Button>

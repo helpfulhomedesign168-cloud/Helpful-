@@ -26,6 +26,12 @@
   - edit categories, grant fields, customer, lines, reason
   - saves via `POST /api/v1/invoices/:id/amendments`
   - locked invoices return API error
+- Live finance pending validation:
+  - `GET /api/v1/payments/pending`
+  - `/finance` live list
+  - validate pending payment
+  - validation triggers 50% release rules
+  - live payment dialog can save pending
 - Live CS work orders:
   - `/handoff` live list
   - assign CS via `/staff`
@@ -65,7 +71,7 @@
 
 ## Not yet done
 
-- Live payment pending validation for finance
+- Live payment pending validation for finance ✅
 - CS work order frontend ✅ (core flow)
 - Remove local demo data path in production
 - Optimistic refresh / cache invalidation

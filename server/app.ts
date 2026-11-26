@@ -13,6 +13,7 @@ import { paymentsRoute } from "./routes/payments";
 import { workOrdersRoute } from "./routes/workOrders";
 import { receiptsRoute } from "./routes/receipts";
 import { staffRoute } from "./routes/staff";
+import { financeRoute } from "./routes/finance";
 
 export const app = new Hono<AppEnv>().basePath("/api/v1");
 
@@ -35,6 +36,7 @@ app.route("/invoices", paymentsRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/receipts", receiptsRoute);
 app.route("/staff", staffRoute);
+app.route("/payments", financeRoute);
 
 app.notFound((c) =>
   c.json(
