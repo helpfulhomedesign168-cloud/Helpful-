@@ -69,6 +69,7 @@
 - Live services catalogue:
   - backend seeded with 38 current catalogue items
   - `/services` live list/search/category
+  - admin create/edit service
   - direct invoice picker still uses local seed (next)
 - Live customers:
   - `/customers` live list/search

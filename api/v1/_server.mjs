@@ -35090,11 +35090,48 @@ customersRoute.get(
 );
 
 // server/routes/services.ts
+var serviceSchema = external_exports.object({
+  code: external_exports.string().trim().min(1).max(40),
+  name: external_exports.string().trim().min(1).max(200),
+  category: external_exports.string().trim().min(1).max(80),
+  unit: external_exports.string().trim().min(1).max(40),
+  priceCents: external_exports.number().int().nonnegative(),
+  measure: external_exports.enum(["area", "length", "quantity", "fixed"]),
+  costMode: external_exports.enum(["ratio", "fixed", "self"]).default("ratio"),
+  published: external_exports.boolean().default(true)
+});
 var servicesRoute = new Hono3();
 servicesRoute.get("/", requireAuth, async (c2) => {
   const rows = await getDb().select().from(services).where(eq(services.published, true)).orderBy(asc(services.category), asc(services.name));
   return c2.json(rows);
 });
+servicesRoute.post(
+  "/",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const parsed = serviceSchema.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u5DE5\u7A0B\u9805\u76EE\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    const [created] = await getDb().insert(services).values(parsed.data).returning();
+    return c2.json(created, 201);
+  }
+);
+servicesRoute.patch(
+  "/:id",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const parsed = serviceSchema.partial().safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u5DE5\u7A0B\u9805\u76EE\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    const [updated] = await getDb().update(services).set(parsed.data).where(eq(services.id, c2.req.param("id"))).returning();
+    if (!updated) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5DE5\u7A0B\u9805\u76EE\u3002" } }, 404);
+    return c2.json(updated);
+  }
+);
 
 // server/routes/users.ts
 var patchSchema = external_exports.object({
