@@ -18,6 +18,7 @@ import { photosRoute } from "./routes/photos";
 import { municipalRoute } from "./routes/municipal";
 import { notificationsRoute } from "./routes/notifications";
 import { suppliersRoute } from "./routes/suppliers";
+import { reportsRoute } from "./routes/reports";
 import { contractorsRoute } from "./routes/contractors";
 
 export const app = new Hono<AppEnv>().basePath("/api/v1");
@@ -43,6 +44,7 @@ app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);
 app.route("/notifications", notificationsRoute);
 app.route("/suppliers", suppliersRoute);
+app.route("/reports", reportsRoute);
 app.route("/contractors", contractorsRoute);
 app.route("/receipts", receiptsRoute);
 app.route("/staff", staffRoute);

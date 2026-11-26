@@ -37082,6 +37082,58 @@ suppliersRoute.patch(
   }
 );
 
+// server/routes/reports.ts
+var reportsRoute = new Hono3();
+reportsRoute.get(
+  "/summary",
+  requireAuth,
+  requireCapability("report.read"),
+  async (c2) => {
+    const db = getDb();
+    const [totals] = await db.select({
+      invoiceCount: sql`count(*)::int`,
+      billedCents: sql`coalesce(sum(${invoices.totalCents}), 0)::int`,
+      collectedCents: sql`coalesce(sum(${invoices.validPaidCents}), 0)::int`,
+      outstandingCents: sql`coalesce(sum(${invoices.totalCents} - ${invoices.validPaidCents}), 0)::int`
+    }).from(invoices).where(sql`${invoices.status} not in ('voided','refunded')`);
+    const statuses = await db.select({
+      status: invoices.status,
+      count: sql`count(*)::int`,
+      totalCents: sql`coalesce(sum(${invoices.totalCents}), 0)::int`
+    }).from(invoices).groupBy(invoices.status);
+    const recent = await db.select({
+      id: invoices.id,
+      number: invoices.number,
+      status: invoices.status,
+      totalCents: invoices.totalCents,
+      validPaidCents: invoices.validPaidCents,
+      createdAt: invoices.createdAt,
+      customerName: customers.name
+    }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).orderBy(desc(invoices.createdAt)).limit(10);
+    return c2.json({ totals, statuses, recent });
+  }
+);
+reportsRoute.get(
+  "/business-orders",
+  requireAuth,
+  requireCapability("report.read"),
+  async (c2) => {
+    const rows = await getDb().select({
+      id: invoices.id,
+      number: invoices.number,
+      status: invoices.status,
+      categories: invoices.categories,
+      totalCents: invoices.totalCents,
+      validPaidCents: invoices.validPaidCents,
+      salesName: invoices.salesName,
+      createdAt: invoices.createdAt,
+      customerName: customers.name,
+      customerPhone: customers.phone
+    }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).orderBy(desc(invoices.createdAt)).limit(200);
+    return c2.json(rows);
+  }
+);
+
 // server/routes/contractors.ts
 var contractorSchema = external_exports.object({
   name: external_exports.string().trim().min(1).max(160),
@@ -37142,6 +37194,7 @@ app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);
 app.route("/notifications", notificationsRoute);
 app.route("/suppliers", suppliersRoute);
+app.route("/reports", reportsRoute);
 app.route("/contractors", contractorsRoute);
 app.route("/receipts", receiptsRoute);
 app.route("/staff", staffRoute);
