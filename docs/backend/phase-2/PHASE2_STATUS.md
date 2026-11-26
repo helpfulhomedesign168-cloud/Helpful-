@@ -54,9 +54,9 @@ Test data cleaned up afterwards.
 
 ## Not yet done
 
-- Payment / proof / validate endpoints
-- 50% release → work order
-- Receipts
+- Payment / proof / validate endpoints ✅ Phase 3
+- 50% release → work order ✅ Phase 3
+- Receipts ✅ Phase 3
 - PDF / Excel server endpoints
 - Frontend switching from localStorage to API
 - CS invoice read permission
