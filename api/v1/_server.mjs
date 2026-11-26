@@ -37082,6 +37082,44 @@ suppliersRoute.patch(
   }
 );
 
+// server/routes/contractors.ts
+var contractorSchema = external_exports.object({
+  name: external_exports.string().trim().min(1).max(160),
+  phone: external_exports.string().trim().max(40).optional(),
+  active: external_exports.boolean().optional()
+});
+var contractorsRoute = new Hono3();
+contractorsRoute.get("/", requireAuth, async (c2) => {
+  return c2.json(await getDb().select().from(contractors).orderBy(asc(contractors.name)));
+});
+contractorsRoute.post(
+  "/",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const parsed = contractorSchema.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u5E2B\u5085\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    const [created] = await getDb().insert(contractors).values(parsed.data).returning();
+    return c2.json(created, 201);
+  }
+);
+contractorsRoute.patch(
+  "/:id",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const parsed = contractorSchema.partial().safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u5E2B\u5085\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    const [updated] = await getDb().update(contractors).set(parsed.data).where(eq(contractors.id, c2.req.param("id"))).returning();
+    if (!updated) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5E2B\u5085\u3002" } }, 404);
+    return c2.json(updated);
+  }
+);
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -37104,6 +37142,7 @@ app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);
 app.route("/notifications", notificationsRoute);
 app.route("/suppliers", suppliersRoute);
+app.route("/contractors", contractorsRoute);
 app.route("/receipts", receiptsRoute);
 app.route("/staff", staffRoute);
 app.route("/payments", financeRoute);
