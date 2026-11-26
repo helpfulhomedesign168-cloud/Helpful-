@@ -31,6 +31,7 @@ type Session = {
 interface AuthContextValue {
   live: boolean;
   user: AuthUser | null;
+  accessToken: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -195,7 +196,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ live: LIVE_AUTH, user, loading, login, logout }}
+      value={{
+        live: LIVE_AUTH,
+        user,
+        accessToken: session?.access_token ?? null,
+        loading,
+        login,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

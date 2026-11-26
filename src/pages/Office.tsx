@@ -20,6 +20,8 @@ import {
   getAttachmentBlob,
   saveAttachment,
 } from "../context";
+import { useAuth } from "../auth";
+import { LiveInvoiceDetail, LiveInvoices } from "./LiveInvoices";
 import {
   Badge,
   Button,
@@ -729,6 +731,11 @@ export function Submissions() {
 }
 
 export function Invoices() {
+  const { live } = useAuth();
+  return live ? <LiveInvoices /> : <DemoInvoices />;
+}
+
+function DemoInvoices() {
   const { actor, engine } = useApp();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
@@ -1037,6 +1044,11 @@ export function Invoices() {
 }
 
 export function InvoiceDetail() {
+  const { live } = useAuth();
+  return live ? <LiveInvoiceDetail /> : <DemoInvoiceDetail />;
+}
+
+function DemoInvoiceDetail() {
   const { id = "" } = useParams();
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
