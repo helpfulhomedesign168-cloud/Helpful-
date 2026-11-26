@@ -510,8 +510,12 @@ export function LiveWorkOrderDetail() {
     if (!confirm("確認標記此工程為完成？")) return;
     setSaving(true);
     try {
-      await apiRequest(`/work-orders/${id}/complete`, accessToken, { method: "POST" });
-      await load();
+      const completed = await apiRequest<WorkOrderDetailData>(
+        `/work-orders/${id}/complete`,
+        accessToken,
+        { method: "POST" },
+      );
+      setOrder(completed);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能完成工程。");
     } finally {
