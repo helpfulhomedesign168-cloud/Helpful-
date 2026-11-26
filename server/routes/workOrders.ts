@@ -11,6 +11,7 @@ import {
   notifications,
   payments,
   users,
+  workOrderAssignments,
   workOrders,
 } from "../db/schema";
 import type { AppEnv } from "../auth";
@@ -26,6 +27,15 @@ const updateSchema = z.object({
 
 const assignSchema = z.object({
   csOwnerId: z.string().uuid(),
+});
+
+const assignmentSchema = z.object({
+  workerName: z.string().trim().min(1).max(120),
+  trade: z.string().trim().max(80).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  feeCents: z.number().int().nonnegative().default(0),
+  notes: z.string().trim().max(1000).optional(),
 });
 
 const error = (code: string, message: string) => ({
@@ -367,5 +377,110 @@ workOrdersRoute.post(
       }
     });
     return c.json(await orderDetail(order.id));
+  },
+);
+
+workOrdersRoute.get(
+  "/:id/assignments",
+  requireAuth,
+  requireCapability("workorder.read"),
+  async (c) => {
+    const order = await orderDetail(c.req.param("id"));
+    if (!order) return c.json(error("NOT_FOUND", "找不到工程單。"), 404);
+    if (!canSeeOrder(c.get("user"), order)) {
+      return c.json(error("FORBIDDEN", "你沒有查看此工程的權限。"), 403);
+    }
+    const rows = await getDb()
+      .select()
+      .from(workOrderAssignments)
+      .where(eq(workOrderAssignments.workOrderId, order.id))
+      .orderBy(desc(workOrderAssignments.createdAt));
+    return c.json(rows);
+  },
+);
+
+workOrdersRoute.post(
+  "/:id/assignments",
+  requireAuth,
+  requireCapability("workorder.update"),
+  async (c) => {
+    const order = await orderDetail(c.req.param("id"));
+    if (!order) return c.json(error("NOT_FOUND", "找不到工程單。"), 404);
+    if (!canSeeOrder(c.get("user"), order)) {
+      return c.json(error("FORBIDDEN", "你沒有修改此工程的權限。"), 403);
+    }
+    if (order.status === "completed") {
+      return c.json(error("WORK_ORDER_COMPLETED", "已完成的工程不可新增施工安排。"), 409);
+    }
+    const parsed = assignmentSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "施工安排資料不正確。",
+            fields: parsed.error.flatten().fieldErrors,
+          },
+        },
+        400,
+      );
+    }
+    const [created] = await getDb()
+      .insert(workOrderAssignments)
+      .values({
+        workOrderId: order.id,
+        workerName: parsed.data.workerName,
+        trade: parsed.data.trade,
+        startDate: parsed.data.startDate,
+        endDate: parsed.data.endDate,
+        feeCents: parsed.data.feeCents,
+        notes: parsed.data.notes,
+        createdBy: c.get("user").id,
+      })
+      .returning();
+    await getDb().insert(auditLogs).values({
+      actorId: c.get("user").id,
+      action: "work_order_assignment_added",
+      entityType: "work_order",
+      entityId: order.id,
+      after: { workerName: created.workerName, feeCents: created.feeCents },
+      requestId: c.get("requestId"),
+    });
+    return c.json(created, 201);
+  },
+);
+
+workOrdersRoute.delete(
+  "/:id/assignments/:assignmentId",
+  requireAuth,
+  requireCapability("workorder.update"),
+  async (c) => {
+    const order = await orderDetail(c.req.param("id"));
+    if (!order) return c.json(error("NOT_FOUND", "找不到工程單。"), 404);
+    if (!canSeeOrder(c.get("user"), order)) {
+      return c.json(error("FORBIDDEN", "你沒有修改此工程的權限。"), 403);
+    }
+    if (order.status === "completed") {
+      return c.json(error("WORK_ORDER_COMPLETED", "已完成的工程不可修改施工安排。"), 409);
+    }
+    const deleted = await getDb()
+      .delete(workOrderAssignments)
+      .where(
+        and(
+          eq(workOrderAssignments.id, c.req.param("assignmentId")),
+          eq(workOrderAssignments.workOrderId, order.id),
+        ),
+      )
+      .returning({ id: workOrderAssignments.id });
+    if (!deleted[0]) return c.json(error("NOT_FOUND", "找不到施工安排。"), 404);
+    await getDb().insert(auditLogs).values({
+      actorId: c.get("user").id,
+      action: "work_order_assignment_deleted",
+      entityType: "work_order",
+      entityId: order.id,
+      before: { assignmentId: deleted[0].id },
+      requestId: c.get("requestId"),
+    });
+    return c.json({ ok: true });
   },
 );

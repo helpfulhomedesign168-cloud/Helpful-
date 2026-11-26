@@ -27,6 +27,16 @@ type WorkOrderRow = {
 
 type Staff = { id: string; name: string; role: string };
 
+type Assignment = {
+  id: string;
+  workerName: string;
+  trade: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  feeCents: number;
+  notes: string | null;
+};
+
 type WorkOrderDetailData = WorkOrderRow & {
   notes: string | null;
   completedAt: string | null;
@@ -215,6 +225,24 @@ export function LiveWorkOrderDetail() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [workerName, setWorkerName] = useState("");
+  const [trade, setTrade] = useState("");
+  const [assignmentStart, setAssignmentStart] = useState("");
+  const [assignmentEnd, setAssignmentEnd] = useState("");
+  const [fee, setFee] = useState("");
+  const [assignmentSaving, setAssignmentSaving] = useState(false);
+
+  async function loadAssignments() {
+    if (!accessToken) return;
+    try {
+      setAssignments(
+        await apiRequest<Assignment[]>(`/work-orders/${id}/assignments`, accessToken),
+      );
+    } catch {
+      setAssignments([]);
+    }
+  }
 
   async function load() {
     try {
@@ -223,6 +251,7 @@ export function LiveWorkOrderDetail() {
       setStartDate(data.startDate ?? "");
       setEndDate(data.endDate ?? "");
       setNotes(data.notes ?? "");
+      await loadAssignments();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能讀取工程單。");
     }
@@ -252,6 +281,45 @@ export function LiveWorkOrderDetail() {
       setError(e instanceof ApiError ? e.message : "未能儲存工程。");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function addAssignment(event: React.FormEvent) {
+    event.preventDefault();
+    if (!workerName.trim()) return;
+    setAssignmentSaving(true);
+    try {
+      await apiRequest(`/work-orders/${id}/assignments`, accessToken, {
+        method: "POST",
+        body: JSON.stringify({
+          workerName: workerName.trim(),
+          trade: trade.trim() || undefined,
+          startDate: assignmentStart || undefined,
+          endDate: assignmentEnd || undefined,
+          feeCents: Math.round((Number(fee) || 0) * 100),
+        }),
+      });
+      setWorkerName("");
+      setTrade("");
+      setAssignmentStart("");
+      setAssignmentEnd("");
+      setFee("");
+      await loadAssignments();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "未能新增施工安排。");
+    } finally {
+      setAssignmentSaving(false);
+    }
+  }
+
+  async function removeAssignment(assignmentId: string) {
+    try {
+      await apiRequest(`/work-orders/${id}/assignments/${assignmentId}`, accessToken, {
+        method: "DELETE",
+      });
+      await loadAssignments();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "未能移除施工安排。");
     }
   }
 
@@ -311,6 +379,41 @@ export function LiveWorkOrderDetail() {
             <tbody>{order.lines.map((line) => <tr key={line.id}><td>{line.name}</td><td>{line.position || "—"}</td><td>{line.quantity} {line.unit}</td><td className="numeric">{money(line.amountCents / 100)}</td></tr>)}</tbody>
           </table>
         </div>
+        <h2 className="section-title">施工人員及成本</h2>
+        {assignments.length === 0 ? <p className="muted">尚未安排施工人員。</p> : (
+          <div className="table-scroll">
+            <table className="invoice-list-table live-work-table">
+              <thead><tr><th>施工人員</th><th>工種</th><th>日期</th><th>成本</th><th /></tr></thead>
+              <tbody>
+                {assignments.map((assignment) => (
+                  <tr key={assignment.id}>
+                    <td><strong>{assignment.workerName}</strong><small>{assignment.notes}</small></td>
+                    <td>{assignment.trade || "—"}</td>
+                    <td>{assignment.startDate || "—"}{assignment.endDate ? ` → ${assignment.endDate}` : ""}</td>
+                    <td>{money(assignment.feeCents / 100)}</td>
+                    <td>
+                      <button type="button" className="icon-button" aria-label={`移除${assignment.workerName}`} onClick={() => void removeAssignment(assignment.id)}>×</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {order.status !== "completed" && (
+          <form className="live-engineering-form" onSubmit={addAssignment}>
+            <div className="form-grid three">
+              <Field label="施工人員" required><input value={workerName} onChange={(e) => setWorkerName(e.target.value)} required /></Field>
+              <Field label="工種"><input value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="例如：泥水" /></Field>
+              <Field label="成本"><input type="number" min="0" step="0.01" value={fee} onChange={(e) => setFee(e.target.value)} /></Field>
+              <Field label="開始日"><input type="date" value={assignmentStart} onChange={(e) => setAssignmentStart(e.target.value)} /></Field>
+              <Field label="完成日"><input type="date" value={assignmentEnd} onChange={(e) => setAssignmentEnd(e.target.value)} /></Field>
+            </div>
+            <div className="dialog-actions live-form-actions">
+              <Button type="submit" variant="secondary" disabled={assignmentSaving}>{assignmentSaving ? "新增中…" : "新增施工安排"}</Button>
+            </div>
+          </form>
+        )}
         <div className="dialog-actions">
           <Button variant="primary" onClick={complete} disabled={saving || order.status === "completed"}><Check size={18} /> {order.status === "completed" ? "工程已完成" : "標記工程完成"}</Button>
         </div>

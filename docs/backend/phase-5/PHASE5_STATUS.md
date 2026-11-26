@@ -26,6 +26,10 @@
   - edit categories, grant fields, customer, lines, reason
   - saves via `POST /api/v1/invoices/:id/amendments`
   - locked invoices return API error
+- Live contractor assignments / costs:
+  - `GET/POST/DELETE /work-orders/:id/assignments`
+  - worker, trade, dates, fee
+  - add/remove in live工程 detail
 - Live finance pending validation:
   - `GET /api/v1/payments/pending`
   - `/finance` live list

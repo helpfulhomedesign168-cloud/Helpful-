@@ -33758,6 +33758,7 @@ __export(schema_exports, {
   suppliers: () => suppliers,
   userGrants: () => userGrants,
   users: () => users,
+  workOrderAssignments: () => workOrderAssignments,
   workOrderStatusEnum: () => workOrderStatusEnum,
   workOrders: () => workOrders
 });
@@ -33953,6 +33954,19 @@ var workOrders = pgTable("work_orders", {
   releasedAt: timestamp("released_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   ...timestamps
+});
+var workOrderAssignments = pgTable("work_order_assignments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workOrderId: uuid("work_order_id").notNull().references(() => workOrders.id, { onDelete: "cascade" }),
+  contractorId: uuid("contractor_id").references(() => contractors.id),
+  workerName: text("worker_name").notNull(),
+  trade: text("trade"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  feeCents: integer("fee_cents").default(0).notNull(),
+  notes: text("notes"),
+  createdBy: uuid("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });
 var municipalOrders = pgTable("municipal_orders", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -35880,6 +35894,14 @@ var updateSchema = external_exports.object({
 var assignSchema = external_exports.object({
   csOwnerId: external_exports.string().uuid()
 });
+var assignmentSchema = external_exports.object({
+  workerName: external_exports.string().trim().min(1).max(120),
+  trade: external_exports.string().trim().max(80).optional(),
+  startDate: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  endDate: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  feeCents: external_exports.number().int().nonnegative().default(0),
+  notes: external_exports.string().trim().max(1e3).optional()
+});
 var error65 = (code, message2) => ({
   error: { code, message: message2 }
 });
@@ -36160,6 +36182,98 @@ workOrdersRoute.post(
       }
     });
     return c2.json(await orderDetail(order2.id));
+  }
+);
+workOrdersRoute.get(
+  "/:id/assignments",
+  requireAuth,
+  requireCapability("workorder.read"),
+  async (c2) => {
+    const order2 = await orderDetail(c2.req.param("id"));
+    if (!order2) return c2.json(error65("NOT_FOUND", "\u627E\u4E0D\u5230\u5DE5\u7A0B\u55AE\u3002"), 404);
+    if (!canSeeOrder(c2.get("user"), order2)) {
+      return c2.json(error65("FORBIDDEN", "\u4F60\u6C92\u6709\u67E5\u770B\u6B64\u5DE5\u7A0B\u7684\u6B0A\u9650\u3002"), 403);
+    }
+    const rows = await getDb().select().from(workOrderAssignments).where(eq(workOrderAssignments.workOrderId, order2.id)).orderBy(desc(workOrderAssignments.createdAt));
+    return c2.json(rows);
+  }
+);
+workOrdersRoute.post(
+  "/:id/assignments",
+  requireAuth,
+  requireCapability("workorder.update"),
+  async (c2) => {
+    const order2 = await orderDetail(c2.req.param("id"));
+    if (!order2) return c2.json(error65("NOT_FOUND", "\u627E\u4E0D\u5230\u5DE5\u7A0B\u55AE\u3002"), 404);
+    if (!canSeeOrder(c2.get("user"), order2)) {
+      return c2.json(error65("FORBIDDEN", "\u4F60\u6C92\u6709\u4FEE\u6539\u6B64\u5DE5\u7A0B\u7684\u6B0A\u9650\u3002"), 403);
+    }
+    if (order2.status === "completed") {
+      return c2.json(error65("WORK_ORDER_COMPLETED", "\u5DF2\u5B8C\u6210\u7684\u5DE5\u7A0B\u4E0D\u53EF\u65B0\u589E\u65BD\u5DE5\u5B89\u6392\u3002"), 409);
+    }
+    const parsed = assignmentSchema.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "\u65BD\u5DE5\u5B89\u6392\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002",
+            fields: parsed.error.flatten().fieldErrors
+          }
+        },
+        400
+      );
+    }
+    const [created] = await getDb().insert(workOrderAssignments).values({
+      workOrderId: order2.id,
+      workerName: parsed.data.workerName,
+      trade: parsed.data.trade,
+      startDate: parsed.data.startDate,
+      endDate: parsed.data.endDate,
+      feeCents: parsed.data.feeCents,
+      notes: parsed.data.notes,
+      createdBy: c2.get("user").id
+    }).returning();
+    await getDb().insert(auditLogs).values({
+      actorId: c2.get("user").id,
+      action: "work_order_assignment_added",
+      entityType: "work_order",
+      entityId: order2.id,
+      after: { workerName: created.workerName, feeCents: created.feeCents },
+      requestId: c2.get("requestId")
+    });
+    return c2.json(created, 201);
+  }
+);
+workOrdersRoute.delete(
+  "/:id/assignments/:assignmentId",
+  requireAuth,
+  requireCapability("workorder.update"),
+  async (c2) => {
+    const order2 = await orderDetail(c2.req.param("id"));
+    if (!order2) return c2.json(error65("NOT_FOUND", "\u627E\u4E0D\u5230\u5DE5\u7A0B\u55AE\u3002"), 404);
+    if (!canSeeOrder(c2.get("user"), order2)) {
+      return c2.json(error65("FORBIDDEN", "\u4F60\u6C92\u6709\u4FEE\u6539\u6B64\u5DE5\u7A0B\u7684\u6B0A\u9650\u3002"), 403);
+    }
+    if (order2.status === "completed") {
+      return c2.json(error65("WORK_ORDER_COMPLETED", "\u5DF2\u5B8C\u6210\u7684\u5DE5\u7A0B\u4E0D\u53EF\u4FEE\u6539\u65BD\u5DE5\u5B89\u6392\u3002"), 409);
+    }
+    const deleted = await getDb().delete(workOrderAssignments).where(
+      and(
+        eq(workOrderAssignments.id, c2.req.param("assignmentId")),
+        eq(workOrderAssignments.workOrderId, order2.id)
+      )
+    ).returning({ id: workOrderAssignments.id });
+    if (!deleted[0]) return c2.json(error65("NOT_FOUND", "\u627E\u4E0D\u5230\u65BD\u5DE5\u5B89\u6392\u3002"), 404);
+    await getDb().insert(auditLogs).values({
+      actorId: c2.get("user").id,
+      action: "work_order_assignment_deleted",
+      entityType: "work_order",
+      entityId: order2.id,
+      before: { assignmentId: deleted[0].id },
+      requestId: c2.get("requestId")
+    });
+    return c2.json({ ok: true });
   }
 );
 

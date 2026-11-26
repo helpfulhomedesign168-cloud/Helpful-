@@ -245,6 +245,26 @@ export const workOrders = pgTable("work_orders", {
   ...timestamps,
 });
 
+export const workOrderAssignments = pgTable("work_order_assignments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workOrderId: uuid("work_order_id")
+    .notNull()
+    .references(() => workOrders.id, { onDelete: "cascade" }),
+  contractorId: uuid("contractor_id").references(() => contractors.id),
+  workerName: text("worker_name").notNull(),
+  trade: text("trade"),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  feeCents: integer("fee_cents").default(0).notNull(),
+  notes: text("notes"),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const municipalOrders = pgTable("municipal_orders", {
   id: uuid("id").defaultRandom().primaryKey(),
   number: text("number").notNull().unique(),
