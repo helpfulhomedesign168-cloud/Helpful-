@@ -37019,6 +37019,29 @@ municipalRoute.patch(
   }
 );
 
+// server/routes/notifications.ts
+var notificationsRoute = new Hono3();
+notificationsRoute.get("/", requireAuth, async (c2) => {
+  const rows = await getDb().select().from(notifications).where(eq(notifications.userId, c2.get("user").id)).orderBy(desc(notifications.createdAt)).limit(100);
+  return c2.json(rows);
+});
+notificationsRoute.post("/read-all", requireAuth, async (c2) => {
+  await getDb().update(notifications).set({ read: true }).where(and(eq(notifications.userId, c2.get("user").id), eq(notifications.read, false)));
+  return c2.json({ ok: true });
+});
+notificationsRoute.post("/:id/read", requireAuth, async (c2) => {
+  const updated = await getDb().update(notifications).set({ read: true }).where(
+    and(
+      eq(notifications.id, c2.req.param("id")),
+      eq(notifications.userId, c2.get("user").id)
+    )
+  ).returning({ id: notifications.id, read: notifications.read });
+  if (!updated[0]) {
+    return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u901A\u77E5\u3002" } }, 404);
+  }
+  return c2.json(updated[0]);
+});
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -37039,6 +37062,7 @@ app.route("/invoices", paymentsRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);
+app.route("/notifications", notificationsRoute);
 app.route("/receipts", receiptsRoute);
 app.route("/staff", staffRoute);
 app.route("/payments", financeRoute);

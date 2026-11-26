@@ -2,6 +2,8 @@ import { useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context";
+import { useAuth } from "../auth";
+import { LiveNotifications } from "./LiveNotifications";
 import { Empty, PageHead, Button } from "../components/ui";
 import { ROLE_NAMES } from "../domain/types";
 import { notificationTarget } from "../notificationTarget";
@@ -24,6 +26,11 @@ function notificationTime(value: string) {
 }
 
 export function Notifications() {
+  const { live } = useAuth();
+  return live ? <LiveNotifications /> : <DemoNotifications />;
+}
+
+function DemoNotifications() {
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
   const [filter, setFilter] = useState<NotificationFilter>("all");
