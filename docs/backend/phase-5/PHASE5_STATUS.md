@@ -48,6 +48,11 @@
   - live mode loads `/api/v1/services`
   - 38 backend catalogue items
   - picker no longer uses local service seed in production
+- Live municipal orders:
+  - `GET /api/v1/municipal-orders`
+  - `GET /api/v1/municipal-orders/:id`
+  - live list/detail with principal, Invoice, grant data and lines
+  - read-only (municipal editing still pending)
 - Live services catalogue:
   - backend seeded with 38 current catalogue items
   - `/services` live list/search/category

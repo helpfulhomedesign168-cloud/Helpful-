@@ -36867,6 +36867,90 @@ photosRoute.delete(
   }
 );
 
+// server/routes/municipal.ts
+var municipalRoute = new Hono3();
+municipalRoute.get(
+  "/",
+  requireAuth,
+  requireCapability("municipal.read"),
+  async (c2) => {
+    const rows = await getDb().select({
+      id: municipalOrders.id,
+      number: municipalOrders.number,
+      status: municipalOrders.status,
+      createdAt: municipalOrders.createdAt,
+      invoiceId: invoices.id,
+      invoiceNumber: invoices.number,
+      grantApplicationNumber: invoices.grantApplicationNumber,
+      grantApprovedAmountCents: invoices.grantApprovedAmountCents,
+      totalCents: invoices.totalCents,
+      validPaidCents: invoices.validPaidCents,
+      principalOrderId: workOrders.id,
+      principalOrderNumber: workOrders.number,
+      customerName: customers.name,
+      customerPhone: customers.phone
+    }).from(municipalOrders).innerJoin(invoices, eq(municipalOrders.invoiceId, invoices.id)).innerJoin(customers, eq(invoices.customerId, customers.id)).innerJoin(workOrders, eq(municipalOrders.workOrderId, workOrders.id)).orderBy(desc(municipalOrders.createdAt));
+    return c2.json(rows);
+  }
+);
+municipalRoute.get(
+  "/:id",
+  requireAuth,
+  requireCapability("municipal.read"),
+  async (c2) => {
+    const rows = await getDb().select({
+      id: municipalOrders.id,
+      number: municipalOrders.number,
+      status: municipalOrders.status,
+      createdAt: municipalOrders.createdAt,
+      invoice: {
+        id: invoices.id,
+        number: invoices.number,
+        categories: invoices.categories,
+        totalCents: invoices.totalCents,
+        validPaidCents: invoices.validPaidCents,
+        grantApplicationNumber: invoices.grantApplicationNumber,
+        grantApprovedAmountCents: invoices.grantApprovedAmountCents,
+        currentVersion: invoices.currentVersion
+      },
+      principal: {
+        id: workOrders.id,
+        number: workOrders.number,
+        status: workOrders.status
+      },
+      customer: {
+        name: customers.name,
+        phone: customers.phone,
+        address: customers.address,
+        district: customers.district
+      }
+    }).from(municipalOrders).innerJoin(invoices, eq(municipalOrders.invoiceId, invoices.id)).innerJoin(customers, eq(invoices.customerId, customers.id)).innerJoin(workOrders, eq(municipalOrders.workOrderId, workOrders.id)).where(eq(municipalOrders.id, c2.req.param("id"))).limit(1);
+    const order2 = rows[0];
+    if (!order2) {
+      return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5E02\u653F\u55AE\u3002" } }, 404);
+    }
+    const version3 = await getDb().select().from(invoiceVersions).where(
+      and(
+        eq(invoiceVersions.invoiceId, order2.invoice.id),
+        eq(invoiceVersions.versionNo, order2.invoice.currentVersion)
+      )
+    ).limit(1);
+    const lines = version3[0] ? await getDb().select().from(invoiceLines).where(eq(invoiceLines.versionId, version3[0].id)) : [];
+    return c2.json({
+      ...order2,
+      lines: lines.map((line2) => ({
+        id: line2.id,
+        name: line2.name,
+        position: line2.position,
+        quantity: line2.quantity,
+        unit: line2.unit,
+        unitPriceCents: line2.unitPriceCents,
+        amountCents: line2.amountCents
+      }))
+    });
+  }
+);
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -36886,6 +36970,7 @@ app.route("/invoices", invoicesRoute);
 app.route("/invoices", paymentsRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/work-orders", photosRoute);
+app.route("/municipal-orders", municipalRoute);
 app.route("/receipts", receiptsRoute);
 app.route("/staff", staffRoute);
 app.route("/payments", financeRoute);
