@@ -48,6 +48,10 @@
   - live mode loads `/api/v1/services`
   - 38 backend catalogue items
   - picker no longer uses local service seed in production
+- Live Invoice document:
+  - `/documents/invoice/:id` reads API
+  - printable invoice with customer, lines, totals, grant
+  - link from live Invoice detail
 - Live municipal orders:
   - `GET /api/v1/municipal-orders`
   - `GET /api/v1/municipal-orders/:id`

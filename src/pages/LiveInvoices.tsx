@@ -273,7 +273,10 @@ export function LiveInvoiceDetail() {
           <p className="eyebrow">Invoice · Live API</p>
           <h1>{invoice.number}</h1>
         </div>
-        <Badge strong={invoice.status === "completed"}>{statusLabel(invoice.status)}</Badge>
+        <div className="page-actions">
+          <Button onClick={() => nav(`/documents/invoice/${id}`)}>列印 Invoice</Button>
+          <Badge strong={invoice.status === "completed"}>{statusLabel(invoice.status)}</Badge>
+        </div>
       </div>
       <div className="list-panel">
         <div className="invoice-summary-grid">

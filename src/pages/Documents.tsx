@@ -4,6 +4,7 @@ import { Printer, ArrowLeft } from "lucide-react";
 import { useApp } from "../context";
 import { useAuth } from "../auth";
 import { LiveReceipt } from "./LiveReceipt";
+import { LiveInvoiceDocument } from "./LiveInvoiceDocument";
 import { Button, Empty } from "../components/ui";
 import { currentVersion, discountLabel, money } from "../domain/types";
 export function Documents() {
@@ -12,6 +13,7 @@ export function Documents() {
   const { live } = useAuth();
   const nav = useNavigate();
   if (live && kind === "receipt") return <LiveReceipt />;
+  if (live && kind === "invoice") return <LiveInvoiceDocument />;
   try {
     const municipal =
       kind === "municipal" ? engine.getMunicipalOrder(actor, id) : undefined;
