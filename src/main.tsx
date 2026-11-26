@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Provider, useApp } from "./context";
-import { AuthGate, AuthProvider } from "./auth";
+import { AuthGate, AuthProvider, useAuth } from "./auth";
 import { Shell, roleHome } from "./components/Shell";
 import { QuoteEditor, Quotes } from "./pages/Quotes";
 import { QuoteView } from "./pages/SubmittedQuote";
@@ -43,6 +43,25 @@ function Home() {
   const { actor } = useApp();
   return <Navigate replace to={roleHome(actor.role)} />;
 }
+function LiveBlocked({ children }: { children: React.ReactNode }) {
+  const { live } = useAuth();
+  const { actor } = useApp();
+  if (!live) return <>{children}</>;
+  return (
+    <div className="fatal-error">
+      <Empty
+        title="此模組尚未接通 production"
+        description="此頁仍然使用舊 demo 資料，為避免誤用，live 模式暫時不開放。"
+        action={
+          <Button onClick={() => location.assign(roleHome(actor.role))}>
+            返回工作台
+          </Button>
+        }
+      />
+    </div>
+  );
+}
+
 function Guard({
   roles,
   children,
@@ -96,7 +115,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/quotes"
               element={
                 <Guard roles={[...sales, "clerk", "finance_supervisor", "admin", "admin_staff", "finance"]}>
-                  <Quotes />
+                  <LiveBlocked><Quotes /></LiveBlocked>
                 </Guard>
               }
             />
@@ -112,7 +131,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/quotes/:id/handoff"
               element={
                 <Guard roles={[...sales, "admin", "admin_staff"]}>
-                  <QuoteHandoff />
+                  <LiveBlocked><QuoteHandoff /></LiveBlocked>
                 </Guard>
               }
             />
@@ -120,7 +139,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/quotes/:id/edit"
               element={
                 <Guard roles={[...sales, "clerk", "invoice_clerk", "finance_supervisor", "admin", "admin_staff"]}>
-                  <QuoteEditor />
+                  <LiveBlocked><QuoteEditor /></LiveBlocked>
                 </Guard>
               }
             />
@@ -137,7 +156,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                     "finance",
                   ]}
                 >
-                  <QuoteView />
+                  <LiveBlocked><QuoteView /></LiveBlocked>
                 </Guard>
               }
             />
@@ -176,7 +195,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                     "admin",
                   ]}
                 >
-                  <CancellationCases />
+                  <LiveBlocked><CancellationCases /></LiveBlocked>
                 </Guard>
               }
             />
@@ -191,7 +210,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                     "admin",
                   ]}
                 >
-                  <CancellationCaseDetail />
+                  <LiveBlocked><CancellationCaseDetail /></LiveBlocked>
                 </Guard>
               }
             />
@@ -199,7 +218,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/custom-work-requests"
               element={
                 <Guard roles={["cs_supervisor", "admin"]}>
-                  <CustomWorkRequests />
+                  <LiveBlocked><CustomWorkRequests /></LiveBlocked>
                 </Guard>
               }
             />
@@ -207,7 +226,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/submissions"
               element={
                 <Guard roles={["clerk", "finance_supervisor", "admin", "admin_staff"]}>
-                  <Submissions />
+                  <LiveBlocked><Submissions /></LiveBlocked>
                 </Guard>
               }
             />
@@ -287,7 +306,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/product-styles"
               element={
                 <Guard roles={[...sales, "admin", "admin_staff"]}>
-                  <ProductStyles />
+                  <LiveBlocked><ProductStyles /></LiveBlocked>
                 </Guard>
               }
             />
@@ -311,7 +330,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/sales-schedule"
               element={
                 <Guard roles={sales}>
-                  <SalesSchedule />
+                  <LiveBlocked><SalesSchedule /></LiveBlocked>
                 </Guard>
               }
             />
@@ -346,7 +365,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/performance"
               element={
                 <Guard roles={sales}>
-                  <Performance />
+                  <LiveBlocked><Performance /></LiveBlocked>
                 </Guard>
               }
             />
