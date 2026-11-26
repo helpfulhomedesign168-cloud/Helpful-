@@ -34977,6 +34977,13 @@ var requireCapability = (capability) => async (c2, next) => {
 };
 
 // server/routes/customers.ts
+var updateSchema = external_exports.object({
+  name: external_exports.string().trim().min(1).max(120).optional(),
+  phone: external_exports.string().trim().min(5).max(30).optional(),
+  whatsapp: external_exports.string().trim().max(30).nullable().optional(),
+  address: external_exports.string().trim().max(300).nullable().optional(),
+  district: external_exports.string().trim().max(80).nullable().optional()
+});
 var createSchema = external_exports.object({
   name: external_exports.string().trim().min(1).max(120),
   phone: external_exports.string().trim().min(5).max(30),
@@ -35027,6 +35034,43 @@ customersRoute.post(
       createdBy: c2.get("user").id
     }).returning();
     return c2.json(created[0], 201);
+  }
+);
+customersRoute.patch(
+  "/:id",
+  requireAuth,
+  requireCapability("customer.write"),
+  async (c2) => {
+    const parsed = updateSchema.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "\u5BA2\u6236\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002",
+            fields: parsed.error.flatten().fieldErrors
+          }
+        },
+        400
+      );
+    }
+    if (parsed.data.phone) {
+      const existing = await getDb().select({ id: customers.id }).from(customers).where(eq(customers.phone, parsed.data.phone)).limit(1);
+      if (existing[0] && existing[0].id !== c2.req.param("id")) {
+        return c2.json(
+          { error: { code: "PHONE_EXISTS", message: "\u6B64\u96FB\u8A71\u5DF2\u6709\u5BA2\u6236\u3002" } },
+          409
+        );
+      }
+    }
+    const [updated] = await getDb().update(customers).set({ ...parsed.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq(customers.id, c2.req.param("id"))).returning();
+    if (!updated) {
+      return c2.json(
+        { error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5BA2\u6236\u3002" } },
+        404
+      );
+    }
+    return c2.json(updated);
   }
 );
 customersRoute.get(
@@ -36008,7 +36052,7 @@ paymentsRoute.post(
 );
 
 // server/routes/workOrders.ts
-var updateSchema = external_exports.object({
+var updateSchema2 = external_exports.object({
   startDate: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   endDate: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   notes: external_exports.string().trim().max(2e3).nullable().optional(),
@@ -36231,7 +36275,7 @@ workOrdersRoute.patch(
     if (order2.status === "completed") {
       return c2.json(error65("WORK_ORDER_COMPLETED", "\u5DF2\u5B8C\u6210\u7684\u5DE5\u7A0B\u4E0D\u53EF\u4FEE\u6539\u3002"), 409);
     }
-    const parsed = updateSchema.safeParse(await c2.req.json().catch(() => null));
+    const parsed = updateSchema2.safeParse(await c2.req.json().catch(() => null));
     if (!parsed.success) {
       return c2.json(
         {
@@ -36868,7 +36912,7 @@ photosRoute.delete(
 );
 
 // server/routes/municipal.ts
-var updateSchema2 = external_exports.object({
+var updateSchema3 = external_exports.object({
   lines: external_exports.array(
     external_exports.object({
       name: external_exports.string().trim().min(1).max(200),
@@ -36974,7 +37018,7 @@ municipalRoute.patch(
   requireAuth,
   requireCapability("municipal.write"),
   async (c2) => {
-    const parsed = updateSchema2.safeParse(await c2.req.json().catch(() => null));
+    const parsed = updateSchema3.safeParse(await c2.req.json().catch(() => null));
     if (!parsed.success) {
       return c2.json(
         {

@@ -7,6 +7,14 @@ import type { AppEnv } from "../auth";
 import { requireAuth } from "../auth";
 import { requireCapability } from "../guards";
 
+const updateSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  phone: z.string().trim().min(5).max(30).optional(),
+  whatsapp: z.string().trim().max(30).nullable().optional(),
+  address: z.string().trim().max(300).nullable().optional(),
+  district: z.string().trim().max(80).nullable().optional(),
+});
+
 const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
   phone: z.string().trim().min(5).max(30),
@@ -74,6 +82,52 @@ customersRoute.post(
       })
       .returning();
     return c.json(created[0], 201);
+  },
+);
+
+customersRoute.patch(
+  "/:id",
+  requireAuth,
+  requireCapability("customer.write"),
+  async (c) => {
+    const parsed = updateSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "客戶資料不正確。",
+            fields: parsed.error.flatten().fieldErrors,
+          },
+        },
+        400,
+      );
+    }
+    if (parsed.data.phone) {
+      const existing = await getDb()
+        .select({ id: customers.id })
+        .from(customers)
+        .where(eq(customers.phone, parsed.data.phone))
+        .limit(1);
+      if (existing[0] && existing[0].id !== c.req.param("id")) {
+        return c.json(
+          { error: { code: "PHONE_EXISTS", message: "此電話已有客戶。" } },
+          409,
+        );
+      }
+    }
+    const [updated] = await getDb()
+      .update(customers)
+      .set({ ...parsed.data, updatedAt: new Date() })
+      .where(eq(customers.id, c.req.param("id")))
+      .returning();
+    if (!updated) {
+      return c.json(
+        { error: { code: "NOT_FOUND", message: "找不到客戶。" } },
+        404,
+      );
+    }
+    return c.json(updated);
   },
 );
 

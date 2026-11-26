@@ -21,6 +21,7 @@ export function LiveCustomers() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<CustomerRow | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", whatsapp: "", address: "", district: "" });
 
@@ -42,29 +43,55 @@ export function LiveCustomers() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, search]);
 
-  async function create(event: React.FormEvent) {
+  async function saveCustomer(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
     setError("");
     try {
-      await apiRequest("/customers", accessToken, {
-        method: "POST",
-        body: JSON.stringify({
-          name: form.name,
-          phone: form.phone,
-          whatsapp: form.whatsapp || undefined,
-          address: form.address || undefined,
-          district: form.district || undefined,
-        }),
+      const body = JSON.stringify({
+        name: form.name,
+        phone: form.phone,
+        whatsapp: form.whatsapp || null,
+        address: form.address || null,
+        district: form.district || null,
       });
+      if (editing) {
+        await apiRequest(`/customers/${editing.id}`, accessToken, {
+          method: "PATCH",
+          body,
+        });
+      } else {
+        await apiRequest("/customers", accessToken, { method: "POST", body });
+      }
       setOpen(false);
+      setEditing(null);
       setForm({ name: "", phone: "", whatsapp: "", address: "", district: "" });
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "未能新增客戶。");
+      setError(e instanceof ApiError ? e.message : "未能儲存客戶。");
     } finally {
       setSaving(false);
     }
+  }
+
+  function openCreate() {
+    setEditing(null);
+    setForm({ name: "", phone: "", whatsapp: "", address: "", district: "" });
+    setError("");
+    setOpen(true);
+  }
+
+  function openEdit(customer: CustomerRow) {
+    setEditing(customer);
+    setForm({
+      name: customer.name,
+      phone: customer.phone,
+      whatsapp: customer.whatsapp ?? "",
+      address: customer.address ?? "",
+      district: customer.district ?? "",
+    });
+    setError("");
+    setOpen(true);
   }
 
   return (
@@ -73,7 +100,7 @@ export function LiveCustomers() {
       <div className="list-panel">
         <div className="submission-toolbar">
           <Search value={search} onChange={setSearch} placeholder="搜尋客戶姓名／電話" />
-          <Button variant="primary" onClick={() => { setError(""); setOpen(true); }}><Plus size={18} /> 新增客戶</Button>
+          <Button variant="primary" onClick={openCreate}><Plus size={18} /> 新增客戶</Button>
         </div>
         {loading ? <p className="muted">正在讀取客戶…</p> : error ? (
           <Empty title="未能讀取客戶" description={error} />
@@ -82,7 +109,7 @@ export function LiveCustomers() {
         ) : (
           <div className="table-scroll">
             <table className="invoice-list-table live-work-table">
-              <thead><tr><th>客戶</th><th>電話</th><th>WhatsApp</th><th>地區／地址</th><th>建立日期</th></tr></thead>
+              <thead><tr><th>客戶</th><th>電話</th><th>WhatsApp</th><th>地區／地址</th><th>建立日期</th><th /></tr></thead>
               <tbody>
                 {rows.map((customer) => (
                   <tr key={customer.id}>
@@ -91,6 +118,7 @@ export function LiveCustomers() {
                     <td>{customer.whatsapp || "—"}</td>
                     <td>{customer.district || customer.address || "—"}</td>
                     <td>{customer.createdAt.slice(0, 10)}</td>
+                    <td><Button variant="ghost" onClick={() => openEdit(customer)}>修改</Button></td>
                   </tr>
                 ))}
               </tbody>
@@ -99,8 +127,8 @@ export function LiveCustomers() {
         )}
       </div>
       {open && (
-        <Dialog title="新增客戶" onClose={() => setOpen(false)}>
-          <form onSubmit={create}>
+        <Dialog title={editing ? "修改客戶" : "新增客戶"} onClose={() => setOpen(false)}>
+          <form onSubmit={saveCustomer}>
             <div className="form-grid two">
               <Field label="客戶姓名" required><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></Field>
               <Field label="聯絡電話" required><input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required /></Field>
@@ -111,7 +139,7 @@ export function LiveCustomers() {
             {error && <p className="auth-error" role="alert">{error}</p>}
             <div className="dialog-actions">
               <Button type="button" onClick={() => setOpen(false)}>取消</Button>
-              <Button type="submit" variant="primary" disabled={saving}>{saving ? "儲存中…" : "建立客戶"}</Button>
+              <Button type="submit" variant="primary" disabled={saving}>{saving ? "儲存中…" : editing ? "儲存修改" : "建立客戶"}</Button>
             </div>
           </form>
         </Dialog>

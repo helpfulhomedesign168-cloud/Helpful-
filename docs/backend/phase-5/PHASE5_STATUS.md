@@ -72,7 +72,7 @@
   - direct invoice picker still uses local seed (next)
 - Live customers:
   - `/customers` live list/search
-  - create customer via API
+  - create/edit customer via API
 - Live admin users:
   - `POST /api/v1/users` creates Supabase Auth + public user
   - `/users` live list / create / activate-deactivate
