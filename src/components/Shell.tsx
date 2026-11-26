@@ -158,6 +158,8 @@ export function Shell() {
               ...(actor.role === "admin"
                 ? [["/users", "用戶管理", UserCog]]
                 : []),
+              ["/quotes/new?direct=1", "建立發票", Receipt],
+              ["/invoices", "單據管理", Files],
               ["/handoff", "工程單", ArrowRightLeft],
               ["/orders", "工程管理", Hammer],
               ["/contractors", "工程師傅", HardHat],

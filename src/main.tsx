@@ -103,7 +103,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/quotes/new"
               element={
-                <Guard roles={[...sales, "invoice_clerk"]}>
+                <Guard roles={[...sales, "invoice_clerk", "admin", "admin_staff"]}>
                   <QuoteEditor />
                 </Guard>
               }
@@ -238,7 +238,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/invoices/:id/edit"
               element={
-                <Guard roles={["invoice_clerk", "admin"]}>
+                <Guard roles={["invoice_clerk", "admin", "admin_staff"]}>
                   <LiveInvoiceEdit />
                 </Guard>
               }
