@@ -179,7 +179,7 @@ export function LiveInvoiceDetail() {
   const [paymentDate, setPaymentDate] = useState(todayLocal);
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [paymentNotice, setPaymentNotice] = useState("");
-  const [receipts, setReceipts] = useState<Record<string, string>>({});
+  const [receipts, setReceipts] = useState<Record<string, { id: string; number: string }>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -240,12 +240,15 @@ export function LiveInvoiceDetail() {
   async function issueReceipt(paymentId: string) {
     if (!accessToken) return;
     try {
-      const receipt = await apiRequest<{ number: string }>(
+      const receipt = await apiRequest<{ id: string; number: string }>(
         `/invoices/${id}/payments/${paymentId}/receipt`,
         accessToken,
         { method: "POST" },
       );
-      setReceipts((current) => ({ ...current, [paymentId]: receipt.number }));
+      setReceipts((current) => ({
+        ...current,
+        [paymentId]: { id: receipt.id, number: receipt.number },
+      }));
     } catch (e) {
       setPaymentNotice(e instanceof ApiError ? e.message : "未能出收據。");
     }
@@ -329,7 +332,16 @@ export function LiveInvoiceDetail() {
                         出收據
                       </Button>
                     )}
-                    {receipts[payment.id] && <small>{receipts[payment.id]}</small>}
+                    {receipts[payment.id] && (
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          nav(`/documents/receipt/${receipts[payment.id].id}`)
+                        }
+                      >
+                        {receipts[payment.id].number} · 查看收據
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

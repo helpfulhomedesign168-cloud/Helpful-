@@ -2,12 +2,16 @@ import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Printer, ArrowLeft } from "lucide-react";
 import { useApp } from "../context";
+import { useAuth } from "../auth";
+import { LiveReceipt } from "./LiveReceipt";
 import { Button, Empty } from "../components/ui";
 import { currentVersion, discountLabel, money } from "../domain/types";
 export function Documents() {
   const { kind, id = "" } = useParams();
   const { engine, actor } = useApp();
+  const { live } = useAuth();
   const nav = useNavigate();
+  if (live && kind === "receipt") return <LiveReceipt />;
   try {
     const municipal =
       kind === "municipal" ? engine.getMunicipalOrder(actor, id) : undefined;

@@ -11,6 +11,7 @@ import { authRoute } from "./routes/auth";
 import { invoicesRoute } from "./routes/invoices";
 import { paymentsRoute } from "./routes/payments";
 import { workOrdersRoute } from "./routes/workOrders";
+import { receiptsRoute } from "./routes/receipts";
 
 export const app = new Hono<AppEnv>().basePath("/api/v1");
 
@@ -31,6 +32,7 @@ app.route("/feature-flags", featureFlagsRoute);
 app.route("/invoices", invoicesRoute);
 app.route("/invoices", paymentsRoute);
 app.route("/work-orders", workOrdersRoute);
+app.route("/receipts", receiptsRoute);
 
 app.notFound((c) =>
   c.json(

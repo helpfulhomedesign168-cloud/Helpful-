@@ -36163,6 +36163,42 @@ workOrdersRoute.post(
   }
 );
 
+// server/routes/receipts.ts
+var receiptsRoute = new Hono3();
+receiptsRoute.get(
+  "/:id",
+  requireAuth,
+  requireCapability("invoice.read"),
+  async (c2) => {
+    const rows = await getDb().select({
+      id: receipts.id,
+      number: receipts.number,
+      amountCents: receipts.amountCents,
+      issuedAt: receipts.issuedAt,
+      paymentId: payments.id,
+      installment: payments.installment,
+      paidAt: payments.paidAt,
+      method: payments.method,
+      reference: payments.reference,
+      invoiceId: invoices.id,
+      invoiceNumber: invoices.number,
+      totalCents: invoices.totalCents,
+      validPaidCents: invoices.validPaidCents,
+      customer: {
+        name: customers.name,
+        phone: customers.phone,
+        address: customers.address,
+        district: customers.district
+      },
+      issuedBy: users.name
+    }).from(receipts).innerJoin(payments, eq(receipts.paymentId, payments.id)).innerJoin(invoices, eq(payments.invoiceId, invoices.id)).innerJoin(customers, eq(invoices.customerId, customers.id)).innerJoin(users, eq(receipts.issuedBy, users.id)).where(eq(receipts.id, c2.req.param("id"))).limit(1);
+    if (!rows[0]) {
+      return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u6536\u64DA\u3002" } }, 404);
+    }
+    return c2.json(rows[0]);
+  }
+);
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -36181,6 +36217,7 @@ app.route("/feature-flags", featureFlagsRoute);
 app.route("/invoices", invoicesRoute);
 app.route("/invoices", paymentsRoute);
 app.route("/work-orders", workOrdersRoute);
+app.route("/receipts", receiptsRoute);
 app.notFound(
   (c2) => c2.json(
     {

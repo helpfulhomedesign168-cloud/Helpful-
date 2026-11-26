@@ -24,6 +24,11 @@
   - edit categories, grant fields, customer, lines, reason
   - saves via `POST /api/v1/invoices/:id/amendments`
   - locked invoices return API error
+- Live receipt document:
+  - `GET /api/v1/receipts/:id`
+  - `/documents/receipt/:id` live branch
+  - printable receipt with invoice/payment/customer data
+  - payment row links to receipt
 - Live Invoice payment:
   - register payment from live detail
   - confirm one-step payment
@@ -53,7 +58,7 @@
 
 - Live Invoice edit/amend form
 - Live payment registration/validation UI
-- Live receipt actions
+- Live receipt document ✅
 - CS work order frontend
 - Remove local demo data path in production
 - Optimistic refresh / cache invalidation
