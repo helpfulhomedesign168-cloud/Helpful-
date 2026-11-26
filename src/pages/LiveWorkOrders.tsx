@@ -138,7 +138,7 @@ export function LiveWorkOrders({ mode }: { mode: "handoff" | "orders" }) {
           <Empty title={mode === "handoff" ? "暫無待分配工程" : "暫無工程"} description="已收足 50% 的 Invoice 會先出現在工程單。" />
         ) : (
           <div className="table-scroll">
-            <table className="invoice-list-table">
+            <table className="invoice-list-table live-work-table">
               <thead>
                 <tr><th>工程單號</th><th>Invoice</th><th>客戶</th><th>電話</th><th>類別</th><th>跟進同事</th><th>狀態</th><th /></tr>
               </thead>
@@ -294,17 +294,19 @@ export function LiveWorkOrderDetail() {
             <p>批核金額：{order.invoice.grantApprovedAmountCents ? money(order.invoice.grantApprovedAmountCents / 100) : "—"}</p>
           </div>
         )}
-        <form className="form-grid two" onSubmit={save}>
-          <Field label="施工開始日"><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Field>
-          <Field label="施工完成日"><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Field>
+        <form className="live-engineering-form" onSubmit={save}>
+          <div className="form-grid two">
+            <Field label="施工開始日"><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Field>
+            <Field label="施工完成日"><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Field>
+          </div>
           <Field label="工程備註"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} /></Field>
-          <div className="dialog-actions">
+          <div className="dialog-actions live-form-actions">
             <Button type="submit" variant="primary" disabled={saving}>{saving ? "儲存中…" : "儲存工程資料"}</Button>
           </div>
         </form>
         <h2 className="section-title">工程項目</h2>
         <div className="table-scroll">
-          <table className="invoice-list-table">
+          <table className="invoice-list-table live-work-table">
             <thead><tr><th>項目</th><th>位置</th><th>數量</th><th>金額</th></tr></thead>
             <tbody>{order.lines.map((line) => <tr key={line.id}><td>{line.name}</td><td>{line.position || "—"}</td><td>{line.quantity} {line.unit}</td><td className="numeric">{money(line.amountCents / 100)}</td></tr>)}</tbody>
           </table>

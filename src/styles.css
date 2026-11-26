@@ -12558,3 +12558,12 @@ textarea::placeholder {
 .live-line-table input { width: 100%; box-sizing: border-box; border: 1px solid #d7e1ec; border-radius: 7px; padding: 7px 8px; font: inherit; }
 .live-edit-total { text-align: right; color: #64748b; font-size: 13px; }
 .live-edit-total strong { color: #0d1f3a; font-size: 18px; margin-left: 8px; }
+
+/* Live CS workspace: keep work-order tables content-width, not Invoice table width. */
+.live-engineering-form { display: grid; gap: 18px; }
+.live-form-actions { margin-top: 0; padding-top: 16px; }
+.live-form-actions .btn { flex: 0 0 auto; }
+.invoice-list-table.live-work-table { min-width: 0; table-layout: auto; }
+.invoice-list-table.live-work-table th,
+.invoice-list-table.live-work-table td { width: auto !important; }
+.invoice-list-table.live-work-table td:last-child .btn { width: auto; }
