@@ -84,3 +84,26 @@ export type ApiPayment = {
   reference: string | null;
   notes: string | null;
 };
+
+export async function apiUpload<T>(
+  path: string,
+  token: string | null,
+  formData: FormData,
+): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: formData,
+  });
+  const body = (await response.json().catch(() => null)) as
+    | { error?: { code?: string; message?: string } }
+    | null;
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      body?.error?.code ?? "API_ERROR",
+      body?.error?.message ?? "上載失敗。",
+    );
+  }
+  return body as T;
+}

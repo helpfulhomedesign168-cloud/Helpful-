@@ -12567,3 +12567,11 @@ textarea::placeholder {
 .invoice-list-table.live-work-table th,
 .invoice-list-table.live-work-table td { width: auto !important; }
 .invoice-list-table.live-work-table td:last-child .btn { width: auto; }
+
+.work-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.work-photo-grid figure { margin: 0; border: 1px solid #dfe7f0; border-radius: 10px; overflow: hidden; background: #fff; }
+.work-photo-grid img { width: 100%; height: 140px; object-fit: cover; display: block; background: #f5f8fc; }
+.work-photo-grid figcaption { padding: 8px 10px; font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.work-photo-grid .text-button { margin: 0 10px 10px; font-size: 11px; color: #b33a17; }
+.photo-upload { display: inline-flex; padding: 10px 14px; border: 1px dashed #cbd5e1; border-radius: 10px; color: #40506a; font-size: 12px; cursor: pointer; margin-bottom: 8px; }
+.photo-upload input { display: none; }

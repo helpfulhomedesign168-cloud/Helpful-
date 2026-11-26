@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Check, UserRound } from "lucide-react";
 import { useAuth } from "../auth";
-import { apiRequest, ApiError } from "../api/client";
+import { apiRequest, apiUpload, ApiError } from "../api/client";
 import { Badge, Button, CategoryChips, Dialog, Empty, Field, PageHead } from "../components/ui";
 import { money } from "../domain/types";
 
@@ -35,6 +35,15 @@ type Assignment = {
   endDate: string | null;
   feeCents: number;
   notes: string | null;
+};
+
+type Photo = {
+  id: string;
+  filename: string;
+  mime: string;
+  sizeBytes: number;
+  createdAt: string;
+  url: string | null;
 };
 
 type Deduction = {
@@ -244,6 +253,17 @@ export function LiveWorkOrderDetail() {
   const [deductionAmount, setDeductionAmount] = useState("");
   const [deductionNotes, setDeductionNotes] = useState("");
   const [deductionSaving, setDeductionSaving] = useState(false);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [photoSaving, setPhotoSaving] = useState(false);
+
+  async function loadPhotos() {
+    if (!accessToken) return;
+    try {
+      setPhotos(await apiRequest<Photo[]>(`/work-orders/${id}/photos`, accessToken));
+    } catch {
+      setPhotos([]);
+    }
+  }
 
   async function loadDeductions() {
     if (!accessToken) return;
@@ -276,6 +296,7 @@ export function LiveWorkOrderDetail() {
       setNotes(data.notes ?? "");
       await loadAssignments();
       await loadDeductions();
+      await loadPhotos();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能讀取工程單。");
     }
@@ -330,6 +351,7 @@ export function LiveWorkOrderDetail() {
       setFee("");
       await loadAssignments();
       await loadDeductions();
+      await loadPhotos();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能新增施工安排。");
     } finally {
@@ -344,6 +366,7 @@ export function LiveWorkOrderDetail() {
       });
       await loadAssignments();
       await loadDeductions();
+      await loadPhotos();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能移除施工安排。");
     }
@@ -381,6 +404,32 @@ export function LiveWorkOrderDetail() {
       await loadDeductions();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能移除材料扣減。");
+    }
+  }
+
+  async function uploadPhoto(file: File) {
+    if (!accessToken) return;
+    setPhotoSaving(true);
+    try {
+      const data = new FormData();
+      data.append("photo", file);
+      await apiUpload(`/work-orders/${id}/photos`, accessToken, data);
+      await loadPhotos();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "相片上載失敗。");
+    } finally {
+      setPhotoSaving(false);
+    }
+  }
+
+  async function removePhoto(photoId: string) {
+    try {
+      await apiRequest(`/work-orders/${id}/photos/${photoId}`, accessToken, {
+        method: "DELETE",
+      });
+      await loadPhotos();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "未能移除相片。");
     }
   }
 
@@ -440,6 +489,35 @@ export function LiveWorkOrderDetail() {
             <tbody>{order.lines.map((line) => <tr key={line.id}><td>{line.name}</td><td>{line.position || "—"}</td><td>{line.quantity} {line.unit}</td><td className="numeric">{money(line.amountCents / 100)}</td></tr>)}</tbody>
           </table>
         </div>
+        <h2 className="section-title">工程相片</h2>
+        {photos.length === 0 ? <p className="muted">尚未上載工程相片。</p> : (
+          <div className="work-photo-grid">
+            {photos.map((photo) => (
+              <figure key={photo.id}>
+                {photo.url ? <img src={photo.url} alt={photo.filename} /> : <div className="muted">未能載入</div>}
+                <figcaption>{photo.filename}</figcaption>
+                {order.status !== "completed" && (
+                  <button type="button" className="text-button" onClick={() => void removePhoto(photo.id)}>移除</button>
+                )}
+              </figure>
+            ))}
+          </div>
+        )}
+        {order.status !== "completed" && (
+          <label className="photo-upload">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={photoSaving}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void uploadPhoto(file);
+                event.target.value = "";
+              }}
+            />
+            {photoSaving ? "上載中…" : "上載工程相片（JPG／PNG／WebP，最多 4MB）"}
+          </label>
+        )}
         <h2 className="section-title">施工人員及成本</h2>
         {assignments.length === 0 ? <p className="muted">尚未安排施工人員。</p> : (
           <div className="table-scroll">

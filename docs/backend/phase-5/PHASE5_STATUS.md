@@ -26,6 +26,12 @@
   - edit categories, grant fields, customer, lines, reason
   - saves via `POST /api/v1/invoices/:id/amendments`
   - locked invoices return API error
+- Live site photos:
+  - Supabase Storage private bucket `work-order-photos`
+  - multipart upload API
+  - signed URL display
+  - delete photo
+  - live工程 detail upload/gallery
 - Live material deductions:
   - `GET/POST/DELETE /work-orders/:id/deductions`
   - add/remove materials and amounts in live detail

@@ -14,6 +14,7 @@ import { workOrdersRoute } from "./routes/workOrders";
 import { receiptsRoute } from "./routes/receipts";
 import { staffRoute } from "./routes/staff";
 import { financeRoute } from "./routes/finance";
+import { photosRoute } from "./routes/photos";
 
 export const app = new Hono<AppEnv>().basePath("/api/v1");
 
@@ -34,6 +35,7 @@ app.route("/feature-flags", featureFlagsRoute);
 app.route("/invoices", invoicesRoute);
 app.route("/invoices", paymentsRoute);
 app.route("/work-orders", workOrdersRoute);
+app.route("/work-orders", photosRoute);
 app.route("/receipts", receiptsRoute);
 app.route("/staff", staffRoute);
 app.route("/payments", financeRoute);
