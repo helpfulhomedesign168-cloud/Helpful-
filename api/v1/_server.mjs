@@ -36199,6 +36199,19 @@ receiptsRoute.get(
   }
 );
 
+// server/routes/staff.ts
+var staffRoute = new Hono3();
+staffRoute.get("/", requireAuth, async (c2) => {
+  const requested = (c2.req.query("roles") ?? "cs,cs_supervisor").split(",").map((role) => role.trim()).filter(Boolean);
+  const allowed = ["cs", "cs_supervisor", "admin"];
+  const roles = requested.filter(
+    (role) => allowed.includes(role)
+  );
+  if (!roles.length) return c2.json([]);
+  const rows = await getDb().select({ id: users.id, name: users.name, role: users.role }).from(users).where(and(eq(users.active, true), inArray(users.role, roles))).orderBy(asc(users.name));
+  return c2.json(rows);
+});
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -36218,6 +36231,7 @@ app.route("/invoices", invoicesRoute);
 app.route("/invoices", paymentsRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/receipts", receiptsRoute);
+app.route("/staff", staffRoute);
 app.notFound(
   (c2) => c2.json(
     {

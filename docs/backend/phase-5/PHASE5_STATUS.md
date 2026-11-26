@@ -26,6 +26,13 @@
   - edit categories, grant fields, customer, lines, reason
   - saves via `POST /api/v1/invoices/:id/amendments`
   - locked invoices return API error
+- Live CS work orders:
+  - `/handoff` live list
+  - assign CS via `/staff`
+  - `/orders` live list/detail
+  - dates/notes/in_progress save
+  - complete work order
+  - 8萬 grant card on detail
 - Live receipt document:
   - `GET /api/v1/receipts/:id`
   - `/documents/receipt/:id` live branch
@@ -59,7 +66,7 @@
 ## Not yet done
 
 - Live payment pending validation for finance
-- CS work order frontend
+- CS work order frontend ✅ (core flow)
 - Remove local demo data path in production
 - Optimistic refresh / cache invalidation
 - API error handling for expired token

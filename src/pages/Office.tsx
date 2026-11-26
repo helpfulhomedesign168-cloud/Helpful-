@@ -22,6 +22,7 @@ import {
 } from "../context";
 import { useAuth } from "../auth";
 import { LiveInvoiceDetail, LiveInvoices } from "./LiveInvoices";
+import { LiveWorkOrderDetail, LiveWorkOrders } from "./LiveWorkOrders";
 import {
   Badge,
   Button,
@@ -1518,6 +1519,11 @@ function DemoInvoiceDetail() {
 }
 
 export function Handoff() {
+  const { live } = useAuth();
+  return live ? <LiveWorkOrders mode="handoff" /> : <DemoHandoff />;
+}
+
+function DemoHandoff() {
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
@@ -3470,6 +3476,11 @@ function OrderPanel({ order }: { order: WorkOrder }) {
 }
 
 export function Orders() {
+  const { live } = useAuth();
+  return live ? <LiveWorkOrders mode="orders" /> : <DemoOrders />;
+}
+
+function DemoOrders() {
   const { actor, engine } = useApp();
   const [filters, setFilters] = useState<OrderFilters>(() => {
     let month = DEMO_TODAY.slice(0, 7);
@@ -3506,6 +3517,11 @@ export function Orders() {
 }
 
 export function OrderDetail() {
+  const { live } = useAuth();
+  return live ? <LiveWorkOrderDetail /> : <DemoOrderDetail />;
+}
+
+function DemoOrderDetail() {
   const { id = "" } = useParams();
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
