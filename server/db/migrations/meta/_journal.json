@@ -36,6 +36,13 @@
       "when": 1795662861041,
       "tag": "0004_closed_hobgoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795663373052,
+      "tag": "0005_acoustic_spectrum",
+      "breakpoints": true
     }
   ]
 }

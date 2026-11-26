@@ -4,7 +4,7 @@ import { ArrowLeft, CalendarDays, Check, UserRound } from "lucide-react";
 import { useAuth } from "../auth";
 import { apiRequest, apiUpload, ApiError } from "../api/client";
 import { Badge, Button, CategoryChips, Dialog, Empty, Field, PageHead } from "../components/ui";
-import { money } from "../domain/types";
+import { EXTRA_WORK_LABELS, money } from "../domain/types";
 
 type WorkOrderRow = {
   id: string;
@@ -44,6 +44,17 @@ type Photo = {
   sizeBytes: number;
   createdAt: string;
   url: string | null;
+};
+
+type ExtraWork = {
+  id: string;
+  kind: string;
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+  time: string | null;
+  notes: string | null;
+  priceCents: number;
 };
 
 type Deduction = {
@@ -255,6 +266,25 @@ export function LiveWorkOrderDetail() {
   const [deductionSaving, setDeductionSaving] = useState(false);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [photoSaving, setPhotoSaving] = useState(false);
+  const [extraWorks, setExtraWorks] = useState<ExtraWork[]>([]);
+  const [extraKind, setExtraKind] = useState("measure");
+  const [extraName, setExtraName] = useState("");
+  const [extraStart, setExtraStart] = useState("");
+  const [extraEnd, setExtraEnd] = useState("");
+  const [extraPrice, setExtraPrice] = useState("");
+  const [extraNotes, setExtraNotes] = useState("");
+  const [extraSaving, setExtraSaving] = useState(false);
+
+  async function loadExtraWorks() {
+    if (!accessToken) return;
+    try {
+      setExtraWorks(
+        await apiRequest<ExtraWork[]>(`/work-orders/${id}/extra-works`, accessToken),
+      );
+    } catch {
+      setExtraWorks([]);
+    }
+  }
 
   async function loadPhotos() {
     if (!accessToken) return;
@@ -297,6 +327,7 @@ export function LiveWorkOrderDetail() {
       await loadAssignments();
       await loadDeductions();
       await loadPhotos();
+      await loadExtraWorks();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能讀取工程單。");
     }
@@ -352,6 +383,7 @@ export function LiveWorkOrderDetail() {
       await loadAssignments();
       await loadDeductions();
       await loadPhotos();
+      await loadExtraWorks();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能新增施工安排。");
     } finally {
@@ -367,6 +399,7 @@ export function LiveWorkOrderDetail() {
       await loadAssignments();
       await loadDeductions();
       await loadPhotos();
+      await loadExtraWorks();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能移除施工安排。");
     }
@@ -430,6 +463,46 @@ export function LiveWorkOrderDetail() {
       await loadPhotos();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能移除相片。");
+    }
+  }
+
+  async function addExtraWork(event: React.FormEvent) {
+    event.preventDefault();
+    if (!extraName.trim()) return;
+    setExtraSaving(true);
+    try {
+      await apiRequest(`/work-orders/${id}/extra-works`, accessToken, {
+        method: "POST",
+        body: JSON.stringify({
+          kind: extraKind,
+          name: extraName.trim(),
+          startDate: extraStart || undefined,
+          endDate: extraEnd || undefined,
+          priceCents: Math.round((Number(extraPrice) || 0) * 100),
+          notes: extraNotes.trim() || undefined,
+        }),
+      });
+      setExtraName("");
+      setExtraStart("");
+      setExtraEnd("");
+      setExtraPrice("");
+      setExtraNotes("");
+      await loadExtraWorks();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "未能新增額外工程。");
+    } finally {
+      setExtraSaving(false);
+    }
+  }
+
+  async function removeExtraWork(extraWorkId: string) {
+    try {
+      await apiRequest(`/work-orders/${id}/extra-works/${extraWorkId}`, accessToken, {
+        method: "DELETE",
+      });
+      await loadExtraWorks();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "未能移除額外工程。");
     }
   }
 
@@ -580,6 +653,44 @@ export function LiveWorkOrderDetail() {
             </div>
             <div className="dialog-actions live-form-actions">
               <Button type="submit" variant="secondary" disabled={deductionSaving}>{deductionSaving ? "新增中…" : "新增材料扣減"}</Button>
+            </div>
+          </form>
+        )}
+        <h2 className="section-title">額外工程</h2>
+        {extraWorks.length === 0 ? <p className="muted">尚未新增額外工程。</p> : (
+          <div className="table-scroll">
+            <table className="invoice-list-table live-work-table">
+              <thead><tr><th>類型</th><th>名稱</th><th>日期</th><th>金額</th><th /></tr></thead>
+              <tbody>
+                {extraWorks.map((work) => (
+                  <tr key={work.id}>
+                    <td>{EXTRA_WORK_LABELS[work.kind as keyof typeof EXTRA_WORK_LABELS] || work.kind}</td>
+                    <td><strong>{work.name}</strong><small>{work.notes}</small></td>
+                    <td>{work.startDate || "—"}{work.endDate ? ` → ${work.endDate}` : ""}{work.time ? ` · ${work.time}` : ""}</td>
+                    <td>{money(work.priceCents / 100)}</td>
+                    <td><button type="button" className="icon-button" aria-label={`移除${work.name}`} onClick={() => void removeExtraWork(work.id)}>×</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {order.status !== "completed" && (
+          <form className="live-engineering-form" onSubmit={addExtraWork}>
+            <div className="form-grid three">
+              <Field label="類型">
+                <select value={extraKind} onChange={(e) => setExtraKind(e.target.value)}>
+                  {Object.entries(EXTRA_WORK_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </Field>
+              <Field label="項目名稱" required><input value={extraName} onChange={(e) => setExtraName(e.target.value)} required /></Field>
+              <Field label="金額"><input type="number" min="0" step="0.01" value={extraPrice} onChange={(e) => setExtraPrice(e.target.value)} /></Field>
+              <Field label="開始日"><input type="date" value={extraStart} onChange={(e) => setExtraStart(e.target.value)} /></Field>
+              <Field label="完成日"><input type="date" value={extraEnd} onChange={(e) => setExtraEnd(e.target.value)} /></Field>
+              <Field label="備註"><input value={extraNotes} onChange={(e) => setExtraNotes(e.target.value)} /></Field>
+            </div>
+            <div className="dialog-actions live-form-actions">
+              <Button type="submit" variant="secondary" disabled={extraSaving}>{extraSaving ? "新增中…" : "新增額外工程"}</Button>
             </div>
           </form>
         )}

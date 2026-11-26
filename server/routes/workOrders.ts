@@ -13,6 +13,7 @@ import {
   users,
   workOrderAssignments,
   workOrderDeductions,
+  workOrderExtraWorks,
   workOrders,
 } from "../db/schema";
 import type { AppEnv } from "../auth";
@@ -28,6 +29,16 @@ const updateSchema = z.object({
 
 const assignSchema = z.object({
   csOwnerId: z.string().uuid(),
+});
+
+const extraWorkSchema = z.object({
+  kind: z.enum(["measure", "delivery", "transport", "fabrication"]),
+  name: z.string().trim().min(1).max(200),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  time: z.string().trim().max(40).optional(),
+  notes: z.string().trim().max(1000).optional(),
+  priceCents: z.number().int().nonnegative().default(0),
 });
 
 const deductionSchema = z.object({
@@ -588,6 +599,112 @@ workOrdersRoute.delete(
       entityType: "work_order",
       entityId: order.id,
       before: { deductionId: deleted[0].id },
+      requestId: c.get("requestId"),
+    });
+    return c.json({ ok: true });
+  },
+);
+
+workOrdersRoute.get(
+  "/:id/extra-works",
+  requireAuth,
+  requireCapability("workorder.read"),
+  async (c) => {
+    const order = await orderDetail(c.req.param("id"));
+    if (!order) return c.json(error("NOT_FOUND", "找不到工程單。"), 404);
+    if (!canSeeOrder(c.get("user"), order)) {
+      return c.json(error("FORBIDDEN", "你沒有查看此工程的權限。"), 403);
+    }
+    const rows = await getDb()
+      .select()
+      .from(workOrderExtraWorks)
+      .where(eq(workOrderExtraWorks.workOrderId, order.id))
+      .orderBy(desc(workOrderExtraWorks.createdAt));
+    return c.json(rows);
+  },
+);
+
+workOrdersRoute.post(
+  "/:id/extra-works",
+  requireAuth,
+  requireCapability("workorder.update"),
+  async (c) => {
+    const order = await orderDetail(c.req.param("id"));
+    if (!order) return c.json(error("NOT_FOUND", "找不到工程單。"), 404);
+    if (!canSeeOrder(c.get("user"), order)) {
+      return c.json(error("FORBIDDEN", "你沒有修改此工程的權限。"), 403);
+    }
+    if (order.status === "completed") {
+      return c.json(error("WORK_ORDER_COMPLETED", "已完成的工程不可新增額外工程。"), 409);
+    }
+    const parsed = extraWorkSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "額外工程資料不正確。",
+            fields: parsed.error.flatten().fieldErrors,
+          },
+        },
+        400,
+      );
+    }
+    const [created] = await getDb()
+      .insert(workOrderExtraWorks)
+      .values({
+        workOrderId: order.id,
+        kind: parsed.data.kind,
+        name: parsed.data.name,
+        startDate: parsed.data.startDate,
+        endDate: parsed.data.endDate,
+        time: parsed.data.time,
+        notes: parsed.data.notes,
+        priceCents: parsed.data.priceCents,
+        createdBy: c.get("user").id,
+      })
+      .returning();
+    await getDb().insert(auditLogs).values({
+      actorId: c.get("user").id,
+      action: "work_order_extra_work_added",
+      entityType: "work_order",
+      entityId: order.id,
+      after: { name: created.name, priceCents: created.priceCents },
+      requestId: c.get("requestId"),
+    });
+    return c.json(created, 201);
+  },
+);
+
+workOrdersRoute.delete(
+  "/:id/extra-works/:extraWorkId",
+  requireAuth,
+  requireCapability("workorder.update"),
+  async (c) => {
+    const order = await orderDetail(c.req.param("id"));
+    if (!order) return c.json(error("NOT_FOUND", "找不到工程單。"), 404);
+    if (!canSeeOrder(c.get("user"), order)) {
+      return c.json(error("FORBIDDEN", "你沒有修改此工程的權限。"), 403);
+    }
+    if (order.status === "completed") {
+      return c.json(error("WORK_ORDER_COMPLETED", "已完成的工程不可修改額外工程。"), 409);
+    }
+    const deleted = await getDb()
+      .delete(workOrderExtraWorks)
+      .where(
+        and(
+          eq(workOrderExtraWorks.id, c.req.param("extraWorkId")),
+          eq(workOrderExtraWorks.workOrderId, order.id),
+        ),
+      )
+      .returning({ id: workOrderExtraWorks.id });
+    if (!deleted[0]) return c.json(error("NOT_FOUND", "找不到額外工程。"), 404);
+    await getDb().insert(auditLogs).values({
+      actorId: c.get("user").id,
+      action: "work_order_extra_work_deleted",
+      entityType: "work_order",
+      entityId: order.id,
+      before: { extraWorkId: deleted[0].id },
       requestId: c.get("requestId"),
     });
     return c.json({ ok: true });

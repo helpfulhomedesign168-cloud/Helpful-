@@ -26,6 +26,11 @@
   - edit categories, grant fields, customer, lines, reason
   - saves via `POST /api/v1/invoices/:id/amendments`
   - locked invoices return API error
+- Live extra works:
+  - `GET/POST/DELETE /work-orders/:id/extra-works`
+  - measure/delivery/transport/fabrication
+  - dates, price, notes
+  - add/remove in live detail
 - Live site photos:
   - Supabase Storage private bucket `work-order-photos`
   - multipart upload API

@@ -281,6 +281,26 @@ export const workOrderDeductions = pgTable("work_order_deductions", {
     .notNull(),
 });
 
+export const workOrderExtraWorks = pgTable("work_order_extra_works", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workOrderId: uuid("work_order_id")
+    .notNull()
+    .references(() => workOrders.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  name: text("name").notNull(),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  time: text("time"),
+  notes: text("notes"),
+  priceCents: integer("price_cents").default(0).notNull(),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const municipalOrders = pgTable("municipal_orders", {
   id: uuid("id").defaultRandom().primaryKey(),
   number: text("number").notNull().unique(),
