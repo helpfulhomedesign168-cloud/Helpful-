@@ -23,6 +23,8 @@ import {
   Search as SearchIcon,
 } from "lucide-react";
 import { getAttachmentBlob, useApp } from "../context";
+import { useAuth } from "../auth";
+import { apiRequest, type InvoiceDetailData } from "../api/client";
 import { exportDirectInvoiceExcel } from "../exportDirectInvoiceExcel";
 import {
   Customer,
@@ -688,6 +690,7 @@ export function QuoteWizardProgress({
 
 export function QuoteEditor() {
   const { actor, engine, run, setQuoteDraftGuard } = useApp();
+  const { live, accessToken } = useAuth();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const nav = useNavigate();
@@ -775,6 +778,7 @@ export function QuoteEditor() {
       "",
   );
   const [exporting, setExporting] = useState(false);
+  const [liveSaving, setLiveSaving] = useState(false);
   const [directCategories, setDirectCategories] = useState<InvoiceCategory[]>(
     existingInvoice?.categories?.length
       ? existingInvoice.categories
@@ -951,26 +955,109 @@ export function QuoteEditor() {
     );
     if (updated) nav("/invoices");
   }
-  function createDirectInvoice() {
-    const invoice = run(
-      () =>
-        engine.createDirectInvoiceFromLines(actor, {
-          customer,
-          lines,
-          discount,
-          category: directCategory,
-          categories: directCategories,
-          salesId,
-          supervisorId,
+  async function createDirectInvoice() {
+    if (!live) {
+      const invoice = run(
+        () =>
+          engine.createDirectInvoiceFromLines(actor, {
+            customer,
+            lines,
+            discount,
+            category: directCategory,
+            categories: directCategories,
+            salesId,
+            supervisorId,
+            date: invoiceDate,
+            grantApplicationNumber,
+            grantApprovedAmount: Number(grantApprovedAmount) || undefined,
+          }),
+        undefined,
+      );
+      if (!invoice) return;
+      run(() => invoice, `發票${invoice.number}已建立`);
+      nav("/invoices");
+      return;
+    }
+    if (!accessToken) {
+      run(() => {
+        throw new Error("登入 session 已失效，請重新登入。");
+      });
+      return;
+    }
+    if (pricing.blocked) {
+      run(() => {
+        throw new Error("工程項目有問題，未能建立發票。");
+      });
+      return;
+    }
+    setLiveSaving(true);
+    try {
+      const byLine = new Map(
+        pricing.lineAmounts.map((entry) => [entry.id, entry.amount]),
+      );
+      const amounts = lines.map((line) =>
+        Math.round(
+          (byLine.get(line.id) ?? line.quantity * line.itemSnapshot.price) *
+            discount *
+            100,
+        ),
+      );
+      const target = Math.round(pricing.total * 100);
+      const difference =
+        target - amounts.reduce((sum, amount) => sum + amount, 0);
+      if (amounts.length) amounts[amounts.length - 1] += difference;
+      if (amounts.some((amount) => amount < 0)) {
+        throw new Error("折扣後金額不正確。");
+      }
+      const salesName =
+        allActors.find((candidate) => candidate.id === salesId)?.name ?? "";
+      const supervisorName =
+        allActors.find((candidate) => candidate.id === supervisorId)?.name ??
+        "";
+      const hasGrant = directCategories.includes("grant-80k");
+      const created = await apiRequest<InvoiceDetailData>("/invoices", accessToken, {
+        method: "POST",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({
           date: invoiceDate,
-          grantApplicationNumber,
-          grantApprovedAmount: Number(grantApprovedAmount) || undefined,
+          salesName,
+          supervisorName,
+          categories: directCategories,
+          grant: hasGrant
+            ? {
+                applicationNumber: grantApplicationNumber || undefined,
+                approvedAmountCents:
+                  Number(grantApprovedAmount) > 0
+                    ? Math.round(Number(grantApprovedAmount) * 100)
+                    : undefined,
+              }
+            : undefined,
+          customer: {
+            name: customer.name,
+            phone: customer.phone,
+            whatsapp: customer.whatsapp || undefined,
+            address: customer.address || undefined,
+            district: customer.district || undefined,
+          },
+          lines: lines.map((line, index) => ({
+            name: line.itemSnapshot.name,
+            position: line.position,
+            quantity: line.quantity,
+            unit: line.itemSnapshot.unit,
+            unitPriceCents: Math.round(line.itemSnapshot.price * 100),
+            amountCents: amounts[index],
+          })),
         }),
-      undefined,
-    );
-    if (!invoice) return;
-    run(() => invoice, `發票${invoice.number}已建立`);
-    nav("/invoices");
+      });
+      run(() => created, `發票${created.number}已建立`);
+      nav("/invoices");
+    } catch (error) {
+      run(() => {
+        throw error;
+      });
+    } finally {
+      setLiveSaving(false);
+    }
   }
   async function exportExcel() {
     setExporting(true);
@@ -2214,8 +2301,13 @@ export function QuoteEditor() {
               </Button>
             )
           ) : wizardStep === 3 && directInvoice ? (
-            <Button variant="primary" onClick={createDirectInvoice}>
-              確定建立發票 <ArrowRight size={18} />
+            <Button
+              variant="primary"
+              onClick={createDirectInvoice}
+              disabled={live && liveSaving}
+            >
+              {live && liveSaving ? "建立中…" : "確定建立發票"}{" "}
+              <ArrowRight size={18} />
             </Button>
           ) : (
             <Button

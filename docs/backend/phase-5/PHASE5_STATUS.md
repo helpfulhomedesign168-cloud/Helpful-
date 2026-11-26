@@ -12,6 +12,12 @@
   - reads `/api/v1/invoices`
   - search / status filter
   - row click to detail
+- Live Invoice create:
+  - existing direct invoice wizard
+  - live mode submits to `POST /api/v1/invoices`
+  - discount-adjusted line amounts
+  - grant fields mapped to cents
+  - returns to live list
 - Live Invoice detail:
   - reads `/api/v1/invoices/:id`
   - reads `/api/v1/invoices/:id/payments`
@@ -23,7 +29,9 @@
 
 ## Verified
 
-- Temp admin login
+- Temp `invoice_clerk` login
+- Live create through existing wizard
+- Created real API invoice `DINV26110006`
 - Live list showed API invoice `DINV26110005`
 - Row click opened `/invoices/:id`
 - Detail amount `HK$1,234.00` displayed
@@ -32,7 +40,6 @@
 
 ## Not yet done
 
-- Live Invoice create from QuoteEditor
 - Live Invoice edit/amend form
 - Live payment registration/validation UI
 - Live receipt actions
