@@ -44,6 +44,10 @@
   - `GET/POST/DELETE /work-orders/:id/assignments`
   - worker, trade, dates, fee
   - add/remove in live工程 detail
+- Live admin users:
+  - `POST /api/v1/users` creates Supabase Auth + public user
+  - `/users` live list / create / activate-deactivate
+  - production role labels
 - Live finance pending validation:
   - `GET /api/v1/payments/pending`
   - `/finance` live list

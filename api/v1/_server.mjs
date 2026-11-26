@@ -35058,7 +35058,106 @@ var patchSchema = external_exports.object({
   role: external_exports.enum(ROLES).optional(),
   active: external_exports.boolean().optional()
 });
+var createSchema2 = external_exports.object({
+  name: external_exports.string().trim().min(1).max(120),
+  email: external_exports.string().trim().email(),
+  password: external_exports.string().min(8).max(200),
+  role: external_exports.enum(ROLES)
+});
 var usersRoute = new Hono3();
+usersRoute.post(
+  "/",
+  requireAuth,
+  requireCapability("user.manage"),
+  async (c2) => {
+    const parsed = createSchema2.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "\u7528\u6236\u8CC7\u6599\u4E0D\u5B8C\u6574\uFF1B\u5BC6\u78BC\u6700\u5C11 8 \u500B\u5B57\u5143\u3002",
+            fields: parsed.error.flatten().fieldErrors
+          }
+        },
+        400
+      );
+    }
+    const serviceKey = getOptionalEnv().serviceRoleKey;
+    if (!serviceKey) {
+      return c2.json(
+        { error: { code: "AUTH_NOT_CONFIGURED", message: "\u7528\u6236\u670D\u52D9\u672A\u8A2D\u5B9A\u3002" } },
+        503
+      );
+    }
+    const env = getEnv();
+    const existing = await getDb().select({ id: users.id }).from(users).where(eq(users.email, parsed.data.email.toLowerCase())).limit(1);
+    if (existing[0]) {
+      return c2.json(
+        { error: { code: "EMAIL_EXISTS", message: "\u6B64 Email \u5DF2\u6709\u5E33\u6236\u3002" } },
+        409
+      );
+    }
+    const authRes = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`
+      },
+      body: JSON.stringify({
+        email: parsed.data.email.toLowerCase(),
+        password: parsed.data.password,
+        email_confirm: true,
+        user_metadata: { name: parsed.data.name }
+      }),
+      signal: AbortSignal.timeout(15e3)
+    });
+    const authUser = await authRes.json().catch(() => null);
+    if (!authRes.ok || !authUser?.id) {
+      return c2.json(
+        {
+          error: {
+            code: "AUTH_CREATE_FAILED",
+            message: authUser?.msg ?? "\u672A\u80FD\u5EFA\u7ACB\u767B\u5165\u5E33\u6236\u3002"
+          }
+        },
+        422
+      );
+    }
+    try {
+      const [created] = await getDb().insert(users).values({
+        id: authUser.id,
+        email: parsed.data.email.toLowerCase(),
+        name: parsed.data.name,
+        role: parsed.data.role,
+        active: true
+      }).returning({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        active: users.active
+      });
+      await getDb().insert(auditLogs).values({
+        actorId: c2.get("user").id,
+        action: "user_created",
+        entityType: "user",
+        entityId: created.id,
+        after: { email: created.email, role: created.role },
+        requestId: c2.get("requestId")
+      });
+      return c2.json(created, 201);
+    } catch (error67) {
+      await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${authUser.id}`, {
+        method: "DELETE",
+        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }
+      }).catch(() => {
+      });
+      throw error67;
+    }
+  }
+);
 usersRoute.get(
   "/",
   requireAuth,
@@ -35270,7 +35369,7 @@ var lineSchema = external_exports.object({
   unitPriceCents: external_exports.number().int().nonnegative(),
   amountCents: external_exports.number().int().nonnegative().optional()
 });
-var createSchema2 = external_exports.object({
+var createSchema3 = external_exports.object({
   date: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   salesName: external_exports.string().trim().max(120).optional(),
   supervisorName: external_exports.string().trim().max(120).optional(),
@@ -35288,7 +35387,7 @@ var createSchema2 = external_exports.object({
   }),
   lines: external_exports.array(lineSchema).min(1).max(300)
 });
-var amendSchema = createSchema2.extend({
+var amendSchema = createSchema3.extend({
   reason: external_exports.string().trim().min(3).max(500)
 });
 var error63 = (code, message2) => ({
@@ -35522,7 +35621,7 @@ invoicesRoute.post(
   requireAuth,
   requireCapability("invoice.create"),
   async (c2) => {
-    const parsed = createSchema2.safeParse(await c2.req.json().catch(() => null));
+    const parsed = createSchema3.safeParse(await c2.req.json().catch(() => null));
     if (!parsed.success) {
       return c2.json(
         {

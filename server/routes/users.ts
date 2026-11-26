@@ -2,8 +2,9 @@ import { Hono } from "hono";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/client";
-import { users } from "../db/schema";
+import { auditLogs, users } from "../db/schema";
 import { ROLES } from "../roles";
+import { getEnv, getOptionalEnv } from "../env";
 import type { AppEnv } from "../auth";
 import { requireAuth } from "../auth";
 import { requireCapability } from "../guards";
@@ -14,7 +15,116 @@ const patchSchema = z.object({
   active: z.boolean().optional(),
 });
 
+const createSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().email(),
+  password: z.string().min(8).max(200),
+  role: z.enum(ROLES),
+});
+
 export const usersRoute = new Hono<AppEnv>();
+
+usersRoute.post(
+  "/",
+  requireAuth,
+  requireCapability("user.manage"),
+  async (c) => {
+    const parsed = createSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "用戶資料不完整；密碼最少 8 個字元。",
+            fields: parsed.error.flatten().fieldErrors,
+          },
+        },
+        400,
+      );
+    }
+    const serviceKey = getOptionalEnv().serviceRoleKey;
+    if (!serviceKey) {
+      return c.json(
+        { error: { code: "AUTH_NOT_CONFIGURED", message: "用戶服務未設定。" } },
+        503,
+      );
+    }
+    const env = getEnv();
+    const existing = await getDb()
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, parsed.data.email.toLowerCase()))
+      .limit(1);
+    if (existing[0]) {
+      return c.json(
+        { error: { code: "EMAIL_EXISTS", message: "此 Email 已有帳戶。" } },
+        409,
+      );
+    }
+    const authRes = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        email: parsed.data.email.toLowerCase(),
+        password: parsed.data.password,
+        email_confirm: true,
+        user_metadata: { name: parsed.data.name },
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const authUser = (await authRes.json().catch(() => null)) as
+      | { id?: string; msg?: string }
+      | null;
+    if (!authRes.ok || !authUser?.id) {
+      return c.json(
+        {
+          error: {
+            code: "AUTH_CREATE_FAILED",
+            message: authUser?.msg ?? "未能建立登入帳戶。",
+          },
+        },
+        422,
+      );
+    }
+    try {
+      const [created] = await getDb()
+        .insert(users)
+        .values({
+          id: authUser.id,
+          email: parsed.data.email.toLowerCase(),
+          name: parsed.data.name,
+          role: parsed.data.role,
+          active: true,
+        })
+        .returning({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          role: users.role,
+          active: users.active,
+        });
+      await getDb().insert(auditLogs).values({
+        actorId: c.get("user").id,
+        action: "user_created",
+        entityType: "user",
+        entityId: created.id,
+        after: { email: created.email, role: created.role },
+        requestId: c.get("requestId"),
+      });
+      return c.json(created, 201);
+    } catch (error) {
+      await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${authUser.id}`, {
+        method: "DELETE",
+        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+      }).catch(() => {});
+      throw error;
+    }
+  },
+);
 
 usersRoute.get(
   "/",

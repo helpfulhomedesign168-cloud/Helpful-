@@ -14,6 +14,8 @@ import {
   saveAttachment,
   useApp,
 } from "../context";
+import { useAuth } from "../auth";
+import { LiveUsers } from "./LiveUsers";
 import {
   Badge,
   Button,
@@ -141,6 +143,11 @@ function AvatarUpload({
 }
 
 export function Users() {
+  const { live } = useAuth();
+  return live ? <LiveUsers /> : <DemoUsers />;
+}
+
+function DemoUsers() {
   const { actor, engine } = useApp();
   const [activeTab, setActiveTab] = useState("sales");
   const [inactiveOpen, setInactiveOpen] = useState(false);
