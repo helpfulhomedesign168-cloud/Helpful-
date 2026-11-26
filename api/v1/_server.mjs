@@ -37042,6 +37042,46 @@ notificationsRoute.post("/:id/read", requireAuth, async (c2) => {
   return c2.json(updated[0]);
 });
 
+// server/routes/suppliers.ts
+var supplierSchema = external_exports.object({
+  name: external_exports.string().trim().min(1).max(160),
+  phone: external_exports.string().trim().max(40).optional(),
+  contact: external_exports.string().trim().max(120).optional(),
+  active: external_exports.boolean().optional()
+});
+var suppliersRoute = new Hono3();
+suppliersRoute.get("/", requireAuth, async (c2) => {
+  const rows = await getDb().select().from(suppliers).orderBy(asc(suppliers.name));
+  return c2.json(rows);
+});
+suppliersRoute.post(
+  "/",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const parsed = supplierSchema.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u4F9B\u61C9\u5546\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    const [created] = await getDb().insert(suppliers).values(parsed.data).returning();
+    return c2.json(created, 201);
+  }
+);
+suppliersRoute.patch(
+  "/:id",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const parsed = supplierSchema.partial().safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u4F9B\u61C9\u5546\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    const [updated] = await getDb().update(suppliers).set(parsed.data).where(eq(suppliers.id, c2.req.param("id"))).returning();
+    if (!updated) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u4F9B\u61C9\u5546\u3002" } }, 404);
+    return c2.json(updated);
+  }
+);
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -37063,6 +37103,7 @@ app.route("/work-orders", workOrdersRoute);
 app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);
 app.route("/notifications", notificationsRoute);
+app.route("/suppliers", suppliersRoute);
 app.route("/receipts", receiptsRoute);
 app.route("/staff", staffRoute);
 app.route("/payments", financeRoute);
