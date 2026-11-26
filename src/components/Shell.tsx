@@ -192,10 +192,20 @@ export function Shell() {
               ["/services", "工程價目", Tags],
               ["/quotes", "報價查閱", Files],
             ];
+  const liveHiddenPaths = live
+    ? new Set([
+        "/quotes",
+        "/product-styles",
+        "/cancellation-cases",
+        "/custom-work-requests",
+      ])
+    : new Set<string>();
   const navItems = [
     ...items,
     ["/notifications", "訊息通知", Bell],
-  ] as Array<[string, string, typeof Files]>;
+  ].filter(([path]) => !liveHiddenPaths.has(path as string)) as Array<
+    [string, string, typeof Files]
+  >;
   const notices = live ? liveNotices : engine.notifications(actor);
   const unread = notices.filter((n) => !n.read).length;
   return (
