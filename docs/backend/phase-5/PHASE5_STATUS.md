@@ -48,6 +48,10 @@
   - live mode loads `/api/v1/services`
   - 38 backend catalogue items
   - picker no longer uses local service seed in production
+- Live topbar notifications:
+  - unread count from API
+  - dialog list from API
+  - mark read + deep-link
 - Live notifications:
   - `GET /api/v1/notifications`
   - mark one/all read

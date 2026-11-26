@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   NavLink,
   Outlet,
@@ -33,7 +33,18 @@ import { ROLE_NAMES } from "../domain/types";
 import { notificationTarget } from "../notificationTarget";
 import { isRoleVisible } from "../features";
 import { useAuth } from "../auth";
+import { apiRequest, ApiError } from "../api/client";
 import { Button, Dialog, Notice } from "./ui";
+
+type LiveNotification = {
+  id: string;
+  title: string;
+  body: string;
+  entityType: string | null;
+  entityId: string | null;
+  read: boolean;
+  createdAt: string;
+};
 
 const NAV_ICON: Record<string, string> = {
   用戶管理: "nav-users",
@@ -79,8 +90,16 @@ export function Shell() {
   const nav = useNavigate();
   const location = useLocation();
   const [pendingPath, setPendingPath] = useState<string | null>(null);
-  const { live, user: authUser, logout } = useAuth();
+  const { live, user: authUser, accessToken, logout } = useAuth();
+  const [liveNotices, setLiveNotices] = useState<LiveNotification[]>([]);
   const [roles, setRoles] = useState(false);
+
+  useEffect(() => {
+    if (!live || !accessToken) return;
+    apiRequest<LiveNotification[]>("/notifications", accessToken)
+      .then(setLiveNotices)
+      .catch(() => setLiveNotices([]));
+  }, [live, accessToken]);
   const [notifications, setNotifications] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [tools, setTools] = useState(false);
@@ -177,7 +196,7 @@ export function Shell() {
     ...items,
     ["/notifications", "訊息通知", Bell],
   ] as Array<[string, string, typeof Files]>;
-  const notices = engine.notifications(actor);
+  const notices = live ? liveNotices : engine.notifications(actor);
   const unread = notices.filter((n) => !n.read).length;
   return (
     <div className="app-shell">
@@ -399,8 +418,40 @@ export function Shell() {
         <Dialog title="通知" onClose={() => setNotifications(false)}>
           {notices.length === 0 ? (
             <p className="muted">暫無通知。</p>
+          ) : live ? (
+            liveNotices.map((n) => (
+              <button
+                className="notification-row"
+                key={n.id}
+                onClick={async () => {
+                  try {
+                    await apiRequest(`/notifications/${n.id}/read`, accessToken, {
+                      method: "POST",
+                    });
+                    setLiveNotices((current) =>
+                      current.map((item) =>
+                        item.id === n.id ? { ...item, read: true } : item,
+                      ),
+                    );
+                    setNotifications(false);
+                    if (n.entityType === "invoice" && n.entityId) nav(`/invoices/${n.entityId}`);
+                    else if (n.entityType === "work_order" && n.entityId) nav(`/orders/${n.entityId}`);
+                    else nav("/notifications");
+                  } catch (e) {
+                    run(() => {
+                      throw e instanceof ApiError ? e : new Error("未能讀取通知。");
+                    });
+                  }
+                }}
+              >
+                <span className={!n.read ? "unread-dot" : ""} />
+                <strong>{n.title}<small>{n.body}</small></strong>
+                <ArrowUpRight size={20} />
+              </button>
+            ))
           ) : (
-            notices
+            engine
+              .notifications(actor)
               .slice()
               .reverse()
               .map((n) => (
