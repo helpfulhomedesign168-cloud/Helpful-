@@ -806,7 +806,51 @@ export function QuoteEditor() {
   const [styleLineIndex, setStyleLineIndex] = useState<number | null>(null);
   const [styleCategory, setStyleCategory] = useState("all");
   const [styleFactoryId, setStyleFactoryId] = useState("");
-  const services = engine.listServices(actor).filter((s) => s.published);
+  const [liveServices, setLiveServices] = useState<ServiceItem[]>([]);
+  useEffect(() => {
+    if (!live || !accessToken) return;
+    apiRequest<
+      {
+        id: string;
+        code: string;
+        name: string;
+        category: string;
+        unit: string;
+        priceCents: number;
+        measure: string;
+        published: boolean;
+        metadata: Partial<ServiceItem> | null;
+      }[]
+    >("/services", accessToken)
+      .then((rows) =>
+        setLiveServices(
+          rows.map((row) => ({
+            ...(row.metadata ?? {}),
+            id: row.metadata?.id ?? row.id,
+            code: row.code,
+            name: row.name,
+            category: row.category,
+            unit: row.unit,
+            price: row.priceCents / 100,
+            measure: row.measure as ServiceItem["measure"],
+            published: row.published,
+            minQty: row.metadata?.minQty ?? 1,
+            minAmount: row.metadata?.minAmount ?? 0,
+            increment: row.metadata?.increment ?? 0,
+            minScope: row.metadata?.minScope ?? "line",
+            execution: row.metadata?.execution ?? "contractor",
+            costMode: row.metadata?.costMode ?? "ratio",
+            options: row.metadata?.options ?? [],
+            allowPending: row.metadata?.allowPending ?? false,
+            notes: row.metadata?.notes ?? "",
+          })),
+        ),
+      )
+      .catch(() => setLiveServices([]));
+  }, [live, accessToken]);
+  const services = live
+    ? liveServices
+    : engine.listServices(actor).filter((s) => s.published);
   let styleSuppliers: ProductStyleSupplier[] = [];
   try {
     styleSuppliers = engine.listProductStyleSuppliers(actor);
