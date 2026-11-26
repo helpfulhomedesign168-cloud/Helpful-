@@ -4,6 +4,7 @@ import { Plus, PenLine, ArrowUpRight, Check, Trash2, X } from "lucide-react";
 import { useApp } from "../context";
 import { useAuth } from "../auth";
 import { LiveCustomers } from "./LiveCustomers";
+import { LiveServices } from "./LiveServices";
 import {
   Badge,
   Button,
@@ -33,6 +34,11 @@ const MEASURE_OPTIONS: Array<{ value: ServiceItem["measure"]; label: string }> =
 ];
 
 export function Services() {
+  const { live } = useAuth();
+  return live ? <LiveServices /> : <DemoServices />;
+}
+
+function DemoServices() {
   const { actor, engine, run } = useApp();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("打拆");

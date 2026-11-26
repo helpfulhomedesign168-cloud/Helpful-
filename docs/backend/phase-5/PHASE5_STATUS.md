@@ -44,6 +44,10 @@
   - `GET/POST/DELETE /work-orders/:id/assignments`
   - worker, trade, dates, fee
   - add/remove in live工程 detail
+- Live services catalogue:
+  - backend seeded with 38 current catalogue items
+  - `/services` live list/search/category
+  - direct invoice picker still uses local seed (next)
 - Live customers:
   - `/customers` live list/search
   - create customer via API
