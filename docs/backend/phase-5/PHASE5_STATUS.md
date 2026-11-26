@@ -136,3 +136,7 @@
 2. Live finance pending validation
 3. Staging E2E
 4. Production cutover checklist
+
+## Cutover
+
+- [Phase 6 checklist](../phase-6/CUTOVER_CHECKLIST.md)
