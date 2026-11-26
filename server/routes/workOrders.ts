@@ -12,6 +12,7 @@ import {
   payments,
   users,
   workOrderAssignments,
+  workOrderDeductions,
   workOrders,
 } from "../db/schema";
 import type { AppEnv } from "../auth";
@@ -27,6 +28,12 @@ const updateSchema = z.object({
 
 const assignSchema = z.object({
   csOwnerId: z.string().uuid(),
+});
+
+const deductionSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  amountCents: z.number().int().nonnegative().default(0),
+  notes: z.string().trim().max(1000).optional(),
 });
 
 const assignmentSchema = z.object({
@@ -479,6 +486,108 @@ workOrdersRoute.delete(
       entityType: "work_order",
       entityId: order.id,
       before: { assignmentId: deleted[0].id },
+      requestId: c.get("requestId"),
+    });
+    return c.json({ ok: true });
+  },
+);
+
+workOrdersRoute.get(
+  "/:id/deductions",
+  requireAuth,
+  requireCapability("workorder.read"),
+  async (c) => {
+    const order = await orderDetail(c.req.param("id"));
+    if (!order) return c.json(error("NOT_FOUND", "找不到工程單。"), 404);
+    if (!canSeeOrder(c.get("user"), order)) {
+      return c.json(error("FORBIDDEN", "你沒有查看此工程的權限。"), 403);
+    }
+    const rows = await getDb()
+      .select()
+      .from(workOrderDeductions)
+      .where(eq(workOrderDeductions.workOrderId, order.id))
+      .orderBy(desc(workOrderDeductions.createdAt));
+    return c.json(rows);
+  },
+);
+
+workOrdersRoute.post(
+  "/:id/deductions",
+  requireAuth,
+  requireCapability("workorder.update"),
+  async (c) => {
+    const order = await orderDetail(c.req.param("id"));
+    if (!order) return c.json(error("NOT_FOUND", "找不到工程單。"), 404);
+    if (!canSeeOrder(c.get("user"), order)) {
+      return c.json(error("FORBIDDEN", "你沒有修改此工程的權限。"), 403);
+    }
+    if (order.status === "completed") {
+      return c.json(error("WORK_ORDER_COMPLETED", "已完成的工程不可新增材料扣減。"), 409);
+    }
+    const parsed = deductionSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "材料扣減資料不正確。",
+            fields: parsed.error.flatten().fieldErrors,
+          },
+        },
+        400,
+      );
+    }
+    const [created] = await getDb()
+      .insert(workOrderDeductions)
+      .values({
+        workOrderId: order.id,
+        name: parsed.data.name,
+        amountCents: parsed.data.amountCents,
+        notes: parsed.data.notes,
+        createdBy: c.get("user").id,
+      })
+      .returning();
+    await getDb().insert(auditLogs).values({
+      actorId: c.get("user").id,
+      action: "work_order_deduction_added",
+      entityType: "work_order",
+      entityId: order.id,
+      after: { name: created.name, amountCents: created.amountCents },
+      requestId: c.get("requestId"),
+    });
+    return c.json(created, 201);
+  },
+);
+
+workOrdersRoute.delete(
+  "/:id/deductions/:deductionId",
+  requireAuth,
+  requireCapability("workorder.update"),
+  async (c) => {
+    const order = await orderDetail(c.req.param("id"));
+    if (!order) return c.json(error("NOT_FOUND", "找不到工程單。"), 404);
+    if (!canSeeOrder(c.get("user"), order)) {
+      return c.json(error("FORBIDDEN", "你沒有修改此工程的權限。"), 403);
+    }
+    if (order.status === "completed") {
+      return c.json(error("WORK_ORDER_COMPLETED", "已完成的工程不可修改材料扣減。"), 409);
+    }
+    const deleted = await getDb()
+      .delete(workOrderDeductions)
+      .where(
+        and(
+          eq(workOrderDeductions.id, c.req.param("deductionId")),
+          eq(workOrderDeductions.workOrderId, order.id),
+        ),
+      )
+      .returning({ id: workOrderDeductions.id });
+    if (!deleted[0]) return c.json(error("NOT_FOUND", "找不到材料扣減。"), 404);
+    await getDb().insert(auditLogs).values({
+      actorId: c.get("user").id,
+      action: "work_order_deduction_deleted",
+      entityType: "work_order",
+      entityId: order.id,
+      before: { deductionId: deleted[0].id },
       requestId: c.get("requestId"),
     });
     return c.json({ ok: true });

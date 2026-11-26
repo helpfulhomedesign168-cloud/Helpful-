@@ -37,6 +37,13 @@ type Assignment = {
   notes: string | null;
 };
 
+type Deduction = {
+  id: string;
+  name: string;
+  amountCents: number;
+  notes: string | null;
+};
+
 type WorkOrderDetailData = WorkOrderRow & {
   notes: string | null;
   completedAt: string | null;
@@ -232,6 +239,22 @@ export function LiveWorkOrderDetail() {
   const [assignmentEnd, setAssignmentEnd] = useState("");
   const [fee, setFee] = useState("");
   const [assignmentSaving, setAssignmentSaving] = useState(false);
+  const [deductions, setDeductions] = useState<Deduction[]>([]);
+  const [deductionName, setDeductionName] = useState("");
+  const [deductionAmount, setDeductionAmount] = useState("");
+  const [deductionNotes, setDeductionNotes] = useState("");
+  const [deductionSaving, setDeductionSaving] = useState(false);
+
+  async function loadDeductions() {
+    if (!accessToken) return;
+    try {
+      setDeductions(
+        await apiRequest<Deduction[]>(`/work-orders/${id}/deductions`, accessToken),
+      );
+    } catch {
+      setDeductions([]);
+    }
+  }
 
   async function loadAssignments() {
     if (!accessToken) return;
@@ -252,6 +275,7 @@ export function LiveWorkOrderDetail() {
       setEndDate(data.endDate ?? "");
       setNotes(data.notes ?? "");
       await loadAssignments();
+      await loadDeductions();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能讀取工程單。");
     }
@@ -305,6 +329,7 @@ export function LiveWorkOrderDetail() {
       setAssignmentEnd("");
       setFee("");
       await loadAssignments();
+      await loadDeductions();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能新增施工安排。");
     } finally {
@@ -318,8 +343,44 @@ export function LiveWorkOrderDetail() {
         method: "DELETE",
       });
       await loadAssignments();
+      await loadDeductions();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能移除施工安排。");
+    }
+  }
+
+  async function addDeduction(event: React.FormEvent) {
+    event.preventDefault();
+    if (!deductionName.trim()) return;
+    setDeductionSaving(true);
+    try {
+      await apiRequest(`/work-orders/${id}/deductions`, accessToken, {
+        method: "POST",
+        body: JSON.stringify({
+          name: deductionName.trim(),
+          amountCents: Math.round((Number(deductionAmount) || 0) * 100),
+          notes: deductionNotes.trim() || undefined,
+        }),
+      });
+      setDeductionName("");
+      setDeductionAmount("");
+      setDeductionNotes("");
+      await loadDeductions();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "未能新增材料扣減。");
+    } finally {
+      setDeductionSaving(false);
+    }
+  }
+
+  async function removeDeduction(deductionId: string) {
+    try {
+      await apiRequest(`/work-orders/${id}/deductions/${deductionId}`, accessToken, {
+        method: "DELETE",
+      });
+      await loadDeductions();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "未能移除材料扣減。");
     }
   }
 
@@ -411,6 +472,36 @@ export function LiveWorkOrderDetail() {
             </div>
             <div className="dialog-actions live-form-actions">
               <Button type="submit" variant="secondary" disabled={assignmentSaving}>{assignmentSaving ? "新增中…" : "新增施工安排"}</Button>
+            </div>
+          </form>
+        )}
+        <h2 className="section-title">材料扣減</h2>
+        {deductions.length === 0 ? <p className="muted">尚未新增材料扣減。</p> : (
+          <div className="table-scroll">
+            <table className="invoice-list-table live-work-table">
+              <thead><tr><th>項目</th><th>備註</th><th>金額</th><th /></tr></thead>
+              <tbody>
+                {deductions.map((deduction) => (
+                  <tr key={deduction.id}>
+                    <td><strong>{deduction.name}</strong></td>
+                    <td>{deduction.notes || "—"}</td>
+                    <td>{money(deduction.amountCents / 100)}</td>
+                    <td><button type="button" className="icon-button" aria-label={`移除${deduction.name}`} onClick={() => void removeDeduction(deduction.id)}>×</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {order.status !== "completed" && (
+          <form className="live-engineering-form" onSubmit={addDeduction}>
+            <div className="form-grid three">
+              <Field label="材料項目" required><input value={deductionName} onChange={(e) => setDeductionName(e.target.value)} required /></Field>
+              <Field label="扣減金額"><input type="number" min="0" step="0.01" value={deductionAmount} onChange={(e) => setDeductionAmount(e.target.value)} /></Field>
+              <Field label="備註"><input value={deductionNotes} onChange={(e) => setDeductionNotes(e.target.value)} /></Field>
+            </div>
+            <div className="dialog-actions live-form-actions">
+              <Button type="submit" variant="secondary" disabled={deductionSaving}>{deductionSaving ? "新增中…" : "新增材料扣減"}</Button>
             </div>
           </form>
         )}

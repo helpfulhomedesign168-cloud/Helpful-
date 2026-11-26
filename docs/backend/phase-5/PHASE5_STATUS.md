@@ -26,6 +26,9 @@
   - edit categories, grant fields, customer, lines, reason
   - saves via `POST /api/v1/invoices/:id/amendments`
   - locked invoices return API error
+- Live material deductions:
+  - `GET/POST/DELETE /work-orders/:id/deductions`
+  - add/remove materials and amounts in live detail
 - Live contractor assignments / costs:
   - `GET/POST/DELETE /work-orders/:id/assignments`
   - worker, trade, dates, fee
