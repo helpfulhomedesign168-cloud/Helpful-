@@ -777,6 +777,8 @@ export function QuoteEditor() {
       supervisorOptions[0]?.id ??
       "",
   );
+  const [liveSalesName, setLiveSalesName] = useState("");
+  const [liveSupervisorName, setLiveSupervisorName] = useState("");
   const [exporting, setExporting] = useState(false);
   const [liveSaving, setLiveSaving] = useState(false);
   const [directCategories, setDirectCategories] = useState<InvoiceCategory[]>(
@@ -856,6 +858,12 @@ export function QuoteEditor() {
   const directPaymentPlan = directInvoice
     ? engine.previewInstallmentPlan(directCategory, pricing.total)
     : [];
+  const displaySalesName = live
+    ? liveSalesName
+    : salesOptions.find((item) => item.id === salesId)?.name || "—";
+  const displaySupervisorName = live
+    ? liveSupervisorName
+    : supervisorOptions.find((item) => item.id === supervisorId)?.name || "—";
   const invoiceDateDisplay = invoiceDate
     ? invoiceDate.split("-").reverse().join(" / ")
     : "—";
@@ -1009,11 +1017,9 @@ export function QuoteEditor() {
       if (amounts.some((amount) => amount < 0)) {
         throw new Error("折扣後金額不正確。");
       }
-      const salesName =
-        allActors.find((candidate) => candidate.id === salesId)?.name ?? "";
+      const salesName = displaySalesName === "—" ? "" : displaySalesName;
       const supervisorName =
-        allActors.find((candidate) => candidate.id === supervisorId)?.name ??
-        "";
+        displaySupervisorName === "—" ? "" : displaySupervisorName;
       const hasGrant = directCategories.includes("grant-80k");
       const created = await apiRequest<InvoiceDetailData>("/invoices", accessToken, {
         method: "POST",
@@ -1381,31 +1387,51 @@ export function QuoteEditor() {
                     onChange={(event) => setInvoiceDate(event.target.value)}
                   />
                 </Field>
-                <Field label="銷售員" required>
-                  <select
-                    aria-label="銷售員"
-                    value={salesId}
-                    onChange={(event) => setSalesId(event.target.value)}
-                  >
-                    {salesOptions.map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.name}（{candidate.code}）
-                      </option>
-                    ))}
-                  </select>
+                <Field label="銷售員" required={!live}>
+                  {live ? (
+                    <input
+                      aria-label="銷售員"
+                      value={liveSalesName}
+                      onChange={(event) => setLiveSalesName(event.target.value)}
+                      placeholder="輸入 Sales 姓名"
+                    />
+                  ) : (
+                    <select
+                      aria-label="銷售員"
+                      value={salesId}
+                      onChange={(event) => setSalesId(event.target.value)}
+                    >
+                      {salesOptions.map((candidate) => (
+                        <option key={candidate.id} value={candidate.id}>
+                          {candidate.name}（{candidate.code}）
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </Field>
-                <Field label="Sales主管" required>
-                  <select
-                    aria-label="Sales主管"
-                    value={supervisorId}
-                    onChange={(event) => setSupervisorId(event.target.value)}
-                  >
-                    {supervisorOptions.map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.name}（{candidate.code}）
-                      </option>
-                    ))}
-                  </select>
+                <Field label="Sales主管" required={!live}>
+                  {live ? (
+                    <input
+                      aria-label="Sales主管"
+                      value={liveSupervisorName}
+                      onChange={(event) =>
+                        setLiveSupervisorName(event.target.value)
+                      }
+                      placeholder="輸入 Sales主管姓名"
+                    />
+                  ) : (
+                    <select
+                      aria-label="Sales主管"
+                      value={supervisorId}
+                      onChange={(event) => setSupervisorId(event.target.value)}
+                    >
+                      {supervisorOptions.map((candidate) => (
+                        <option key={candidate.id} value={candidate.id}>
+                          {candidate.name}（{candidate.code}）
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </Field>
               </div>
               {editingInvoice && (
@@ -1882,20 +1908,13 @@ export function QuoteEditor() {
                   </Field>
                   <Field label="銷售員">
                     <input
-                      value={
-                        salesOptions.find((item) => item.id === salesId)?.name ||
-                        "—"
-                      }
+                      value={displaySalesName}
                       readOnly
                     />
                   </Field>
                   <Field label="Sales主管">
                     <input
-                      value={
-                        supervisorOptions.find(
-                          (item) => item.id === supervisorId,
-                        )?.name || "—"
-                      }
+                      value={displaySupervisorName}
                       readOnly
                     />
                   </Field>
@@ -1964,14 +1983,11 @@ export function QuoteEditor() {
                     <strong>{invoiceDate}</strong>
                     <span>銷售員</span>
                     <strong>
-                      {salesOptions.find((item) => item.id === salesId)?.name ||
-                        "—"}
+                      {displaySalesName}
                     </strong>
                     <span>Sales主管</span>
                     <strong>
-                      {supervisorOptions.find(
-                        (item) => item.id === supervisorId,
-                      )?.name || "—"}
+                      {displaySupervisorName}
                     </strong>
                   </div>
                   <p className="handoff-note">

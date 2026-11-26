@@ -13,6 +13,8 @@
   - search / status filter
   - row click to detail
 - Live Invoice create:
+  - live mode uses text fields for Sales / Sales supervisor
+  - no demo actors (文文／Don／嘉嘉) appear in production
   - existing direct invoice wizard
   - live mode submits to `POST /api/v1/invoices`
   - discount-adjusted line amounts
