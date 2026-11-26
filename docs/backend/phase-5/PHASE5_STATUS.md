@@ -18,6 +18,12 @@
   - discount-adjusted line amounts
   - grant fields mapped to cents
   - returns to live list
+- Live Invoice edit/amend:
+  - live list pencil entry
+  - `/invoices/:id/edit`
+  - edit categories, grant fields, customer, lines, reason
+  - saves via `POST /api/v1/invoices/:id/amendments`
+  - locked invoices return API error
 - Live Invoice payment:
   - register payment from live detail
   - confirm one-step payment

@@ -29,6 +29,7 @@ import { Documents } from "./pages/Documents";
 import { UserProfile, Users } from "./pages/Users";
 import { Notifications } from "./pages/Notifications";
 import { DirectInvoices } from "./pages/DirectInvoices";
+import { LiveInvoiceEdit } from "./pages/LiveInvoiceEdit";
 import { AccountingDashboard } from "./pages/AccountingDashboard";
 import { BusinessOrders } from "./pages/BusinessOrders";
 import { CustomWorkRequests } from "./pages/CustomWorkRequests";
@@ -231,6 +232,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={["clerk", "invoice_clerk", "finance", "finance_supervisor", "admin", "admin_staff"]}>
                   <InvoiceDetail />
+                </Guard>
+              }
+            />
+            <Route
+              path="/invoices/:id/edit"
+              element={
+                <Guard roles={["invoice_clerk", "admin"]}>
+                  <LiveInvoiceEdit />
                 </Guard>
               }
             />

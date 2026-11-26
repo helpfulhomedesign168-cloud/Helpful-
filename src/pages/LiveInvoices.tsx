@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PenLine } from "lucide-react";
 import { useAuth } from "../auth";
 import { apiRequest, ApiError, type ApiPayment, type InvoiceDetailData, type InvoiceSummary } from "../api/client";
 import {
@@ -102,6 +102,7 @@ export function LiveInvoices() {
                   <th>收款進度</th>
                   <th>分類</th>
                   <th>狀態</th>
+                  <th className="numeric">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,6 +140,20 @@ export function LiveInvoices() {
                       </td>
                       <td><CategoryChips categories={invoice.categories as never} /></td>
                       <td><Badge strong={invoice.status === "completed"}>{statusLabel(invoice.status)}</Badge></td>
+                      <td className="numeric">
+                        <button
+                          type="button"
+                          className="icon-button"
+                          aria-label={`修改${invoice.number}`}
+                          title="修改單"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            nav(`/invoices/${invoice.id}/edit`);
+                          }}
+                        >
+                          <PenLine size={19} />
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}

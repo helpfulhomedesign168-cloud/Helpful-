@@ -12550,3 +12550,11 @@ textarea::placeholder {
   cursor: pointer;
 }
 .actor-logout:hover { color: #f26b21; }
+
+.live-invoice-edit { display: grid; gap: 18px; }
+.live-invoice-edit .section-title { margin: 4px 0 0; }
+.live-category-options { display: flex; gap: 18px; flex-wrap: wrap; padding-top: 4px; }
+.live-category-options label { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #334155; }
+.live-line-table input { width: 100%; box-sizing: border-box; border: 1px solid #d7e1ec; border-radius: 7px; padding: 7px 8px; font: inherit; }
+.live-edit-total { text-align: right; color: #64748b; font-size: 13px; }
+.live-edit-total strong { color: #0d1f3a; font-size: 18px; margin-left: 8px; }
