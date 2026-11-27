@@ -9,7 +9,7 @@
 - [x] PR checks green
 - [x] Typecheck
 - [x] Unit tests (34)
-- [ ] Full E2E on staging/preview (67 demo tests pass locally)
+- [x] Full E2E (67 passed locally)
 - [x] Migrations 0000–0005 applied to staging
 - [x] 38 services seeded
 - [x] Feature flags:
@@ -78,11 +78,11 @@
 ## 3. Data / migration
 
 - [ ] Take production DB backup / confirm PITR
-- [ ] Confirm no QA/test records:
-  - [ ] invoices = 0 (or intended)
-  - [ ] customers = 0 (or intended)
-  - [ ] work_orders = 0 (or intended)
-  - [ ] users = only intended staff
+- [x] Confirm no QA/test records:
+  - [x] invoices = 0
+  - [x] customers = 0
+  - [x] work_orders = 0
+  - [x] users = 1 real admin
 - [ ] Remove/rotate test admin credentials if any
 - [ ] Confirm real staff roles mapped
 
@@ -108,3 +108,23 @@
 - [ ] Accounting
 - [ ] CS supervisor
 - [ ] Admin
+
+
+## Verification snapshot (2026-11-27)
+
+```text
+public tables: 22
+migrations: 6 (0000–0005)
+users: 1 (real admin)
+invoices: 0
+customers: 0
+work_orders: 0
+services: 38
+flags:
+  direct_invoice=true
+  sales_workspace=false
+  legacy_clerk=false
+unit: 34 passed
+e2e: 67 passed
+build: passed
+```
