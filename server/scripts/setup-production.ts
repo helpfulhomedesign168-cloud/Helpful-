@@ -1,4 +1,6 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.production.local" });
+dotenv.config();
 import { createSeedState } from "../../src/domain/engine";
 import { getDb } from "../db/client";
 import { services, users } from "../db/schema";

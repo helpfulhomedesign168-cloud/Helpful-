@@ -11,3 +11,5 @@ first-preview.png
 .env*
 .vercel/
 .vercel-cli/
+
+.env.production.local

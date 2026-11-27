@@ -38,11 +38,26 @@ Preview 可以繼續用 staging；Production 必須用新 production project。
 
 ## 4. Initialise database
 
-在安全的本機環境，用 production values 執行：
+建議在本機建立 **gitignored** 的 `.env.production.local`，只放 production values：
+
+```text
+DATABASE_URL=...
+SUPABASE_URL=...
+SUPABASE_JWKS_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+ADMIN_EMAIL=...
+ADMIN_NAME=...
+ADMIN_PASSWORD=...
+```
+
+不要把此檔 commit 或貼上 chat。
+
+然後執行：
 
 ```bash
 pnpm install
-DATABASE_URL='postgresql://...' pnpm db:migrate
+set -a; source .env.production.local; set +a
+pnpm db:migrate
 ```
 
 Migrations：0000–0008。
@@ -52,9 +67,6 @@ Migrations：0000–0008。
 在同一個 production env 下：
 
 ```bash
-ADMIN_EMAIL='admin@example.com' \
-ADMIN_NAME='Admin' \
-ADMIN_PASSWORD='<strong-password>' \
 pnpm prod:setup
 ```
 
