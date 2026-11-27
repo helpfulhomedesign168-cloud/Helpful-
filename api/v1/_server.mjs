@@ -34055,6 +34055,14 @@ var suppliers = pgTable("suppliers", {
   name: text("name").notNull(),
   phone: text("phone"),
   contact: text("contact"),
+  contact2: text("contact2"),
+  phone2: text("phone2"),
+  address: text("address"),
+  categories: jsonb("categories").$type().default([]).notNull(),
+  hasProductStyles: boolean("has_product_styles").default(true).notNull(),
+  logoFileId: uuid("logo_file_id").references(() => files.id, {
+    onDelete: "set null"
+  }),
   active: boolean("active").default(true).notNull()
 });
 var customWorkRequests = pgTable("custom_work_requests", {
@@ -36103,6 +36111,50 @@ async function deleteProductStyleImage(path) {
     throw new Error(`Storage delete failed (${res.status})`);
   }
 }
+var SUPPLIER_LOGO_BUCKET = "supplier-logos";
+async function uploadSupplierLogo(path, bytes2, mime) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${SUPPLIER_LOGO_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": mime,
+      "x-upsert": "false"
+    },
+    body: bytes2,
+    signal: AbortSignal.timeout(3e4)
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+async function signedSupplierLogo(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${SUPPLIER_LOGO_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = await res.json();
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}
+async function deleteSupplierLogo(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${SUPPLIER_LOGO_BUCKET}/${path}`, {
+    method: "DELETE",
+    headers: { apikey: key2, Authorization: `Bearer ${key2}` },
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Storage delete failed (${res.status})`);
+  }
+}
 
 // server/routes/payments.ts
 var paymentSchema = external_exports.object({
@@ -37358,12 +37410,29 @@ var supplierSchema = external_exports.object({
   name: external_exports.string().trim().min(1).max(160),
   phone: external_exports.string().trim().max(40).optional(),
   contact: external_exports.string().trim().max(120).optional(),
+  contact2: external_exports.string().trim().max(120).optional(),
+  phone2: external_exports.string().trim().max(40).optional(),
+  address: external_exports.string().trim().max(500).optional(),
+  categories: external_exports.array(external_exports.string().trim().max(40)).max(30).optional(),
+  hasProductStyles: external_exports.boolean().optional(),
   active: external_exports.boolean().optional()
 });
+function withLogo(row, url2) {
+  return { ...row, logoUrl: url2 };
+}
 var suppliersRoute = new Hono3();
 suppliersRoute.get("/", requireAuth, async (c2) => {
-  const rows = await getDb().select().from(suppliers).orderBy(asc(suppliers.name));
-  return c2.json(rows);
+  const rows = await getDb().select({ supplier: suppliers, file: files }).from(suppliers).leftJoin(files, eq(suppliers.logoFileId, files.id)).orderBy(asc(suppliers.name));
+  return c2.json(
+    await Promise.all(
+      rows.map(
+        async ({ supplier, file: file2 }) => withLogo(
+          supplier,
+          file2 ? await signedSupplierLogo(file2.storageKey).catch(() => null) : null
+        )
+      )
+    )
+  );
 });
 suppliersRoute.post(
   "/",
@@ -37375,7 +37444,7 @@ suppliersRoute.post(
       return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u4F9B\u61C9\u5546\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } }, 400);
     }
     const [created] = await getDb().insert(suppliers).values(parsed.data).returning();
-    return c2.json(created, 201);
+    return c2.json(withLogo(created, null), 201);
   }
 );
 suppliersRoute.patch(
@@ -37389,7 +37458,55 @@ suppliersRoute.patch(
     }
     const [updated] = await getDb().update(suppliers).set(parsed.data).where(eq(suppliers.id, c2.req.param("id"))).returning();
     if (!updated) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u4F9B\u61C9\u5546\u3002" } }, 404);
-    return c2.json(updated);
+    return c2.json(withLogo(updated, null));
+  }
+);
+suppliersRoute.post(
+  "/:id/logo",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const [supplier] = await getDb().select().from(suppliers).where(eq(suppliers.id, c2.req.param("id"))).limit(1);
+    if (!supplier) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u4F9B\u61C9\u5546\u3002" } }, 404);
+    const body = await c2.req.parseBody();
+    const file2 = body.file;
+    if (!(file2 instanceof File)) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u8ACB\u9078\u64C7 Logo\u3002" } }, 400);
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file2.type)) {
+      return c2.json({ error: { code: "UNSUPPORTED_FILE", message: "\u53EA\u652F\u63F4 JPG\uFF0FPNG\uFF0FWebP\u3002" } }, 415);
+    }
+    if (file2.size > 5 * 1024 * 1024) {
+      return c2.json({ error: { code: "FILE_TOO_LARGE", message: "Logo \u4E0A\u9650 5MB\u3002" } }, 413);
+    }
+    const safeName = file2.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
+    const storageKey = `suppliers/${supplier.id}/${crypto.randomUUID()}-${safeName}`;
+    await uploadSupplierLogo(storageKey, await file2.arrayBuffer(), file2.type);
+    let inserted;
+    try {
+      [inserted] = await getDb().insert(files).values({
+        ownerType: "supplier",
+        ownerId: supplier.id,
+        storageKey,
+        filename: file2.name.slice(0, 200),
+        mime: file2.type,
+        sizeBytes: file2.size,
+        createdBy: c2.get("user").id
+      }).returning();
+      await getDb().update(suppliers).set({ logoFileId: inserted.id }).where(eq(suppliers.id, supplier.id));
+    } catch (error68) {
+      await deleteSupplierLogo(storageKey).catch(() => {
+      });
+      throw error68;
+    }
+    return c2.json(
+      {
+        id: inserted.id,
+        filename: inserted.filename,
+        url: await signedSupplierLogo(storageKey).catch(() => null)
+      },
+      201
+    );
   }
 );
 

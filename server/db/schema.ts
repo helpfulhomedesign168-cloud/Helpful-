@@ -374,6 +374,14 @@ export const suppliers = pgTable("suppliers", {
   name: text("name").notNull(),
   phone: text("phone"),
   contact: text("contact"),
+  contact2: text("contact2"),
+  phone2: text("phone2"),
+  address: text("address"),
+  categories: jsonb("categories").$type<string[]>().default([]).notNull(),
+  hasProductStyles: boolean("has_product_styles").default(true).notNull(),
+  logoFileId: uuid("logo_file_id").references(() => files.id, {
+    onDelete: "set null",
+  }),
   active: boolean("active").default(true).notNull(),
 });
 
