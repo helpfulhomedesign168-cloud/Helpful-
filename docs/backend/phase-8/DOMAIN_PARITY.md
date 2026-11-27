@@ -21,7 +21,7 @@ Rule: backend entities, fields, state transitions and live UI must match the pro
 | ServiceItem | `services` + `metadata` + `service_categories` | ✅ category management, measure/price/min/linked |
 | Invoice | `invoices` + versions + lines | 🟡 payment plan added; team/add-on/quote relation missing |
 | Invoice.paymentPlan | `invoice_payment_plan` | ✅ 50/50, 30/20/50, 30/20/30/20 + gates |
-| Payment | `payments` | 🟡 custody added; cleared state missing |
+| Payment | `payments` | ✅ custody + cleared + validation gate |
 | Receipt | `receipts` | ✅ |
 | WorkOrder | `work_orders` + assignments/deductions/extra works | 🟡 live UI parity pending |
 | ProductStyleSeries | `product_style_series` + images | ✅ |

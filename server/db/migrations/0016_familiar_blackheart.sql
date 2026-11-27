@@ -1,0 +1,1 @@
+ALTER TABLE "payments" ADD COLUMN "cleared" boolean DEFAULT false NOT NULL;

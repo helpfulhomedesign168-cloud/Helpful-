@@ -257,6 +257,7 @@ export function LiveInvoiceDetail() {
           amountCents: Math.round(Number(paymentAmount) * 100),
           method: paymentMethod,
           custody: paymentCustody,
+          cleared: confirm,
           paidAt: paymentDate,
           confirm,
           proofFileId: proofFileId || undefined,

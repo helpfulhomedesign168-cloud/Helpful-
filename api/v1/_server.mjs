@@ -33746,6 +33746,7 @@ __export(schema_exports, {
   files: () => files,
   invoiceCategoryEnum: () => invoiceCategoryEnum,
   invoiceLines: () => invoiceLines,
+  invoicePaymentPlan: () => invoicePaymentPlan,
   invoiceStatusEnum: () => invoiceStatusEnum,
   invoiceVersions: () => invoiceVersions,
   invoices: () => invoices,
@@ -33932,6 +33933,19 @@ var invoiceVersions = pgTable(
     )
   ]
 );
+var invoicePaymentPlan = pgTable(
+  "invoice_payment_plan",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+    installment: integer("installment").notNull(),
+    label: text("label").notNull(),
+    percentage: integer("percentage").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    cumulativeCents: integer("cumulative_cents").notNull()
+  },
+  (table2) => [uniqueIndex("invoice_payment_plan_invoice_installment").on(table2.invoiceId, table2.installment)]
+);
 var invoiceLines = pgTable("invoice_lines", {
   id: uuid("id").defaultRandom().primaryKey(),
   versionId: uuid("version_id").notNull().references(() => invoiceVersions.id, { onDelete: "cascade" }),
@@ -33964,6 +33978,7 @@ var payments = pgTable("payments", {
   amountCents: integer("amount_cents").notNull(),
   method: paymentMethodEnum("method").notNull(),
   custody: paymentCustodyEnum("custody").default("company").notNull(),
+  cleared: boolean("cleared").default(false).notNull(),
   status: paymentStatusEnum("status").default("pending").notNull(),
   paidAt: date("paid_at").notNull(),
   reference: text("reference"),
@@ -36032,6 +36047,44 @@ var amendSchema = createSchema3.extend({
 var error63 = (code, message2) => ({
   error: { code, message: message2 }
 });
+var PLAN_DEFINITIONS = {
+  "group-buy": [
+    { label: "\u7B2C\u4E00\u671F\u8A02\u91D1", percentage: 50 },
+    { label: "\u5C3E\u6578", percentage: 50 }
+  ],
+  "grant-80k": [
+    { label: "\u7B2C\u4E00\u671F\u8A02\u91D1", percentage: 30 },
+    { label: "\u7B2C\u4E8C\u671F\u8A02\u91D1", percentage: 20 },
+    { label: "\u5C3E\u6578", percentage: 50 }
+  ],
+  "self-pay": [
+    { label: "\u7B2C\u4E00\u671F\u8A02\u91D1", percentage: 30 },
+    { label: "\u7B2C\u4E8C\u671F\u8A02\u91D1", percentage: 20 },
+    { label: "\u5DE5\u7A0B\u4E2D\u671F\u6B3E", percentage: 30 },
+    { label: "\u5C3E\u6578", percentage: 20 }
+  ]
+};
+function primaryInvoiceCategory(categories) {
+  if (categories.includes("grant-80k")) return "grant-80k";
+  if (categories.includes("group-buy")) return "group-buy";
+  return "self-pay";
+}
+function buildPaymentPlan(categories, totalCents) {
+  const category = primaryInvoiceCategory(categories);
+  const rows = PLAN_DEFINITIONS[category];
+  let used = 0;
+  return rows.map((row, index) => {
+    const amountCents = index === rows.length - 1 ? totalCents - used : Math.round(totalCents * row.percentage / 100);
+    used += amountCents;
+    return {
+      installment: index + 1,
+      label: row.label,
+      percentage: row.percentage,
+      amountCents,
+      cumulativeCents: used
+    };
+  });
+}
 async function invoiceDetail(id) {
   const db = getDb();
   const rows = await db.select({
@@ -36066,6 +36119,34 @@ async function invoiceDetail(id) {
   const version3 = versionRows[0];
   if (!version3) return null;
   const lines = await db.select().from(invoiceLines).where(eq(invoiceLines.versionId, version3.id));
+  const plan = await db.select().from(invoicePaymentPlan).where(eq(invoicePaymentPlan.invoiceId, id)).orderBy(invoicePaymentPlan.installment);
+  const invoicePayments = await db.select().from(payments).where(eq(payments.invoiceId, id)).orderBy(payments.installment);
+  const invoiceReceipts = await db.select({ id: receipts.id, paymentId: receipts.paymentId }).from(receipts).innerJoin(payments, eq(receipts.paymentId, payments.id)).where(eq(payments.invoiceId, id));
+  const validPayments = invoicePayments.filter((payment) => payment.status === "valid");
+  const pendingPayments = invoicePayments.filter((payment) => payment.status === "pending");
+  const installments = plan.map((stage, index) => {
+    const priorPaid = plan.slice(0, index).every(
+      (prior) => validPayments.filter((payment) => payment.installment === prior.installment).reduce((sum, payment) => sum + payment.amountCents, 0) >= prior.amountCents
+    );
+    const received = validPayments.filter((payment) => payment.installment === stage.installment).reduce((sum, payment) => sum + payment.amountCents, 0);
+    const pending = pendingPayments.filter((payment) => payment.installment === stage.installment).reduce((sum, payment) => sum + payment.amountCents, 0);
+    const paymentIds = validPayments.filter((payment) => payment.installment === stage.installment).map((payment) => payment.id);
+    const receiptIds = invoiceReceipts.filter((receipt) => paymentIds.includes(receipt.paymentId)).map((receipt) => receipt.id);
+    const hasUnreceipted = validPayments.some(
+      (payment) => payment.installment === stage.installment && !invoiceReceipts.some((receipt) => receipt.paymentId === payment.id)
+    );
+    const status = !priorPaid ? "locked" : pending > 0 ? "under_review" : hasUnreceipted ? "ready_receipt" : received >= stage.amountCents ? "receipted" : "awaiting_payment";
+    return {
+      ...stage,
+      receivedCents: received,
+      pendingCents: pending,
+      status,
+      paymentIds,
+      receiptIds
+    };
+  });
+  const validPaidCents = validPayments.reduce((sum, payment) => sum + payment.amountCents, 0);
+  const pendingPaidCents = pendingPayments.reduce((sum, payment) => sum + payment.amountCents, 0);
   return {
     ...rows[0],
     version: {
@@ -36083,7 +36164,15 @@ async function invoiceDetail(id) {
       unit: line2.unit,
       unitPriceCents: line2.unitPriceCents,
       amountCents: line2.amountCents
-    }))
+    })),
+    paymentStatus: {
+      validPaidCents,
+      pendingPaidCents,
+      percentPaid: rows[0].totalCents > 0 ? Number((validPaidCents / rows[0].totalCents * 100).toFixed(2)) : 0,
+      csReleaseDueCents: Math.round(rows[0].totalCents * 0.5),
+      completed: validPaidCents >= rows[0].totalCents,
+      installments
+    }
   };
 }
 var invoicesRoute = new Hono3();
@@ -36159,13 +36248,18 @@ invoicesRoute.post(
     if (current.status === "voided" || current.status === "refunded") {
       return c2.json(error63("INVOICE_CLOSED", "\u6B64\u767C\u7968\u5DF2\u95DC\u9589\uFF0C\u4E0D\u53EF\u4FEE\u6539\u3002"), 409);
     }
-    const validPayment = await db.select({ id: payments.id }).from(payments).where(and(eq(payments.invoiceId, invoiceId), eq(payments.status, "valid"))).limit(1);
+    const existingPayment = await db.select({ id: payments.id, status: payments.status }).from(payments).where(
+      and(
+        eq(payments.invoiceId, invoiceId),
+        sql`${payments.status} in ('valid','pending')`
+      )
+    ).limit(1);
     const releasedOrder = await db.select({ id: workOrders.id }).from(workOrders).where(eq(workOrders.invoiceId, invoiceId)).limit(1);
-    if (validPayment[0] || releasedOrder[0]) {
+    if (existingPayment[0] || releasedOrder[0]) {
       return c2.json(
         error63(
           "INVOICE_LOCKED",
-          "\u6B64\u767C\u7968\u5DF2\u6709\u6709\u6548\u4ED8\u6B3E\u6216\u5DF2\u767C\u5DE5\u7A0B\u55AE\uFF0C\u4E0D\u53EF\u76F4\u63A5\u4FEE\u6539\u3002"
+          "\u6B64\u767C\u7968\u5DF2\u6709\u6709\u6548\uFF0F\u5F85\u6838\u5C0D\u4ED8\u6B3E\u6216\u5DF2\u767C\u5DE5\u7A0B\u55AE\uFF0C\u4E0D\u53EF\u76F4\u63A5\u4FEE\u6539\u3002"
         ),
         409
       );
@@ -36239,6 +36333,13 @@ invoicesRoute.post(
           unit: line2.unit,
           unitPriceCents: line2.unitPriceCents,
           amountCents: line2.amountCents
+        }))
+      );
+      await tx.delete(invoicePaymentPlan).where(eq(invoicePaymentPlan.invoiceId, invoiceId));
+      await tx.insert(invoicePaymentPlan).values(
+        buildPaymentPlan(input2.categories, totalCents).map((row) => ({
+          invoiceId,
+          ...row
         }))
       );
       await tx.insert(auditLogs).values({
@@ -36341,6 +36442,12 @@ invoicesRoute.post(
         idempotencyKey
       }).returning({ id: invoices.id });
       invoiceId = createdInvoice[0].id;
+      await tx.insert(invoicePaymentPlan).values(
+        buildPaymentPlan(input2.categories, totalCents).map((row) => ({
+          invoiceId,
+          ...row
+        }))
+      );
       const version3 = await tx.insert(invoiceVersions).values({
         invoiceId,
         versionNo: 1,
@@ -36387,6 +36494,7 @@ var paymentSchema = external_exports.object({
   amountCents: external_exports.number().int().positive(),
   method: external_exports.enum(["cash", "fps", "transfer", "cheque"]),
   custody: external_exports.enum(["company", "sales"]).default("company"),
+  cleared: external_exports.boolean().optional().default(false),
   paidAt: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   reference: external_exports.string().trim().max(200).optional(),
   notes: external_exports.string().trim().max(1e3).optional(),
@@ -36528,6 +36636,36 @@ paymentsRoute.post(
       const existing = await getDb().select().from(payments).where(eq(payments.idempotencyKey, idempotencyKey)).limit(1);
       if (existing[0]) return c2.json(existing[0], 200);
     }
+    const plan = await getDb().select().from(invoicePaymentPlan).where(eq(invoicePaymentPlan.invoiceId, invoice.id)).orderBy(invoicePaymentPlan.installment);
+    if (plan.length) {
+      const stage = plan.find((row) => row.installment === parsed.data.installment);
+      if (!stage) {
+        return c2.json(error64("INVALID_INSTALLMENT", "\u6B64\u767C\u7968\u6C92\u6709\u9019\u500B\u671F\u6578\u3002"), 422);
+      }
+      const prior = plan.filter((row) => row.installment < stage.installment);
+      for (const row of prior) {
+        const paid = await getDb().select({ total: sql`coalesce(sum(${payments.amountCents}), 0)::int` }).from(payments).where(
+          and(
+            eq(payments.invoiceId, invoice.id),
+            eq(payments.installment, row.installment),
+            eq(payments.status, "valid")
+          )
+        );
+        if (Number(paid[0]?.total ?? 0) < row.amountCents) {
+          return c2.json(error64("PRIOR_INSTALLMENT_UNPAID", "\u8ACB\u5148\u6536\u8DB3\u4E0A\u4E00\u671F\u6B3E\u9805\u3002"), 422);
+        }
+      }
+      const stagePaid = await getDb().select({ total: sql`coalesce(sum(${payments.amountCents}), 0)::int` }).from(payments).where(
+        and(
+          eq(payments.invoiceId, invoice.id),
+          eq(payments.installment, stage.installment),
+          sql`${payments.status} in ('valid','pending')`
+        )
+      );
+      if (Number(stagePaid[0]?.total ?? 0) + parsed.data.amountCents > stage.amountCents) {
+        return c2.json(error64("INSTALLMENT_EXCEEDS", "\u4ED8\u6B3E\u91D1\u984D\u8D85\u904E\u672C\u671F\u61C9\u6536\u91D1\u984D\u3002"), 422);
+      }
+    }
     const occupied = await getDb().select({
       total: sql`coalesce(sum(${payments.amountCents}), 0)::int`
     }).from(payments).where(
@@ -36552,6 +36690,7 @@ paymentsRoute.post(
         amountCents: parsed.data.amountCents,
         method: parsed.data.method,
         custody: parsed.data.custody,
+        cleared: parsed.data.cleared,
         status: "pending",
         paidAt: parsed.data.paidAt,
         reference: parsed.data.reference,
@@ -36577,6 +36716,7 @@ paymentsRoute.post(
         amountCents: parsed.data.amountCents,
         method: parsed.data.method,
         custody: parsed.data.custody,
+        cleared: parsed.data.cleared,
         status: "valid",
         paidAt: parsed.data.paidAt,
         reference: parsed.data.reference,
@@ -36605,10 +36745,16 @@ paymentsRoute.post(
     if (payment.status !== "pending") {
       return c2.json(error64("INVALID_PAYMENT_STATE", "\u6B64\u4ED8\u6B3E\u4E0D\u662F\u5F85\u6838\u5C0D\u72C0\u614B\u3002"), 409);
     }
+    const body = await c2.req.json().catch(() => null);
+    const cleared = body?.cleared === true || payment.method === "cash";
+    if (payment.method !== "cash" && !cleared) {
+      return c2.json(error64("NOT_CLEARED", "\u8ACB\u5148\u78BA\u8A8D\u6B3E\u9805\u5DF2\u5230\u5E33\u3002"), 422);
+    }
     let updated;
     await getDb().transaction(async (tx) => {
       const [row] = await tx.update(payments).set({
         status: "valid",
+        cleared: true,
         validatedBy: c2.get("user").id,
         validatedAt: /* @__PURE__ */ new Date()
       }).where(eq(payments.id, paymentId)).returning();

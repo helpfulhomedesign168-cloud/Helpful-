@@ -26,6 +26,7 @@ const paymentSchema = z.object({
   amountCents: z.number().int().positive(),
   method: z.enum(["cash", "fps", "transfer", "cheque"]),
   custody: z.enum(["company", "sales"]).default("company"),
+  cleared: z.boolean().optional().default(false),
   paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   reference: z.string().trim().max(200).optional(),
   notes: z.string().trim().max(1000).optional(),
@@ -314,6 +315,7 @@ paymentsRoute.post(
           amountCents: parsed.data.amountCents,
           method: parsed.data.method,
           custody: parsed.data.custody,
+          cleared: parsed.data.cleared,
           status: "pending",
           paidAt: parsed.data.paidAt,
           reference: parsed.data.reference,
@@ -346,6 +348,7 @@ paymentsRoute.post(
           amountCents: parsed.data.amountCents,
           method: parsed.data.method,
           custody: parsed.data.custody,
+          cleared: parsed.data.cleared,
           status: "valid",
           paidAt: parsed.data.paidAt,
           reference: parsed.data.reference,
@@ -380,12 +383,18 @@ paymentsRoute.post(
     if (payment.status !== "pending") {
       return c.json(error("INVALID_PAYMENT_STATE", "此付款不是待核對狀態。"), 409);
     }
+    const body = await c.req.json().catch(() => null);
+    const cleared = body?.cleared === true || payment.method === "cash";
+    if (payment.method !== "cash" && !cleared) {
+      return c.json(error("NOT_CLEARED", "請先確認款項已到帳。"), 422);
+    }
     let updated: any;
     await getDb().transaction(async (tx) => {
       const [row] = await tx
         .update(payments)
         .set({
           status: "valid",
+          cleared: true,
           validatedBy: c.get("user").id,
           validatedAt: new Date(),
         })

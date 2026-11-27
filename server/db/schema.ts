@@ -242,6 +242,7 @@ export const payments = pgTable("payments", {
   amountCents: integer("amount_cents").notNull(),
   method: paymentMethodEnum("method").notNull(),
   custody: paymentCustodyEnum("custody").default("company").notNull(),
+  cleared: boolean("cleared").default(false).notNull(),
   status: paymentStatusEnum("status").default("pending").notNull(),
   paidAt: date("paid_at").notNull(),
   reference: text("reference"),
