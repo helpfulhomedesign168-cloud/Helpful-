@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { apiRequest, ApiError } from "../api/client";
 import { Button, Dialog, Empty, Field, PageHead, Search } from "../components/ui";
@@ -16,6 +17,7 @@ type CustomerRow = {
 
 export function LiveCustomers() {
   const { accessToken } = useAuth();
+  const nav = useNavigate();
   const [rows, setRows] = useState<CustomerRow[]>([]);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
@@ -118,7 +120,7 @@ export function LiveCustomers() {
                     <td>{customer.whatsapp || "—"}</td>
                     <td>{customer.district || customer.address || "—"}</td>
                     <td>{customer.createdAt.slice(0, 10)}</td>
-                    <td><Button variant="ghost" onClick={() => openEdit(customer)}>修改</Button></td>
+                    <td><Button variant="ghost" onClick={() => nav(`/customers/${customer.id}`)}>查看</Button><Button variant="ghost" onClick={() => openEdit(customer)}>修改</Button></td>
                   </tr>
                 ))}
               </tbody>

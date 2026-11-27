@@ -3,6 +3,7 @@
 ## Completed
 
 - Audit log viewer for admin/finance supervisor
+- Customer detail with Invoice history
 - Hover/focus prefetch for Invoice and work order detail
 - Live Invoice Excel export
   - uses current API Invoice data

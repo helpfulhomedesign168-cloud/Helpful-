@@ -1,8 +1,8 @@
 import { Hono } from "hono";
-import { asc, eq, ilike, or } from "drizzle-orm";
+import { asc, desc, eq, ilike, or } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/client";
-import { customers } from "../db/schema";
+import { customers, invoices } from "../db/schema";
 import type { AppEnv } from "../auth";
 import { requireAuth } from "../auth";
 import { requireCapability } from "../guards";
@@ -128,6 +128,28 @@ customersRoute.patch(
       );
     }
     return c.json(updated);
+  },
+);
+
+customersRoute.get(
+  "/:id/invoices",
+  requireAuth,
+  requireCapability("customer.read"),
+  async (c) => {
+    const rows = await getDb()
+      .select({
+        id: invoices.id,
+        number: invoices.number,
+        status: invoices.status,
+        categories: invoices.categories,
+        totalCents: invoices.totalCents,
+        validPaidCents: invoices.validPaidCents,
+        createdAt: invoices.createdAt,
+      })
+      .from(invoices)
+      .where(eq(invoices.customerId, c.req.param("id")))
+      .orderBy(desc(invoices.createdAt));
+    return c.json(rows);
   },
 );
 
