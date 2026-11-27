@@ -4,6 +4,10 @@
 **PR:** #80  
 **Staging project:** `fijjpbkrsooltxkgrxvf`
 
+## Production DB
+
+See [Production Supabase Setup](./PRODUCTION_SUPABASE_SETUP.md).
+
 ## 1. Pre-merge
 
 - [x] PR checks green
