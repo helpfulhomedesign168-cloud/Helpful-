@@ -24,5 +24,6 @@
 - Cancellation / refund live ✅
 - Product styles live ✅
 - Custom work live ✅
+- Cancellation live ✅
 - Further optimistic UI / prefetch
 - Production DB separation and cutover
