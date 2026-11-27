@@ -13,6 +13,7 @@ export const CAPABILITIES = [
   "workorder.assign",
   "workorder.update",
   "workorder.complete",
+  "contractor.manage",
   "municipal.read",
   "municipal.write",
   "refund.manage",
@@ -58,11 +59,13 @@ const cs: Capability[] = [
   "workorder.read",
   "workorder.update",
   "workorder.complete",
+  "contractor.manage",
 ];
 
 const csSupervisor: Capability[] = [
   ...cs,
   "workorder.assign",
+  "contractor.manage",
 ];
 
 const admin: Capability[] = [...CAPABILITIES];

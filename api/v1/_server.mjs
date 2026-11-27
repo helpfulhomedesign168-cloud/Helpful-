@@ -34059,7 +34059,17 @@ var contractors = pgTable("contractors", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   phone: text("phone"),
-  active: boolean("active").default(true).notNull()
+  type: text("type").default("contractor").notNull(),
+  kind: text("kind"),
+  specialty: text("specialty"),
+  mainWork: text("main_work"),
+  scope: text("scope"),
+  details: text("details"),
+  trades: jsonb("trades").$type().default([]).notNull(),
+  feeMode: text("fee_mode"),
+  feeAmount: integer("fee_amount").default(0).notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });
 var suppliers = pgTable("suppliers", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -34964,6 +34974,7 @@ var CAPABILITIES = [
   "workorder.assign",
   "workorder.update",
   "workorder.complete",
+  "contractor.manage",
   "municipal.read",
   "municipal.write",
   "refund.manage",
@@ -35002,11 +35013,13 @@ var cs = [
   "customer.read",
   "workorder.read",
   "workorder.update",
-  "workorder.complete"
+  "workorder.complete",
+  "contractor.manage"
 ];
 var csSupervisor = [
   ...cs,
-  "workorder.assign"
+  "workorder.assign",
+  "contractor.manage"
 ];
 var admin = [...CAPABILITIES];
 var adminStaff = CAPABILITIES.filter(
@@ -37702,16 +37715,25 @@ reportsRoute.get(
 var contractorSchema = external_exports.object({
   name: external_exports.string().trim().min(1).max(160),
   phone: external_exports.string().trim().max(40).optional(),
+  type: external_exports.enum(["contractor", "staff"]).optional(),
+  kind: external_exports.enum(["foreman", "worker"]).nullable().optional(),
+  specialty: external_exports.string().trim().max(120).nullable().optional(),
+  mainWork: external_exports.string().trim().max(80).nullable().optional(),
+  scope: external_exports.string().trim().max(500).nullable().optional(),
+  details: external_exports.string().trim().max(1e3).nullable().optional(),
+  trades: external_exports.array(external_exports.string().trim().max(40)).max(30).optional(),
+  feeMode: external_exports.enum(["project60", "daily", "fixed"]).nullable().optional(),
+  feeAmount: external_exports.number().int().nonnegative().optional(),
   active: external_exports.boolean().optional()
 });
 var contractorsRoute = new Hono3();
-contractorsRoute.get("/", requireAuth, async (c2) => {
+contractorsRoute.get("/", requireAuth, requireCapability("workorder.read"), async (c2) => {
   return c2.json(await getDb().select().from(contractors).orderBy(asc(contractors.name)));
 });
 contractorsRoute.post(
   "/",
   requireAuth,
-  requireCapability("feature_flags.manage"),
+  requireCapability("contractor.manage"),
   async (c2) => {
     const parsed = contractorSchema.safeParse(await c2.req.json().catch(() => null));
     if (!parsed.success) {
@@ -37724,7 +37746,7 @@ contractorsRoute.post(
 contractorsRoute.patch(
   "/:id",
   requireAuth,
-  requireCapability("feature_flags.manage"),
+  requireCapability("contractor.manage"),
   async (c2) => {
     const parsed = contractorSchema.partial().safeParse(await c2.req.json().catch(() => null));
     if (!parsed.success) {
@@ -37733,6 +37755,16 @@ contractorsRoute.patch(
     const [updated] = await getDb().update(contractors).set(parsed.data).where(eq(contractors.id, c2.req.param("id"))).returning();
     if (!updated) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5E2B\u5085\u3002" } }, 404);
     return c2.json(updated);
+  }
+);
+contractorsRoute.delete(
+  "/:id",
+  requireAuth,
+  requireCapability("contractor.manage"),
+  async (c2) => {
+    const [deleted] = await getDb().delete(contractors).where(eq(contractors.id, c2.req.param("id"))).returning({ id: contractors.id });
+    if (!deleted) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5E2B\u5085\u3002" } }, 404);
+    return c2.json({ ok: true });
   }
 );
 

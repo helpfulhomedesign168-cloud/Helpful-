@@ -377,7 +377,17 @@ export const contractors = pgTable("contractors", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
   phone: text("phone"),
+  type: text("type").default("contractor").notNull(),
+  kind: text("kind"),
+  specialty: text("specialty"),
+  mainWork: text("main_work"),
+  scope: text("scope"),
+  details: text("details"),
+  trades: jsonb("trades").$type<string[]>().default([]).notNull(),
+  feeMode: text("fee_mode"),
+  feeAmount: integer("fee_amount").default(0).notNull(),
   active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const suppliers = pgTable("suppliers", {
