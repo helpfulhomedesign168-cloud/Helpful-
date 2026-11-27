@@ -156,6 +156,7 @@ export function Shell() {
             ["/invoices", "單據管理", Files],
             ["/customers", "客戶", Users],
             ["/municipal-orders", "市政單", FileText],
+            ["/custom-work-requests", "自訂工程請示", FileText],
           ]
       : actor.role === "clerk" || actor.role === "finance_supervisor"
           ? [

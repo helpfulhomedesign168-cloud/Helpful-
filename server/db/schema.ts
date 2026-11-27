@@ -439,9 +439,15 @@ export const suppliers = pgTable("suppliers", {
 
 export const customWorkRequests = pgTable("custom_work_requests", {
   id: uuid("id").defaultRandom().primaryKey(),
-  workOrderId: uuid("work_order_id")
-    .notNull()
-    .references(() => workOrders.id, { onDelete: "cascade" }),
+  workOrderId: uuid("work_order_id").references(() => workOrders.id, {
+    onDelete: "cascade",
+  }),
+  invoiceId: uuid("invoice_id").references(() => invoices.id, {
+    onDelete: "cascade",
+  }),
+  invoiceLineId: uuid("invoice_line_id").references(() => invoiceLines.id, {
+    onDelete: "set null",
+  }),
   description: text("description").notNull(),
   quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull(),
   unit: text("unit").notNull(),

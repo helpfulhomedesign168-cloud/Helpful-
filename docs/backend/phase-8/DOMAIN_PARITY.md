@@ -27,7 +27,7 @@ Rule: backend entities, fields, state transitions and live UI must match the pro
 | ProductStyleSeries | `product_style_series` + images | ✅ |
 | MunicipalOrder | `municipal_orders` + lines | 🟡 editor parity pending |
 | CancellationCase | `cancellation_cases` | 🟡 full credit-note/transfer/commission flow missing |
-| CustomWorkRequest | `custom_work_requests` | ❌ prototype uses quoteId/lineId; live uses workOrderId |
+| CustomWorkRequest | `custom_work_requests` | ✅ invoice/invoice-line domain + work-order compatibility |
 | Notification | `notifications` | ✅ |
 | Audit | `audit_logs` | ✅ |
 
