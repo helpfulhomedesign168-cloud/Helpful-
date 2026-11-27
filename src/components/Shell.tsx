@@ -198,7 +198,6 @@ export function Shell() {
   const liveHiddenPaths = live
     ? new Set([
         "/quotes",
-        "/product-styles",
         "/cancellation-cases",
         "/custom-work-requests",
       ])

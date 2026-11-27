@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useAuth } from "../auth";
+import { LiveProductStyles } from "./LiveProductStyles";
 import { ArrowLeft, Check, Plus } from "lucide-react";
 import { getAttachmentBlob, useApp } from "../context";
 import {
@@ -346,6 +348,11 @@ function AdminProductStyles() {
 
 
 export function ProductStyles() {
+  const { live } = useAuth();
+  return live ? <LiveProductStyles /> : <DemoProductStyles />;
+}
+
+function DemoProductStyles() {
   const { actor } = useApp();
   return ["admin", "admin_staff"].includes(actor.role) ? (
     <AdminProductStyles />

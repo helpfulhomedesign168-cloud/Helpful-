@@ -50,6 +50,13 @@
       "when": 1795748515633,
       "tag": "0006_hesitant_wonder_man",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795751684198,
+      "tag": "0007_amazing_shinko_yamashiro",
+      "breakpoints": true
     }
   ]
 }

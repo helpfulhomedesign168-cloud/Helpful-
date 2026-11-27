@@ -310,7 +310,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/product-styles"
               element={
                 <Guard roles={[...sales, "admin", "admin_staff"]}>
-                  <LiveBlocked><ProductStyles /></LiveBlocked>
+                  <ProductStyles />
                 </Guard>
               }
             />

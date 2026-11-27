@@ -372,6 +372,29 @@ export const suppliers = pgTable("suppliers", {
   active: boolean("active").default(true).notNull(),
 });
 
+export const productStyleSeries = pgTable("product_style_series", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  supplierId: uuid("supplier_id")
+    .notNull()
+    .references(() => suppliers.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const productStyleImages = pgTable("product_style_images", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  seriesId: uuid("series_id")
+    .notNull()
+    .references(() => productStyleSeries.id, { onDelete: "cascade" }),
+  storageKey: text("storage_key").notNull(),
+  filename: text("filename").notNull(),
+  mime: text("mime").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const notifications = pgTable("notifications", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")

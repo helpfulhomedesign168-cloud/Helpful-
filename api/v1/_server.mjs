@@ -33754,6 +33754,8 @@ __export(schema_exports, {
   paymentMethodEnum: () => paymentMethodEnum,
   paymentStatusEnum: () => paymentStatusEnum,
   payments: () => payments,
+  productStyleImages: () => productStyleImages,
+  productStyleSeries: () => productStyleSeries,
   receipts: () => receipts,
   roleEnum: () => roleEnum,
   services: () => services,
@@ -34047,6 +34049,23 @@ var suppliers = pgTable("suppliers", {
   phone: text("phone"),
   contact: text("contact"),
   active: boolean("active").default(true).notNull()
+});
+var productStyleSeries = pgTable("product_style_series", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  supplierId: uuid("supplier_id").notNull().references(() => suppliers.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+});
+var productStyleImages = pgTable("product_style_images", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  seriesId: uuid("series_id").notNull().references(() => productStyleSeries.id, { onDelete: "cascade" }),
+  storageKey: text("storage_key").notNull(),
+  filename: text("filename").notNull(),
+  mime: text("mime").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  createdBy: uuid("created_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });
 var notifications = pgTable("notifications", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -35966,6 +35985,50 @@ async function deletePaymentProof(path) {
     throw new Error(`Storage delete failed (${res.status})`);
   }
 }
+var PRODUCT_STYLE_BUCKET = "product-style-images";
+async function uploadProductStyleImage(path, bytes2, mime) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${PRODUCT_STYLE_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": mime,
+      "x-upsert": "false"
+    },
+    body: bytes2,
+    signal: AbortSignal.timeout(3e4)
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+async function signedProductStyleImage(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${PRODUCT_STYLE_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = await res.json();
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}
+async function deleteProductStyleImage(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${PRODUCT_STYLE_BUCKET}/${path}`, {
+    method: "DELETE",
+    headers: { apikey: key2, Authorization: `Bearer ${key2}` },
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Storage delete failed (${res.status})`);
+  }
+}
 
 // server/routes/payments.ts
 var paymentSchema = external_exports.object({
@@ -37625,6 +37688,102 @@ systemRoute.get(
   }
 );
 
+// server/routes/productStyles.ts
+var seriesSchema = external_exports.object({ name: external_exports.string().trim().min(1).max(160) });
+var productStylesRoute = new Hono3();
+productStylesRoute.get("/suppliers", requireAuth, async (c2) => {
+  return c2.json(
+    await getDb().select({ id: suppliers.id, name: suppliers.name, active: suppliers.active }).from(suppliers).orderBy(asc(suppliers.name))
+  );
+});
+productStylesRoute.get("/suppliers/:id/series", requireAuth, async (c2) => {
+  const rows = await getDb().select().from(productStyleSeries).where(eq(productStyleSeries.supplierId, c2.req.param("id"))).orderBy(asc(productStyleSeries.name));
+  return c2.json(
+    await Promise.all(
+      rows.map(async (series) => {
+        const images = await getDb().select().from(productStyleImages).where(eq(productStyleImages.seriesId, series.id)).orderBy(asc(productStyleImages.createdAt));
+        return {
+          ...series,
+          images: await Promise.all(
+            images.map(async (image) => ({
+              id: image.id,
+              filename: image.filename,
+              mime: image.mime,
+              sizeBytes: image.sizeBytes,
+              url: await signedProductStyleImage(image.storageKey).catch(() => null)
+            }))
+          )
+        };
+      })
+    )
+  );
+});
+productStylesRoute.post(
+  "/suppliers/:id/series",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const parsed = seriesSchema.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u7CFB\u5217\u540D\u7A31\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    const [supplier] = await getDb().select({ id: suppliers.id }).from(suppliers).where(eq(suppliers.id, c2.req.param("id"))).limit(1);
+    if (!supplier) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u4F9B\u61C9\u5546\u3002" } }, 404);
+    const [created] = await getDb().insert(productStyleSeries).values({
+      supplierId: supplier.id,
+      name: parsed.data.name,
+      createdBy: c2.get("user").id
+    }).returning();
+    return c2.json({ ...created, images: [] }, 201);
+  }
+);
+productStylesRoute.post(
+  "/series/:id/images",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const [series] = await getDb().select().from(productStyleSeries).where(eq(productStyleSeries.id, c2.req.param("id"))).limit(1);
+    if (!series) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u7CFB\u5217\u3002" } }, 404);
+    const body = await c2.req.parseBody();
+    const file2 = body.file;
+    if (!(file2 instanceof File)) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u8ACB\u9078\u64C7\u5716\u7247\u3002" } }, 400);
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file2.type)) {
+      return c2.json({ error: { code: "UNSUPPORTED_FILE", message: "\u53EA\u652F\u63F4 JPG\uFF0FPNG\uFF0FWebP\u3002" } }, 415);
+    }
+    if (file2.size > 10 * 1024 * 1024) {
+      return c2.json({ error: { code: "FILE_TOO_LARGE", message: "\u5716\u7247\u4E0A\u9650 10MB\u3002" } }, 413);
+    }
+    const safeName = file2.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
+    const storageKey = `series/${series.id}/${crypto.randomUUID()}-${safeName}`;
+    await uploadProductStyleImage(storageKey, await file2.arrayBuffer(), file2.type);
+    let inserted;
+    try {
+      [inserted] = await getDb().insert(productStyleImages).values({
+        seriesId: series.id,
+        storageKey,
+        filename: file2.name.slice(0, 200),
+        mime: file2.type,
+        sizeBytes: file2.size,
+        createdBy: c2.get("user").id
+      }).returning();
+    } catch (error68) {
+      await deleteProductStyleImage(storageKey).catch(() => {
+      });
+      throw error68;
+    }
+    return c2.json(
+      {
+        id: inserted.id,
+        filename: inserted.filename,
+        url: await signedProductStyleImage(storageKey).catch(() => null)
+      },
+      201
+    );
+  }
+);
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -37646,6 +37805,7 @@ app.route("/invoices", paymentProofsRoute);
 app.route("/cancellation-cases", cancellationsRoute);
 app.route("/audit-logs", auditRoute);
 app.route("/system", systemRoute);
+app.route("/product-styles", productStylesRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);
