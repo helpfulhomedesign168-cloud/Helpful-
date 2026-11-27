@@ -127,6 +127,6 @@ flags:
   sales_workspace=false
   legacy_clerk=false
 unit: 34 passed
-e2e: 67 passed
+e2e: 67 passed (final regression 2026-11-27)
 build: passed
 ```
