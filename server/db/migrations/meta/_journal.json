@@ -92,6 +92,13 @@
       "when": 1795765418561,
       "tag": "0012_wet_zuras",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795766440983,
+      "tag": "0013_supreme_wendigo",
+      "breakpoints": true
     }
   ]
 }

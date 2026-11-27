@@ -111,6 +111,12 @@ export const customers = pgTable("customers", {
   ...timestamps,
 });
 
+export const serviceCategories = pgTable("service_categories", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const services = pgTable("services", {
   id: uuid("id").defaultRandom().primaryKey(),
   code: text("code").notNull().unique(),

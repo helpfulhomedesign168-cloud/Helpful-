@@ -31,6 +31,11 @@ const money = (cents: number) => `HK$${(cents / 100).toLocaleString("zh-HK", { m
 export function LiveServices() {
   const { accessToken, user } = useAuth();
   const [rows, setRows] = useState<ServiceRow[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [tagEditor, setTagEditor] = useState(false);
+  const [tagDraft, setTagDraft] = useState("");
+  const [tagsToDelete, setTagsToDelete] = useState<string[]>([]);
+  const [confirmTagDelete, setConfirmTagDelete] = useState(false);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("全部");
   const [editing, setEditing] = useState<ServiceRow | null>(null);
@@ -39,11 +44,16 @@ export function LiveServices() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const canEdit = ["admin", "admin_staff"].includes(user?.role ?? "");
-  const categories = Array.from(new Set(rows.map((row) => row.category))).sort();
-
   async function load() {
-    try { setRows(await apiRequest<ServiceRow[]>("/services", accessToken)); setError(""); }
-    catch (e) { setError(e instanceof ApiError ? e.message : "未能讀取工程價目。"); }
+    try {
+      const [services, cats] = await Promise.all([
+        apiRequest<ServiceRow[]>("/services", accessToken),
+        apiRequest<Array<{ name: string }>>("/service-categories", accessToken),
+      ]);
+      setRows(services);
+      setCategories(cats.map((item) => item.name));
+      setError("");
+    } catch (e) { setError(e instanceof ApiError ? e.message : "未能讀取工程價目。"); }
   }
   useEffect(() => { void load(); }, [accessToken]);
 
@@ -81,6 +91,7 @@ export function LiveServices() {
         <div className="service-tabs" role="tablist" aria-label="工程分類">
           <button type="button" role="tab" aria-selected={activeCategory === "全部"} className={activeCategory === "全部" ? "active" : ""} onClick={() => setActiveCategory("全部")}>全部</button>
           {categories.map((category) => <button type="button" role="tab" key={category} aria-selected={activeCategory === category} className={activeCategory === category ? "active" : ""} onClick={() => setActiveCategory(category)}>{category}項目</button>)}
+          {canEdit && <button type="button" className="service-tags-edit" onClick={() => { setTagDraft(""); setTagsToDelete([]); setTagEditor(true); }}>編輯</button>}
         </div>
         <div className="service-toolbar"><Search value={search} onChange={setSearch} placeholder="搜尋工程名稱或代號" />{canEdit && <Button variant="primary" aria-label="新增工程項目" onClick={newItem}><Plus size={20} /> 新增項目</Button>}</div>
         {error ? <Empty title="未能讀取工程價目" description={error} /> : visible.length === 0 ? <Empty title="此分類未有工程項目" description="可按右上角「新增項目」加入，或切換其他分類。" /> : (
@@ -99,6 +110,23 @@ export function LiveServices() {
         <div className="dialog-actions"><Button onClick={() => setEditing(null)}>取消</Button><Button variant="primary" disabled={saving} onClick={() => void save()}><Check size={20} /> {saving ? "儲存中…" : "儲存工程項目"}</Button></div>
       </Dialog>}
       {editing && linkPicker && <Dialog title="新增連貫工程" onClose={() => setLinkPicker(false)}><p className="dialog-intro">選擇要連貫的工程項目。只顯示分類、名稱及工程詳細。</p><div className="linked-picker">{categories.map((category) => { const items = rows.filter((row) => row.category === category && row.id !== editing.id); if (!items.length) return null; return <div className="linked-picker-group" key={category}><h4>{category}項目</h4>{items.map((service) => <label className="linked-option" key={service.id}><input type="checkbox" checked={(editing.metadata?.linkedServiceIds ?? []).includes(service.id)} onChange={(e) => setMeta({ linkedServiceIds: e.target.checked ? [...(editing.metadata?.linkedServiceIds ?? []), service.id] : (editing.metadata?.linkedServiceIds ?? []).filter((id) => id !== service.id) })} /><span><strong>{service.name}</strong>{service.metadata?.details && <small>{service.metadata.details}</small>}</span></label>)}</div>; })}</div><div className="dialog-actions"><Button variant="primary" onClick={() => setLinkPicker(false)}>完成</Button></div></Dialog>}
+      {tagEditor && <Dialog title="編輯工程分類" onClose={() => setTagEditor(false)}>
+        <div className="tag-editor-add"><label className="field-label">新增項目</label><div className="tag-add-row"><input aria-label="新增分類名稱" value={tagDraft} onChange={(e) => setTagDraft(e.target.value)} placeholder="輸入新分類名稱" /><Button variant="primary" disabled={!tagDraft.trim()} onClick={async () => {
+          try {
+            await apiRequest("/service-categories", accessToken, { method: "POST", body: JSON.stringify({ name: tagDraft.trim() }) });
+            setTagDraft(""); setActiveCategory(tagDraft.trim()); await load();
+          } catch (e) { setError(e instanceof ApiError ? e.message : "未能新增分類。"); }
+        }}>新增</Button></div></div>
+        <div className="tag-editor-delete"><h4>刪除項目</h4>{categories.map((category) => <label className="tag-delete-row" key={category}><span>{category}項目</span><input type="checkbox" checked={tagsToDelete.includes(category)} onChange={(e) => setTagsToDelete(e.target.checked ? [...tagsToDelete, category] : tagsToDelete.filter((item) => item !== category))} /></label>)}</div>
+        <div className="dialog-actions"><Button disabled={!tagsToDelete.length} onClick={() => setConfirmTagDelete(true)}>刪除</Button><Button onClick={() => setTagEditor(false)}>取消</Button></div>
+      </Dialog>}
+      {confirmTagDelete && <Dialog title="確認刪除" onClose={() => setConfirmTagDelete(false)}><p>是否確定真的要刪除{tagsToDelete.map((category) => `${category}項目`).join("、")}？一旦刪除，工程項目入面的工程全部都會一齊刪除掉。</p><div className="dialog-actions"><Button onClick={() => setConfirmTagDelete(false)}>取消</Button><Button variant="primary" onClick={async () => {
+        try {
+          await apiRequest("/service-categories/delete", accessToken, { method: "POST", body: JSON.stringify({ names: tagsToDelete }) });
+          if (tagsToDelete.includes(activeCategory)) setActiveCategory("全部");
+          setTagsToDelete([]); setConfirmTagDelete(false); setTagEditor(false); await load();
+        } catch (e) { setError(e instanceof ApiError ? e.message : "未能刪除分類。"); }
+      }}>刪除</Button></div></Dialog>}
       {deleting && <Dialog title="刪除工程項目" onClose={() => setDeleting(null)}><p>確定刪除 <strong>{deleting.name}</strong>？</p><div className="dialog-actions"><Button onClick={() => setDeleting(null)}>取消</Button><Button variant="danger" onClick={() => void remove()}>刪除</Button></div></Dialog>}
     </>
   );

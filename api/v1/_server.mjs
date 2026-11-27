@@ -33760,6 +33760,7 @@ __export(schema_exports, {
   productStyleSeries: () => productStyleSeries,
   receipts: () => receipts,
   roleEnum: () => roleEnum,
+  serviceCategories: () => serviceCategories,
   services: () => services,
   suppliers: () => suppliers,
   userGrants: () => userGrants,
@@ -33872,6 +33873,11 @@ var customers = pgTable("customers", {
   notes: text("notes"),
   createdBy: uuid("created_by").references(() => users.id),
   ...timestamps
+});
+var serviceCategories = pgTable("service_categories", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });
 var services = pgTable("services", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -35258,6 +35264,57 @@ servicesRoute.delete(
     return c2.json({ ok: true });
   }
 );
+var categorySchema = external_exports.object({
+  name: external_exports.string().trim().min(1).max(80)
+});
+var deleteCategoriesSchema = external_exports.object({
+  names: external_exports.array(external_exports.string().trim().min(1).max(80)).min(1).max(50)
+});
+var serviceCategoriesRoute = new Hono3();
+serviceCategoriesRoute.get("/", requireAuth, async (c2) => {
+  return c2.json(
+    await getDb().select().from(serviceCategories).orderBy(asc(serviceCategories.name))
+  );
+});
+serviceCategoriesRoute.post(
+  "/",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const parsed = categorySchema.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u5206\u985E\u540D\u7A31\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    const [created] = await getDb().insert(serviceCategories).values({ name: parsed.data.name }).onConflictDoNothing().returning();
+    if (!created) {
+      return c2.json({ error: { code: "CATEGORY_EXISTS", message: "\u6B64\u5206\u985E\u5DF2\u5B58\u5728\u3002" } }, 409);
+    }
+    return c2.json(created, 201);
+  }
+);
+serviceCategoriesRoute.post(
+  "/delete",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const parsed = deleteCategoriesSchema.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u5206\u985E\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    await getDb().transaction(async (tx) => {
+      const deleted = await tx.delete(services).where(inArray(services.category, parsed.data.names)).returning({ id: services.id });
+      await tx.delete(serviceCategories).where(inArray(serviceCategories.name, parsed.data.names));
+      await tx.insert(auditLogs).values({
+        actorId: c2.get("user").id,
+        action: "service_categories_deleted",
+        entityType: "service_category",
+        after: { names: parsed.data.names, deletedServices: deleted.length },
+        requestId: c2.get("requestId")
+      });
+    });
+    return c2.json({ ok: true });
+  }
+);
 
 // server/storage.ts
 var BUCKET = "work-order-photos";
@@ -35935,7 +35992,7 @@ authRoute.post("/refresh", async (c2) => {
 });
 
 // server/routes/invoices.ts
-var categorySchema = external_exports.enum(["self-pay", "grant-80k", "group-buy"]);
+var categorySchema2 = external_exports.enum(["self-pay", "grant-80k", "group-buy"]);
 var lineSchema = external_exports.object({
   serviceId: external_exports.string().uuid().optional(),
   name: external_exports.string().trim().min(1).max(200),
@@ -35949,7 +36006,7 @@ var createSchema3 = external_exports.object({
   date: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   salesName: external_exports.string().trim().max(120).optional(),
   supervisorName: external_exports.string().trim().max(120).optional(),
-  categories: external_exports.array(categorySchema).min(1),
+  categories: external_exports.array(categorySchema2).min(1),
   grant: external_exports.object({
     applicationNumber: external_exports.string().trim().max(120).optional(),
     approvedAmountCents: external_exports.number().int().nonnegative().optional()
@@ -38277,6 +38334,7 @@ app.route("/audit-logs", auditRoute);
 app.route("/system", systemRoute);
 app.route("/product-styles", productStylesRoute);
 app.route("/custom-work-requests", customWorkRoute);
+app.route("/service-categories", serviceCategoriesRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);
