@@ -37562,6 +37562,69 @@ auditRoute.get(
   }
 );
 
+// server/routes/system.ts
+var systemRoute = new Hono3();
+systemRoute.get(
+  "/health",
+  requireAuth,
+  requireCapability("audit.read"),
+  async (c2) => {
+    const db = getDb();
+    const [dbCheck] = await db.execute(sql`select 1 as ok`);
+    const [counts] = await db.execute(sql`
+      select
+        (select count(*) from users)::int as users,
+        (select count(*) from invoices)::int as invoices,
+        (select count(*) from customers)::int as customers,
+        (select count(*) from work_orders)::int as work_orders,
+        (select count(*) from services)::int as services,
+        (select count(*) from payments)::int as payments
+    `);
+    const [migrations] = await db.execute(
+      sql`select count(*)::int as count from drizzle.__drizzle_migrations`
+    );
+    const flags = await db.select({ key: featureFlags.key, enabled: featureFlags.enabled }).from(featureFlags).orderBy(featureFlags.key);
+    const env = getEnv();
+    let storage = {
+      bucket: "work-order-photos",
+      ok: false,
+      status: 0
+    };
+    try {
+      const res = await fetch(
+        `${env.SUPABASE_URL}/storage/v1/bucket/work-order-photos`,
+        {
+          headers: {
+            apikey: env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY ?? ""}`
+          },
+          signal: AbortSignal.timeout(8e3)
+        }
+      );
+      storage = {
+        bucket: "work-order-photos",
+        ok: res.ok,
+        status: res.status
+      };
+    } catch {
+      storage = {
+        bucket: "work-order-photos",
+        ok: false,
+        status: 0
+      };
+    }
+    return c2.json({
+      db: { ok: dbCheck.ok === 1 },
+      migrations: migrations.count,
+      counts,
+      flags,
+      storage,
+      region: process.env.VERCEL_REGION ?? "local",
+      now: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  }
+);
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -37582,6 +37645,7 @@ app.route("/invoices", paymentsRoute);
 app.route("/invoices", paymentProofsRoute);
 app.route("/cancellation-cases", cancellationsRoute);
 app.route("/audit-logs", auditRoute);
+app.route("/system", systemRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);
