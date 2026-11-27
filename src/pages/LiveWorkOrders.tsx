@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CalendarDays, Check, UserRound } from "lucide-react";
 import { useAuth } from "../auth";
 import { apiRequest, apiUpload, ApiError } from "../api/client";
-import { Badge, Button, CategoryChips, Dialog, Empty, Field, PageHead } from "../components/ui";
+import { Badge, Button, CategoryChips, Dialog, Empty, Field, PageHead, Search } from "../components/ui";
 import { EXTRA_WORK_LABELS, money } from "../domain/types";
 
 type WorkOrderRow = {
@@ -17,6 +17,7 @@ type WorkOrderRow = {
   releasedAt: string | null;
   invoiceId: string;
   invoiceNumber: string;
+  salesName: string | null;
   totalCents: number;
   validPaidCents: number;
   categories: string[];
@@ -120,16 +121,17 @@ export function LiveWorkOrders({ mode }: { mode: "handoff" | "orders" }) {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [csOwnerId, setCsOwnerId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [salesFilter, setSalesFilter] = useState("all");
+  const [csFilter, setCsFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
   async function load() {
     setLoading(true);
     try {
       const data = await apiRequest<WorkOrderRow[]>("/work-orders?limit=100", accessToken);
-      setRows(
-        data.filter((row) =>
-          mode === "handoff" ? row.status === "unassigned" : row.status !== "unassigned",
-        ),
-      );
+      setRows(data);
       setError("");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "無法讀取工程單。");
@@ -173,22 +175,44 @@ export function LiveWorkOrders({ mode }: { mode: "handoff" | "orders" }) {
     }
   }
 
+  const months = Array.from(new Set(rows.map((row) => row.releasedAt?.slice(0, 7)).filter((value): value is string => Boolean(value)))).sort().reverse();
+  const salesNames = Array.from(new Set(rows.map((row) => row.salesName).filter((value): value is string => Boolean(value)))).sort();
+  const csNames = Array.from(new Set(rows.map((row) => row.csOwnerName).filter((value): value is string => Boolean(value)))).sort();
+  const shown = rows
+    .filter((row) => monthFilter === "all" || row.releasedAt?.startsWith(monthFilter))
+    .filter((row) => salesFilter === "all" || row.salesName === salesFilter)
+    .filter((row) => csFilter === "all" || (csFilter === "unassigned" ? !row.csOwnerId : row.csOwnerName === csFilter))
+    .filter((row) => `${row.number} ${row.invoiceNumber} ${row.customerName} ${row.phone} ${row.salesName ?? ""} ${row.csOwnerName ?? ""}`.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const byDate = (b.releasedAt ?? "").localeCompare(a.releasedAt ?? "");
+      return sortOrder === "newest" ? byDate : -byDate;
+    });
+
   return (
     <>
       <PageHead title={mode === "handoff" ? "工程單" : "工程管理"} />
       <div className="list-panel">
+        <div className="submission-toolbar">
+          <Search value={search} onChange={setSearch} placeholder="搜尋工程單、客戶、電話、Sales或Invoice" />
+          <div className="submission-filters">
+            <select aria-label="工程月份" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}><option value="all">全部月份</option>{months.map((month) => <option key={month} value={month}>{month}</option>)}</select>
+            <select aria-label="Sales" value={salesFilter} onChange={(e) => setSalesFilter(e.target.value)}><option value="all">全部 Sales</option>{salesNames.map((name) => <option key={name} value={name}>{name}</option>)}</select>
+            <select aria-label="跟進同事" value={csFilter} onChange={(e) => setCsFilter(e.target.value)}><option value="all">全部跟進同事</option><option value="unassigned">未安排</option>{csNames.map((name) => <option key={name} value={name}>{name}</option>)}</select>
+            <select aria-label="排序" value={sortOrder} onChange={(e) => setSortOrder(e.target.value as "newest" | "oldest")}><option value="newest">最新至最舊</option><option value="oldest">最舊至最新</option></select>
+          </div>
+        </div>
         {loading ? <p className="muted">正在讀取工程單…</p> : error ? (
           <Empty title="未能讀取工程單" description={error} />
-        ) : rows.length === 0 ? (
+        ) : shown.length === 0 ? (
           <Empty title={mode === "handoff" ? "暫無待分配工程" : "暫無工程"} description="已收足 50% 的 Invoice 會先出現在工程單。" />
         ) : (
           <div className="table-scroll">
             <table className="invoice-list-table live-work-table">
               <thead>
-                <tr><th>工程單號</th><th>Invoice</th><th>客戶</th><th>電話</th><th>類別</th><th>跟進同事</th><th>狀態</th><th /></tr>
+                <tr><th>工程單號</th><th>Invoice</th><th>客戶</th><th>電話</th><th>Sales</th><th>類別</th><th>跟進同事</th><th>狀態</th><th /></tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {shown.map((row) => (
                   <tr
                     key={row.id}
                     className="invoice-clickable-row"
@@ -215,6 +239,7 @@ export function LiveWorkOrders({ mode }: { mode: "handoff" | "orders" }) {
                     <td>{row.invoiceNumber}</td>
                     <td><strong>{row.customerName}</strong><small>{row.district}</small></td>
                     <td>{row.phone}</td>
+                    <td>{row.salesName || "—"}</td>
                     <td><CategoryChips categories={row.categories as never} /></td>
                     <td>{row.csOwnerName || "未安排"}</td>
                     <td><Badge strong={row.status === "completed"}>{STATUS[row.status] ?? row.status}</Badge></td>

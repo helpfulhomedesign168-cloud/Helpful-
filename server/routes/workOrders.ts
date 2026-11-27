@@ -194,6 +194,7 @@ workOrdersRoute.get(
         releasedAt: workOrders.releasedAt,
         invoiceId: invoices.id,
         invoiceNumber: invoices.number,
+        salesName: invoices.salesName,
         totalCents: invoices.totalCents,
         validPaidCents: invoices.validPaidCents,
         categories: invoices.categories,
