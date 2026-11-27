@@ -150,7 +150,7 @@ export function LiveInvoices() {
                         }
                       }}
                     >
-                      <td><div className="invoice-number-cell"><strong>{invoice.number}</strong>{invoice.isAdditional && <small>後加單</small>}</div></td>
+                      <td><div className="invoice-number-cell"><strong>{invoice.number}</strong>{invoice.isAdditional && <small>後加單{invoice.parentInvoiceNumber ? ` · ${invoice.parentInvoiceNumber}` : ""}</small>}</div></td>
                       <td>{invoice.createdAt.slice(0, 10)}</td>
                       <td><strong>{invoice.customerName}</strong><small>{invoice.customerPhone}</small></td>
                       <td>{invoice.salesName || "—"}</td>

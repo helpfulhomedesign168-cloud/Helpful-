@@ -79,6 +79,7 @@ export type InvoiceSummary = {
   team?: string | null;
   isAdditional?: boolean;
   parentInvoiceId?: string | null;
+  parentInvoiceNumber?: string | null;
   totalCents: number;
   validPaidCents: number;
   salesName: string | null;
@@ -95,6 +96,7 @@ export type InvoiceDetailData = InvoiceSummary & {
   team?: string | null;
   isAdditional?: boolean;
   parentInvoiceId?: string | null;
+  parentInvoiceNumber?: string | null;
   customer: {
     id: string;
     name: string;

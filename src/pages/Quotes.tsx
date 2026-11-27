@@ -779,6 +779,10 @@ export function QuoteEditor() {
   );
   const [liveSalesName, setLiveSalesName] = useState("");
   const [liveSupervisorName, setLiveSupervisorName] = useState("");
+  const [invoiceTeam, setInvoiceTeam] = useState<"" | "A" | "B">("");
+  const [isAdditional, setIsAdditional] = useState(false);
+  const [parentInvoiceId, setParentInvoiceId] = useState("");
+  const [parentInvoices, setParentInvoices] = useState<Array<{ id: string; number: string; customerName: string }>>([]);
   const [exporting, setExporting] = useState(false);
   const [liveSaving, setLiveSaving] = useState(false);
   const [directCategories, setDirectCategories] = useState<InvoiceCategory[]>(
@@ -848,6 +852,16 @@ export function QuoteEditor() {
       )
       .catch(() => setLiveServices([]));
   }, [live, accessToken]);
+  useEffect(() => {
+    if (!live || !accessToken || !directInvoice) return;
+    apiRequest<Array<{ id: string; number: string; customerName: string }>>(
+      "/invoices?limit=100",
+      accessToken,
+    )
+      .then(setParentInvoices)
+      .catch(() => setParentInvoices([]));
+  }, [live, accessToken, directInvoice]);
+
   const services = live
     ? liveServices
     : engine.listServices(actor).filter((s) => s.published);
@@ -1072,6 +1086,9 @@ export function QuoteEditor() {
           date: invoiceDate,
           salesName,
           supervisorName,
+          team: invoiceTeam || null,
+          isAdditional,
+          parentInvoiceId: isAdditional && parentInvoiceId ? parentInvoiceId : null,
           categories: directCategories,
           grant: hasGrant
             ? {
@@ -1477,6 +1494,26 @@ export function QuoteEditor() {
                     </select>
                   )}
                 </Field>
+                <Field label="Team">
+                  <select value={invoiceTeam} onChange={(event) => setInvoiceTeam(event.target.value as "" | "A" | "B")}>
+                    <option value="">未指定</option>
+                    <option value="A">Team A</option>
+                    <option value="B">Team B</option>
+                  </select>
+                </Field>
+                <Field label="單類">
+                  <label className="checkbox-label">
+                    <input type="checkbox" checked={isAdditional} onChange={(event) => setIsAdditional(event.target.checked)} /> 後加單
+                  </label>
+                </Field>
+                {isAdditional && (
+                  <Field label="原單">
+                    <select value={parentInvoiceId} onChange={(event) => setParentInvoiceId(event.target.value)}>
+                      <option value="">未指定</option>
+                      {parentInvoices.map((parent) => <option key={parent.id} value={parent.id}>{parent.number} · {parent.customerName}</option>)}
+                    </select>
+                  </Field>
+                )}
               </div>
               {editingInvoice && (
                 <Field label="單種">

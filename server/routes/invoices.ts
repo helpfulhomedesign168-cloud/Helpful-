@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { getDb } from "../db/client";
 import {
@@ -109,6 +110,7 @@ export function buildPaymentPlan(categories: string[], totalCents: number) {
 
 async function invoiceDetail(id: string) {
   const db = getDb();
+  const parentInvoice = alias(invoices, "parent_invoice");
   const rows = await db
     .select({
       id: invoices.id,
@@ -121,6 +123,7 @@ async function invoiceDetail(id: string) {
       team: invoices.team,
       isAdditional: invoices.isAdditional,
       parentInvoiceId: invoices.parentInvoiceId,
+      parentInvoiceNumber: parentInvoice.number,
       grantApplicationNumber: invoices.grantApplicationNumber,
       grantApprovedAmountCents: invoices.grantApprovedAmountCents,
       totalCents: invoices.totalCents,
@@ -137,6 +140,7 @@ async function invoiceDetail(id: string) {
     })
     .from(invoices)
     .innerJoin(customers, eq(invoices.customerId, customers.id))
+    .leftJoin(parentInvoice, eq(invoices.parentInvoiceId, parentInvoice.id))
     .where(eq(invoices.id, id))
     .limit(1);
   if (!rows[0]) return null;
@@ -253,6 +257,7 @@ invoicesRoute.get(
   requireCapability("invoice.read"),
   async (c) => {
     const db = getDb();
+    const parentInvoice = alias(invoices, "parent_invoice");
     const q = c.req.query("q")?.trim();
     const status = c.req.query("status");
     const limit = Math.min(Number(c.req.query("limit") ?? 50) || 50, 100);
@@ -279,12 +284,14 @@ invoicesRoute.get(
         team: invoices.team,
         isAdditional: invoices.isAdditional,
         parentInvoiceId: invoices.parentInvoiceId,
+        parentInvoiceNumber: parentInvoice.number,
         createdAt: invoices.createdAt,
         customerName: customers.name,
         customerPhone: customers.phone,
       })
       .from(invoices)
       .innerJoin(customers, eq(invoices.customerId, customers.id))
+      .leftJoin(parentInvoice, eq(invoices.parentInvoiceId, parentInvoice.id))
       .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(desc(invoices.createdAt))
       .limit(limit);
@@ -331,6 +338,17 @@ invoicesRoute.post(
       .limit(1);
     const current = currentRows[0];
     if (!current) return c.json(error("NOT_FOUND", "找不到發票。"), 404);
+    if (input.parentInvoiceId) {
+      if (input.parentInvoiceId === invoiceId) {
+        return c.json(error("INVALID_PARENT", "發票不可作為自己的原單。"), 422);
+      }
+      const [parent] = await db
+        .select({ id: invoices.id })
+        .from(invoices)
+        .where(eq(invoices.id, input.parentInvoiceId))
+        .limit(1);
+      if (!parent) return c.json(error("INVALID_PARENT", "找不到原單。"), 422);
+    }
     if (current.status === "voided" || current.status === "refunded") {
       return c.json(error("INVOICE_CLOSED", "此發票已關閉，不可修改。"), 409);
     }
@@ -499,6 +517,14 @@ invoicesRoute.post(
       );
     }
     const input = parsed.data;
+    if (input.parentInvoiceId) {
+      const [parent] = await getDb()
+        .select({ id: invoices.id })
+        .from(invoices)
+        .where(eq(invoices.id, input.parentInvoiceId))
+        .limit(1);
+      if (!parent) return c.json(error("INVALID_PARENT", "找不到原單。"), 422);
+    }
     const hasGrant = input.categories.includes("grant-80k");
     if (
       !hasGrant &&
