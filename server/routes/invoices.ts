@@ -325,21 +325,26 @@ invoicesRoute.post(
     if (current.status === "voided" || current.status === "refunded") {
       return c.json(error("INVOICE_CLOSED", "此發票已關閉，不可修改。"), 409);
     }
-    const validPayment = await db
-      .select({ id: payments.id })
+    const existingPayment = await db
+      .select({ id: payments.id, status: payments.status })
       .from(payments)
-      .where(and(eq(payments.invoiceId, invoiceId), eq(payments.status, "valid")))
+      .where(
+        and(
+          eq(payments.invoiceId, invoiceId),
+          sql`${payments.status} in ('valid','pending')`,
+        ),
+      )
       .limit(1);
     const releasedOrder = await db
       .select({ id: workOrders.id })
       .from(workOrders)
       .where(eq(workOrders.invoiceId, invoiceId))
       .limit(1);
-    if (validPayment[0] || releasedOrder[0]) {
+    if (existingPayment[0] || releasedOrder[0]) {
       return c.json(
         error(
           "INVOICE_LOCKED",
-          "此發票已有有效付款或已發工程單，不可直接修改。",
+          "此發票已有有效／待核對付款或已發工程單，不可直接修改。",
         ),
         409,
       );
@@ -434,6 +439,15 @@ invoicesRoute.post(
           unit: line.unit,
           unitPriceCents: line.unitPriceCents,
           amountCents: line.amountCents,
+        })),
+      );
+      await tx
+        .delete(invoicePaymentPlan)
+        .where(eq(invoicePaymentPlan.invoiceId, invoiceId));
+      await tx.insert(invoicePaymentPlan).values(
+        buildPaymentPlan(input.categories, totalCents).map((row) => ({
+          invoiceId,
+          ...row,
         })),
       );
       await tx.insert(auditLogs).values({

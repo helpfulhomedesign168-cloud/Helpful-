@@ -41,6 +41,8 @@ export function LiveInvoices() {
   const nav = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [salesFilter, setSalesFilter] = useState("all");
   const [rows, setRows] = useState<InvoiceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -67,6 +69,15 @@ export function LiveInvoices() {
     };
   }, [accessToken, search, status]);
 
+  const salesNames = Array.from(new Set(rows.map((row) => row.salesName).filter((name): name is string => Boolean(name)))).sort();
+  const visibleRows = rows
+    .filter((row) => salesFilter === "all" || row.salesName === salesFilter)
+    .sort((a, b) => {
+      const byDate = b.createdAt.localeCompare(a.createdAt);
+      if (byDate !== 0) return sortOrder === "newest" ? byDate : -byDate;
+      return sortOrder === "newest" ? b.number.localeCompare(a.number) : a.number.localeCompare(b.number);
+    });
+
   return (
     <>
       <PageHead title="單據管理" />
@@ -81,15 +92,18 @@ export function LiveInvoices() {
               <option value="paid">已收足</option>
               <option value="released">已發工程部</option>
               <option value="completed">已完成工程</option>
+              <option value="voided">已退訂</option>
+              <option value="refunded">已退款</option>
             </select>
-            <Badge>Live API</Badge>
+            <select aria-label="排序" value={sortOrder} onChange={(e) => setSortOrder(e.target.value as "newest" | "oldest")}><option value="newest">最新至最舊</option><option value="oldest">最舊至最新</option></select>
+            <select aria-label="Invoice Sales" value={salesFilter} onChange={(e) => setSalesFilter(e.target.value)}><option value="all">全部 Sales</option>{salesNames.map((name) => <option key={name} value={name}>{name}</option>)}</select>
           </div>
         </div>
         {loading ? (
           <p className="muted">正在讀取 Supabase 發票…</p>
         ) : error ? (
           <Empty title="未能讀取發票" description={error} />
-        ) : rows.length === 0 ? (
+        ) : visibleRows.length === 0 ? (
           <Empty title="暫無 Invoice" description="API 已接通；建立發票功能會在下一步接入。" />
         ) : (
           <div className="table-scroll">
@@ -107,7 +121,7 @@ export function LiveInvoices() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((invoice) => {
+                {visibleRows.map((invoice) => {
                   const percent = invoice.totalCents
                     ? Math.round((invoice.validPaidCents / invoice.totalCents) * 100)
                     : 0;
