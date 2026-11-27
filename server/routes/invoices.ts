@@ -6,10 +6,12 @@ import {
   auditLogs,
   customers,
   invoiceLines,
+  invoicePaymentPlan,
   invoiceVersions,
   invoices,
   numberSequences,
   payments,
+  receipts,
   workOrders,
 } from "../db/schema";
 import type { AppEnv } from "../auth";
@@ -57,6 +59,51 @@ const error = (code: string, message: string) => ({
   error: { code, message },
 });
 
+type Category = "self-pay" | "grant-80k" | "group-buy";
+const PLAN_DEFINITIONS: Record<Category, Array<{ label: string; percentage: number }>> = {
+  "group-buy": [
+    { label: "第一期訂金", percentage: 50 },
+    { label: "尾數", percentage: 50 },
+  ],
+  "grant-80k": [
+    { label: "第一期訂金", percentage: 30 },
+    { label: "第二期訂金", percentage: 20 },
+    { label: "尾數", percentage: 50 },
+  ],
+  "self-pay": [
+    { label: "第一期訂金", percentage: 30 },
+    { label: "第二期訂金", percentage: 20 },
+    { label: "工程中期款", percentage: 30 },
+    { label: "尾數", percentage: 20 },
+  ],
+};
+
+export function primaryInvoiceCategory(categories: string[]): Category {
+  if (categories.includes("grant-80k")) return "grant-80k";
+  if (categories.includes("group-buy")) return "group-buy";
+  return "self-pay";
+}
+
+export function buildPaymentPlan(categories: string[], totalCents: number) {
+  const category = primaryInvoiceCategory(categories);
+  const rows = PLAN_DEFINITIONS[category];
+  let used = 0;
+  return rows.map((row, index) => {
+    const amountCents =
+      index === rows.length - 1
+        ? totalCents - used
+        : Math.round((totalCents * row.percentage) / 100);
+    used += amountCents;
+    return {
+      installment: index + 1,
+      label: row.label,
+      percentage: row.percentage,
+      amountCents,
+      cumulativeCents: used,
+    };
+  });
+}
+
 async function invoiceDetail(id: string) {
   const db = getDb();
   const rows = await db
@@ -103,6 +150,66 @@ async function invoiceDetail(id: string) {
     .select()
     .from(invoiceLines)
     .where(eq(invoiceLines.versionId, version.id));
+  const plan = await db
+    .select()
+    .from(invoicePaymentPlan)
+    .where(eq(invoicePaymentPlan.invoiceId, id))
+    .orderBy(invoicePaymentPlan.installment);
+  const invoicePayments = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.invoiceId, id))
+    .orderBy(payments.installment);
+  const invoiceReceipts = await db
+    .select({ id: receipts.id, paymentId: receipts.paymentId })
+    .from(receipts)
+    .innerJoin(payments, eq(receipts.paymentId, payments.id))
+    .where(eq(payments.invoiceId, id));
+  const validPayments = invoicePayments.filter((payment) => payment.status === "valid");
+  const pendingPayments = invoicePayments.filter((payment) => payment.status === "pending");
+  const installments = plan.map((stage, index) => {
+    const priorPaid = plan.slice(0, index).every((prior) =>
+      validPayments
+        .filter((payment) => payment.installment === prior.installment)
+        .reduce((sum, payment) => sum + payment.amountCents, 0) >= prior.amountCents,
+    );
+    const received = validPayments
+      .filter((payment) => payment.installment === stage.installment)
+      .reduce((sum, payment) => sum + payment.amountCents, 0);
+    const pending = pendingPayments
+      .filter((payment) => payment.installment === stage.installment)
+      .reduce((sum, payment) => sum + payment.amountCents, 0);
+    const paymentIds = validPayments
+      .filter((payment) => payment.installment === stage.installment)
+      .map((payment) => payment.id);
+    const receiptIds = invoiceReceipts
+      .filter((receipt) => paymentIds.includes(receipt.paymentId))
+      .map((receipt) => receipt.id);
+    const hasUnreceipted = validPayments.some(
+      (payment) =>
+        payment.installment === stage.installment &&
+        !invoiceReceipts.some((receipt) => receipt.paymentId === payment.id),
+    );
+    const status = !priorPaid
+      ? "locked"
+      : pending > 0
+        ? "under_review"
+        : hasUnreceipted
+          ? "ready_receipt"
+          : received >= stage.amountCents
+            ? "receipted"
+            : "awaiting_payment";
+    return {
+      ...stage,
+      receivedCents: received,
+      pendingCents: pending,
+      status,
+      paymentIds,
+      receiptIds,
+    };
+  });
+  const validPaidCents = validPayments.reduce((sum, payment) => sum + payment.amountCents, 0);
+  const pendingPaidCents = pendingPayments.reduce((sum, payment) => sum + payment.amountCents, 0);
   return {
     ...rows[0],
     version: {
@@ -121,6 +228,14 @@ async function invoiceDetail(id: string) {
       unitPriceCents: line.unitPriceCents,
       amountCents: line.amountCents,
     })),
+    paymentStatus: {
+      validPaidCents,
+      pendingPaidCents,
+      percentPaid: rows[0].totalCents > 0 ? Number(((validPaidCents / rows[0].totalCents) * 100).toFixed(2)) : 0,
+      csReleaseDueCents: Math.round(rows[0].totalCents * 0.5),
+      completed: validPaidCents >= rows[0].totalCents,
+      installments,
+    },
   };
 }
 
@@ -455,6 +570,13 @@ invoicesRoute.post(
         })
         .returning({ id: invoices.id });
       invoiceId = createdInvoice[0].id;
+
+      await tx.insert(invoicePaymentPlan).values(
+        buildPaymentPlan(input.categories, totalCents).map((row) => ({
+          invoiceId,
+          ...row,
+        })),
+      );
 
       const version = await tx
         .insert(invoiceVersions)

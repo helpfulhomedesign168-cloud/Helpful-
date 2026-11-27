@@ -107,6 +107,25 @@ export type InvoiceDetailData = InvoiceSummary & {
     amountCents: number;
   }[];
   version: { id: string; versionNo: number; reason: string | null; createdAt: string };
+  paymentStatus?: {
+    validPaidCents: number;
+    pendingPaidCents: number;
+    percentPaid: number;
+    csReleaseDueCents: number;
+    completed: boolean;
+    installments: Array<{
+      installment: number;
+      label: string;
+      percentage: number;
+      amountCents: number;
+      cumulativeCents: number;
+      receivedCents: number;
+      pendingCents: number;
+      status: "locked" | "awaiting_payment" | "under_review" | "ready_receipt" | "receipted";
+      paymentIds: string[];
+      receiptIds: string[];
+    }>;
+  };
 };
 
 export type ApiPayment = {

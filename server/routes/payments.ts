@@ -5,6 +5,7 @@ import { getDb } from "../db/client";
 import {
   auditLogs,
   files,
+  invoicePaymentPlan,
   invoiceVersions,
   invoices,
   municipalOrders,
@@ -237,6 +238,46 @@ paymentsRoute.post(
         .where(eq(payments.idempotencyKey, idempotencyKey))
         .limit(1);
       if (existing[0]) return c.json(existing[0], 200);
+    }
+    const plan = await getDb()
+      .select()
+      .from(invoicePaymentPlan)
+      .where(eq(invoicePaymentPlan.invoiceId, invoice.id))
+      .orderBy(invoicePaymentPlan.installment);
+    if (plan.length) {
+      const stage = plan.find((row) => row.installment === parsed.data.installment);
+      if (!stage) {
+        return c.json(error("INVALID_INSTALLMENT", "此發票沒有這個期數。"), 422);
+      }
+      const prior = plan.filter((row) => row.installment < stage.installment);
+      for (const row of prior) {
+        const paid = await getDb()
+          .select({ total: sql<number>`coalesce(sum(${payments.amountCents}), 0)::int` })
+          .from(payments)
+          .where(
+            and(
+              eq(payments.invoiceId, invoice.id),
+              eq(payments.installment, row.installment),
+              eq(payments.status, "valid"),
+            ),
+          );
+        if (Number(paid[0]?.total ?? 0) < row.amountCents) {
+          return c.json(error("PRIOR_INSTALLMENT_UNPAID", "請先收足上一期款項。"), 422);
+        }
+      }
+      const stagePaid = await getDb()
+        .select({ total: sql<number>`coalesce(sum(${payments.amountCents}), 0)::int` })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.invoiceId, invoice.id),
+            eq(payments.installment, stage.installment),
+            sql`${payments.status} in ('valid','pending')`,
+          ),
+        );
+      if (Number(stagePaid[0]?.total ?? 0) + parsed.data.amountCents > stage.amountCents) {
+        return c.json(error("INSTALLMENT_EXCEEDS", "付款金額超過本期應收金額。"), 422);
+      }
     }
     const occupied = await getDb()
       .select({

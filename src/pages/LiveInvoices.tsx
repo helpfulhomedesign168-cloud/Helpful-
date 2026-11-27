@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, PenLine } from "lucide-react";
+import { ArrowLeft, PenLine, Plus } from "lucide-react";
 import { useAuth } from "../auth";
 import { apiRequest, apiUpload, ApiError, type ApiPayment, type InvoiceDetailData, type InvoiceSummary } from "../api/client";
 import {
@@ -181,6 +181,7 @@ export function LiveInvoiceDetail() {
   const [payments, setPayments] = useState<ApiPayment[]>([]);
   const [error, setError] = useState("");
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentStage, setPaymentStage] = useState(1);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("fps");
   const [paymentCustody, setPaymentCustody] = useState<"company" | "sales">("company");
@@ -238,7 +239,7 @@ export function LiveInvoiceDetail() {
         method: "POST",
         headers: { "Idempotency-Key": crypto.randomUUID() },
         body: JSON.stringify({
-          installment: payments.length + 1,
+          installment: paymentStage,
           amountCents: Math.round(Number(paymentAmount) * 100),
           method: paymentMethod,
           custody: paymentCustody,
@@ -323,6 +324,7 @@ export function LiveInvoiceDetail() {
           <div><span>已核有效收款</span><strong>{money(invoice.validPaidCents / 100)} · {percent}%</strong></div>
           <div><span>客戶</span><strong>{invoice.customer.name}</strong><small>{invoice.customer.phone}</small></div>
         </div>
+        {invoice.paymentStatus && !invoice.paymentStatus.completed && <p className="release-gate-note">尚未收足：累計有效收款需達 {money(invoice.paymentStatus.csReleaseDueCents / 100)}（成交額50%）。核對付款後會自動建立工程單及通知CS。</p>}
         <div className="form-grid two">
           <div><span className="muted">發票日期</span><p>{invoice.createdAt.slice(0, 10)}</p></div>
           <div><span className="muted">Sales</span><p>{invoice.salesName || "—"}</p></div>
@@ -344,65 +346,25 @@ export function LiveInvoiceDetail() {
             </tbody>
           </table>
         </div>
-        <Section
-          title="付款記錄"
-          action={
-            (user?.role === "invoice_clerk" || user?.role === "admin") &&
-            invoice.validPaidCents < invoice.totalCents ? (
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setPaymentAmount(
-                    String((invoice.totalCents - invoice.validPaidCents) / 100),
-                  );
-                  setPaymentDate(todayLocal());
-                  setProofFileId("");
-                  setProofName("");
-                  setPaymentNotice("");
-                  setPaymentOpen(true);
-                }}
-              >
-                登記付款
-              </Button>
-            ) : undefined
-          }
-        >
+        <Section title="收款狀況及收據" action={<Badge strong={invoice.paymentStatus?.completed}>{invoice.paymentStatus?.completed ? "已收清" : "收款進行中"}</Badge>}>
+          <p className="muted">每筆付款先核對為有效款，之後可獨立發出收據；付款證明只在開單／會計工作區可見。</p>
           {paymentNotice && <p className="muted">{paymentNotice}</p>}
-          {payments.length === 0 ? <p className="muted">尚未登記付款。</p> : (
-            <div className="payment-ledger">
-              {payments.map((payment) => (
-                <div className="payment-row" key={payment.id}>
-                  <div>
-                    <strong>{money(payment.amountCents / 100)}</strong>
-                    <small>第{payment.installment}期 · {payment.paidAt} · {METHOD_NAMES[payment.method as keyof typeof METHOD_NAMES] || payment.method} · {payment.reference || "未填參考"}</small>
-                  </div>
-                  <div className="table-actions">
-                    <Badge strong={payment.status === "valid"}>{payment.status === "valid" ? "已核" : payment.status === "pending" ? "待核對" : "已退回"}</Badge>
-                    {payment.status === "valid" && !receipts[payment.id] && (
-                      <Button variant="ghost" onClick={() => issueReceipt(payment.id)}>
-                        出收據
-                      </Button>
-                    )}
-                    {payment.proofUrl && (
-                      <a className="text-button" href={payment.proofUrl} target="_blank" rel="noreferrer">
-                        付款證明
-                      </a>
-                    )}
-                    {receipts[payment.id] && (
-                      <Button
-                        variant="ghost"
-                        onClick={() =>
-                          nav(`/documents/receipt/${receipts[payment.id].id}`)
-                        }
-                      >
-                        {receipts[payment.id].number} · 查看收據
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="installment-list">
+            {(invoice.paymentStatus?.installments ?? []).map((stage) => {
+              const stagePayments = payments.filter((payment) => payment.installment === stage.installment);
+              const remaining = Math.max(0, stage.amountCents - stage.receivedCents - stage.pendingCents);
+              const canAdd = ["invoice_clerk", "admin"].includes(user?.role ?? "") && stage.status !== "locked" && remaining > 0;
+              const statusLabel = stage.status === "locked" ? "待前一期收足" : stage.status === "under_review" ? "待核對" : stage.status === "ready_receipt" ? "可發收據" : stage.status === "receipted" ? "已收妥" : "待收款";
+              return (
+                <article className="installment-card" key={stage.installment}>
+                  <header><div><span>第{stage.installment}期 · {stage.percentage}%</span><h3>{stage.label}</h3></div><Badge strong={stage.status === "receipted" || stage.status === "ready_receipt"}>{statusLabel}</Badge></header>
+                  <div className="installment-amounts"><div><span>本期應收</span><strong>{money(stage.amountCents / 100)}</strong></div><div><span>已核</span><strong>{money(stage.receivedCents / 100)}</strong></div><div><span>累計至本期</span><strong>{money(stage.cumulativeCents / 100)}</strong></div></div>
+                  {stagePayments.length ? <div className="payment-ledger">{stagePayments.map((payment) => <div className="payment-row" key={payment.id}><div><strong>{money(payment.amountCents / 100)}</strong><small>{payment.paidAt} · {METHOD_NAMES[payment.method as keyof typeof METHOD_NAMES] || payment.method} · {payment.reference || "未填參考"}</small></div><div className="table-actions"><Badge strong={payment.status === "valid"}>{payment.status === "valid" ? "已核" : payment.status === "pending" ? "待核對" : "已退回"}</Badge>{payment.proofUrl && <a className="text-button" href={payment.proofUrl} target="_blank" rel="noreferrer">付款證明</a>}{payment.status === "valid" && !receipts[payment.id] && <Button variant="ghost" onClick={() => issueReceipt(payment.id)}>出收據</Button>}{receipts[payment.id] && <Button variant="ghost" onClick={() => nav(`/documents/receipt/${receipts[payment.id].id}`)}>{receipts[payment.id].number} · 查看收據</Button>}</div></div>)}</div> : <p className="muted">尚未登記此期款。</p>}
+                  {canAdd && <Button className="installment-add" variant="primary" onClick={() => { setPaymentStage(stage.installment); setPaymentAmount(String(remaining / 100)); setPaymentDate(todayLocal()); setProofFileId(""); setProofName(""); setPaymentNotice(""); setPaymentOpen(true); }}><Plus size={20} /> 登記第{stage.installment}期款</Button>}
+                </article>
+              );
+            })}
+          </div>
         </Section>
         {refundOpen && (
         <Dialog title="建立退款個案" onClose={() => setRefundOpen(false)}>
@@ -450,7 +412,7 @@ export function LiveInvoiceDetail() {
         </Dialog>
       )}
       {paymentOpen && (
-          <Dialog title="登記付款" onClose={() => setPaymentOpen(false)}>
+          <Dialog title={`登記第${paymentStage}期款`} onClose={() => setPaymentOpen(false)}>
             <form onSubmit={(event) => registerPayment(event, true)}>
               <div className="form-grid two">
                 <Field label="付款金額" required>

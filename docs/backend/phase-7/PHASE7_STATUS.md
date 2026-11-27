@@ -8,6 +8,7 @@
 - Admin system health dashboard
 - Admin feature-flag settings UI
 - Customer detail with Invoice history
+- Invoice payment plan parity: group-buy 50/50, grant 30/20/50, self-pay 30/20/30/20; installment lock/status; payment gates
 - Finance prototype parity: pending/all tabs, proof review, validate/reject with notes, company/sales custody
 - Hover/focus prefetch for Invoice and work order detail
 - Live Invoice Excel export

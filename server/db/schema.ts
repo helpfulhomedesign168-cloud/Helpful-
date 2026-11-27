@@ -182,6 +182,22 @@ export const invoiceVersions = pgTable(
   ],
 );
 
+export const invoicePaymentPlan = pgTable(
+  "invoice_payment_plan",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    installment: integer("installment").notNull(),
+    label: text("label").notNull(),
+    percentage: integer("percentage").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    cumulativeCents: integer("cumulative_cents").notNull(),
+  },
+  (table) => [uniqueIndex("invoice_payment_plan_invoice_installment").on(table.invoiceId, table.installment)],
+);
+
 export const invoiceLines = pgTable("invoice_lines", {
   id: uuid("id").defaultRandom().primaryKey(),
   versionId: uuid("version_id")
