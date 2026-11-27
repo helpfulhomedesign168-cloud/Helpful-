@@ -23,7 +23,7 @@ Rule: backend entities, fields, state transitions and live UI must match the pro
 | Invoice.paymentPlan | `invoice_payment_plan` | ✅ 50/50, 30/20/50, 30/20/30/20 + gates |
 | Payment | `payments` | ✅ custody + cleared + validation gate |
 | Receipt | `receipts` | ✅ |
-| WorkOrder | `work_orders` + assignments/deductions/extra works | 🟡 assignment line/time/material + dateChanges/extra fields added; UI partial |
+| WorkOrder | `work_orders` + assignments/deductions/extra works | 🟡 assignment + extra resource/supplier/category UI added; date history/handoff parity pending |
 | ProductStyleSeries | `product_style_series` + images | ✅ |
 | MunicipalOrder | `municipal_orders` + lines | 🟡 editor parity pending |
 | CancellationCase | `cancellation_cases` | 🟡 full credit-note/transfer/commission flow missing |

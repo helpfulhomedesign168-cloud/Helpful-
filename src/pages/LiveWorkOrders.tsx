@@ -54,6 +54,9 @@ type ExtraWork = {
   id: string;
   kind: string;
   name: string;
+  resourceId: string | null;
+  supplierId: string | null;
+  category: string | null;
   startDate: string | null;
   endDate: string | null;
   time: string | null;
@@ -292,6 +295,22 @@ export function LiveWorkOrderDetail() {
   const [extraPrice, setExtraPrice] = useState("");
   const [extraNotes, setExtraNotes] = useState("");
   const [extraSaving, setExtraSaving] = useState(false);
+  const [extraResourceId, setExtraResourceId] = useState("");
+  const [extraSupplierId, setExtraSupplierId] = useState("");
+  const [extraCategory, setExtraCategory] = useState("");
+  const [resourceOptions, setResourceOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [supplierOptions, setSupplierOptions] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    Promise.all([
+      apiRequest<Array<{ id: string; name: string }>>("/contractors", accessToken).catch(() => []),
+      apiRequest<Array<{ id: string; name: string }>>("/suppliers", accessToken).catch(() => []),
+    ]).then(([resources, suppliers]) => {
+      setResourceOptions(resources.filter((item) => item.name));
+      setSupplierOptions(suppliers);
+    });
+  }, [accessToken]);
 
   async function loadExtraWorks() {
     if (!accessToken) return;
@@ -498,6 +517,9 @@ export function LiveWorkOrderDetail() {
         body: JSON.stringify({
           kind: extraKind,
           name: extraName.trim(),
+          resourceId: extraResourceId || undefined,
+          supplierId: extraSupplierId || undefined,
+          category: extraCategory.trim() || undefined,
           startDate: extraStart || undefined,
           endDate: extraEnd || undefined,
           priceCents: Math.round((Number(extraPrice) || 0) * 100),
@@ -508,6 +530,9 @@ export function LiveWorkOrderDetail() {
       setExtraStart("");
       setExtraEnd("");
       setExtraPrice("");
+      setExtraResourceId("");
+      setExtraSupplierId("");
+      setExtraCategory("");
       setExtraNotes("");
       await loadExtraWorks();
     } catch (e) {
@@ -695,7 +720,7 @@ export function LiveWorkOrderDetail() {
                 {extraWorks.map((work) => (
                   <tr key={work.id}>
                     <td>{EXTRA_WORK_LABELS[work.kind as keyof typeof EXTRA_WORK_LABELS] || work.kind}</td>
-                    <td><strong>{work.name}</strong><small>{work.notes}</small></td>
+                    <td><strong>{work.name}</strong><small>{work.notes}{work.resourceId ? ` · ${resourceOptions.find((item) => item.id === work.resourceId)?.name ?? "師傅"}` : ""}{work.supplierId ? ` · ${supplierOptions.find((item) => item.id === work.supplierId)?.name ?? "供應商"}` : ""}{work.category ? ` · ${work.category}` : ""}</small></td>
                     <td>{work.startDate || "—"}{work.endDate ? ` → ${work.endDate}` : ""}{work.time ? ` · ${work.time}` : ""}</td>
                     <td>{money(work.priceCents / 100)}</td>
                     <td><button type="button" className="icon-button" aria-label={`移除${work.name}`} onClick={() => void removeExtraWork(work.id)}>×</button></td>
@@ -714,6 +739,9 @@ export function LiveWorkOrderDetail() {
                 </select>
               </Field>
               <Field label="項目名稱" required><input value={extraName} onChange={(e) => setExtraName(e.target.value)} required /></Field>
+              <Field label="師傅／資源"><select value={extraResourceId} onChange={(e) => setExtraResourceId(e.target.value)}><option value="">未指定</option>{resourceOptions.map((resource) => <option key={resource.id} value={resource.id}>{resource.name}</option>)}</select></Field>
+              <Field label="供應商"><select value={extraSupplierId} onChange={(e) => setExtraSupplierId(e.target.value)}><option value="">未指定</option>{supplierOptions.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></Field>
+              <Field label="造貨分類"><input value={extraCategory} onChange={(e) => setExtraCategory(e.target.value)} placeholder="例如：木門" /></Field>
               <Field label="金額"><input type="number" min="0" step="0.01" value={extraPrice} onChange={(e) => setExtraPrice(e.target.value)} /></Field>
               <Field label="開始日"><input type="date" value={extraStart} onChange={(e) => setExtraStart(e.target.value)} /></Field>
               <Field label="完成日"><input type="date" value={extraEnd} onChange={(e) => setExtraEnd(e.target.value)} /></Field>
