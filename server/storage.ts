@@ -65,3 +65,57 @@ export async function deleteWorkOrderPhoto(path: string) {
     throw new Error(`Storage delete failed (${res.status})`);
   }
 }
+
+
+const PAYMENT_BUCKET = "payment-proofs";
+
+export async function uploadPaymentProof(
+  path: string,
+  bytes: ArrayBuffer,
+  mime: string,
+) {
+  const { base, key } = storageConfig();
+  const res = await fetch(`${base}/object/${PAYMENT_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": mime,
+      "x-upsert": "false",
+    },
+    body: bytes,
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+
+export async function signedPaymentProof(path: string) {
+  const { base, key } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${PAYMENT_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = (await res.json()) as { signedURL?: string };
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}
+
+
+export async function deletePaymentProof(path: string) {
+  const { base, key } = storageConfig();
+  const res = await fetch(`${base}/object/${PAYMENT_BUCKET}/${path}`, {
+    method: "DELETE",
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Storage delete failed (${res.status})`);
+  }
+}

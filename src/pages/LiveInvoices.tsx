@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, PenLine } from "lucide-react";
 import { useAuth } from "../auth";
-import { apiRequest, ApiError, type ApiPayment, type InvoiceDetailData, type InvoiceSummary } from "../api/client";
+import { apiRequest, apiUpload, ApiError, type ApiPayment, type InvoiceDetailData, type InvoiceSummary } from "../api/client";
 import {
   Badge,
   Button,
@@ -178,6 +178,9 @@ export function LiveInvoiceDetail() {
   const [paymentMethod, setPaymentMethod] = useState("fps");
   const [paymentDate, setPaymentDate] = useState(todayLocal);
   const [paymentSaving, setPaymentSaving] = useState(false);
+  const [proofFileId, setProofFileId] = useState("");
+  const [proofName, setProofName] = useState("");
+  const [proofUploading, setProofUploading] = useState(false);
   const [paymentNotice, setPaymentNotice] = useState("");
   const [receipts, setReceipts] = useState<Record<string, { id: string; number: string }>>({});
 
@@ -227,10 +230,13 @@ export function LiveInvoiceDetail() {
           method: paymentMethod,
           paidAt: paymentDate,
           confirm,
+          proofFileId: proofFileId || undefined,
         }),
       });
       setPaymentOpen(false);
       setPaymentAmount("");
+      setProofFileId("");
+      setProofName("");
       await reload();
       setPaymentNotice(
         confirm
@@ -317,6 +323,8 @@ export function LiveInvoiceDetail() {
                     String((invoice.totalCents - invoice.validPaidCents) / 100),
                   );
                   setPaymentDate(todayLocal());
+                  setProofFileId("");
+                  setProofName("");
                   setPaymentNotice("");
                   setPaymentOpen(true);
                 }}
@@ -341,6 +349,11 @@ export function LiveInvoiceDetail() {
                       <Button variant="ghost" onClick={() => issueReceipt(payment.id)}>
                         出收據
                       </Button>
+                    )}
+                    {payment.proofUrl && (
+                      <a className="text-button" href={payment.proofUrl} target="_blank" rel="noreferrer">
+                        付款證明
+                      </a>
                     )}
                     {receipts[payment.id] && (
                       <Button
@@ -389,6 +402,35 @@ export function LiveInvoiceDetail() {
                   </select>
                 </Field>
               </div>
+              <Field label="付款證明">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  disabled={proofUploading}
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file || !accessToken) return;
+                    setProofUploading(true);
+                    try {
+                      const data = new FormData();
+                      data.append("file", file);
+                      const uploaded = await apiUpload<{ id: string; filename: string }>(
+                        `/invoices/${id}/proofs`,
+                        accessToken,
+                        data,
+                      );
+                      setProofFileId(uploaded.id);
+                      setProofName(uploaded.filename);
+                    } catch (e) {
+                      setPaymentNotice(e instanceof ApiError ? e.message : "付款證明上載失敗。");
+                    } finally {
+                      setProofUploading(false);
+                      event.target.value = "";
+                    }
+                  }}
+                />
+                {proofUploading ? <small>上載中…</small> : proofName ? <small>已上載：{proofName}</small> : null}
+              </Field>
               <div className="dialog-actions">
                 <Button type="button" onClick={() => setPaymentOpen(false)}>取消</Button>
                 <Button

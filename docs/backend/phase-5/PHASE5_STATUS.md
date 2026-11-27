@@ -78,6 +78,10 @@
   - `POST /api/v1/users` creates Supabase Auth + public user
   - `/users` live list / create / activate-deactivate
   - production role labels
+- Live payment proof:
+  - multipart upload to private `payment-proofs` bucket
+  - signed proof URL in payment records
+  - proof attached to payment
 - Live finance pending validation:
   - `GET /api/v1/payments/pending`
   - `/finance` live list

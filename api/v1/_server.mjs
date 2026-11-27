@@ -35823,6 +35823,109 @@ invoicesRoute.post(
   }
 );
 
+// server/storage.ts
+var BUCKET = "work-order-photos";
+function storageConfig() {
+  const env = getEnv();
+  const key2 = getOptionalEnv().serviceRoleKey;
+  if (!key2) throw new Error("STORAGE_NOT_CONFIGURED");
+  return {
+    base: `${env.SUPABASE_URL}/storage/v1`,
+    key: key2,
+    bucket: BUCKET
+  };
+}
+async function uploadWorkOrderPhoto(path, bytes2, mime) {
+  const { base, key: key2, bucket } = storageConfig();
+  const res = await fetch(`${base}/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": mime,
+      "x-upsert": "false"
+    },
+    body: bytes2,
+    signal: AbortSignal.timeout(3e4)
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+async function signedWorkOrderPhoto(path) {
+  const { base, key: key2, bucket } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${bucket}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = await res.json();
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}
+async function deleteWorkOrderPhoto(path) {
+  const { base, key: key2, bucket } = storageConfig();
+  const res = await fetch(`${base}/object/${bucket}/${path}`, {
+    method: "DELETE",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`
+    },
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Storage delete failed (${res.status})`);
+  }
+}
+var PAYMENT_BUCKET = "payment-proofs";
+async function uploadPaymentProof(path, bytes2, mime) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${PAYMENT_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": mime,
+      "x-upsert": "false"
+    },
+    body: bytes2,
+    signal: AbortSignal.timeout(3e4)
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+async function signedPaymentProof(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${PAYMENT_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = await res.json();
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}
+async function deletePaymentProof(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${PAYMENT_BUCKET}/${path}`, {
+    method: "DELETE",
+    headers: { apikey: key2, Authorization: `Bearer ${key2}` },
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Storage delete failed (${res.status})`);
+  }
+}
+
 // server/routes/payments.ts
 var paymentSchema = external_exports.object({
   installment: external_exports.number().int().min(1).max(20),
@@ -35926,8 +36029,16 @@ paymentsRoute.get(
   requireAuth,
   requireCapability("invoice.read"),
   async (c2) => {
-    const rows = await getDb().select().from(payments).where(eq(payments.invoiceId, c2.req.param("invoiceId"))).orderBy(desc(payments.createdAt));
-    return c2.json(rows);
+    const rows = await getDb().select({ payment: payments, proof: files }).from(payments).leftJoin(files, eq(payments.proofFileId, files.id)).where(eq(payments.invoiceId, c2.req.param("invoiceId"))).orderBy(desc(payments.createdAt));
+    return c2.json(
+      await Promise.all(
+        rows.map(async ({ payment, proof }) => ({
+          ...payment,
+          proofFilename: proof?.filename ?? null,
+          proofUrl: proof ? await signedPaymentProof(proof.storageKey).catch(() => null) : null
+        }))
+      )
+    );
   }
 );
 paymentsRoute.post(
@@ -36751,65 +36862,6 @@ financeRoute.get(
   }
 );
 
-// server/storage.ts
-var BUCKET = "work-order-photos";
-function storageConfig() {
-  const env = getEnv();
-  const key2 = getOptionalEnv().serviceRoleKey;
-  if (!key2) throw new Error("STORAGE_NOT_CONFIGURED");
-  return {
-    base: `${env.SUPABASE_URL}/storage/v1`,
-    key: key2,
-    bucket: BUCKET
-  };
-}
-async function uploadWorkOrderPhoto(path, bytes2, mime) {
-  const { base, key: key2, bucket } = storageConfig();
-  const res = await fetch(`${base}/object/${bucket}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`,
-      "Content-Type": mime,
-      "x-upsert": "false"
-    },
-    body: bytes2,
-    signal: AbortSignal.timeout(3e4)
-  });
-  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
-}
-async function signedWorkOrderPhoto(path) {
-  const { base, key: key2, bucket } = storageConfig();
-  const res = await fetch(`${base}/object/sign/${bucket}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ expiresIn: 3600 }),
-    signal: AbortSignal.timeout(15e3)
-  });
-  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
-  const body = await res.json();
-  if (!body.signedURL) throw new Error("Storage sign returned no URL");
-  return `${base}${body.signedURL}`;
-}
-async function deleteWorkOrderPhoto(path) {
-  const { base, key: key2, bucket } = storageConfig();
-  const res = await fetch(`${base}/object/${bucket}/${path}`, {
-    method: "DELETE",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`
-    },
-    signal: AbortSignal.timeout(15e3)
-  });
-  if (!res.ok && res.status !== 404) {
-    throw new Error(`Storage delete failed (${res.status})`);
-  }
-}
-
 // server/routes/photos.ts
 var error66 = (code, message2) => ({
   error: { code, message: message2 }
@@ -37253,6 +37305,60 @@ contractorsRoute.patch(
   }
 );
 
+// server/routes/paymentProofs.ts
+var paymentProofsRoute = new Hono3();
+paymentProofsRoute.post(
+  "/:invoiceId/proofs",
+  requireAuth,
+  requireCapability("payment.register"),
+  async (c2) => {
+    const [invoice] = await getDb().select({ id: invoices.id }).from(invoices).where(eq(invoices.id, c2.req.param("invoiceId"))).limit(1);
+    if (!invoice) {
+      return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u767C\u7968\u3002" } }, 404);
+    }
+    const body = await c2.req.parseBody();
+    const file2 = body.file;
+    if (!(file2 instanceof File)) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u8ACB\u9078\u64C7\u4ED8\u6B3E\u8B49\u660E\u3002" } }, 400);
+    }
+    if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(file2.type)) {
+      return c2.json({ error: { code: "UNSUPPORTED_FILE", message: "\u53EA\u652F\u63F4 JPG\uFF0FPNG\uFF0FWebP\uFF0FPDF\u3002" } }, 415);
+    }
+    if (file2.size > 10 * 1024 * 1024) {
+      return c2.json({ error: { code: "FILE_TOO_LARGE", message: "\u4ED8\u6B3E\u8B49\u660E\u4E0A\u9650 10MB\u3002" } }, 413);
+    }
+    const safeName = file2.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
+    const storageKey = `invoices/${invoice.id}/${crypto.randomUUID()}-${safeName}`;
+    await uploadPaymentProof(storageKey, await file2.arrayBuffer(), file2.type);
+    let inserted;
+    try {
+      [inserted] = await getDb().insert(files).values({
+        ownerType: "invoice",
+        ownerId: invoice.id,
+        storageKey,
+        filename: file2.name.slice(0, 200),
+        mime: file2.type,
+        sizeBytes: file2.size,
+        createdBy: c2.get("user").id
+      }).returning();
+    } catch (error67) {
+      await deletePaymentProof(storageKey).catch(() => {
+      });
+      throw error67;
+    }
+    return c2.json(
+      {
+        id: inserted.id,
+        filename: inserted.filename,
+        mime: inserted.mime,
+        sizeBytes: inserted.sizeBytes,
+        url: await signedPaymentProof(storageKey)
+      },
+      201
+    );
+  }
+);
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -37270,6 +37376,7 @@ app.route("/users", usersRoute);
 app.route("/feature-flags", featureFlagsRoute);
 app.route("/invoices", invoicesRoute);
 app.route("/invoices", paymentsRoute);
+app.route("/invoices", paymentProofsRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);

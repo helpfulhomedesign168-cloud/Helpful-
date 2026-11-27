@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb } from "../db/client";
 import {
   auditLogs,
+  files,
   invoiceVersions,
   invoices,
   municipalOrders,
@@ -17,6 +18,7 @@ import {
 import type { AppEnv } from "../auth";
 import { requireAuth } from "../auth";
 import { requireCapability } from "../guards";
+import { signedPaymentProof } from "../storage";
 
 const paymentSchema = z.object({
   installment: z.number().int().min(1).max(20),
@@ -181,11 +183,22 @@ paymentsRoute.get(
   requireCapability("invoice.read"),
   async (c) => {
     const rows = await getDb()
-      .select()
+      .select({ payment: payments, proof: files })
       .from(payments)
+      .leftJoin(files, eq(payments.proofFileId, files.id))
       .where(eq(payments.invoiceId, c.req.param("invoiceId")))
       .orderBy(desc(payments.createdAt));
-    return c.json(rows);
+    return c.json(
+      await Promise.all(
+        rows.map(async ({ payment, proof }) => ({
+          ...payment,
+          proofFilename: proof?.filename ?? null,
+          proofUrl: proof
+            ? await signedPaymentProof(proof.storageKey).catch(() => null)
+            : null,
+        })),
+      ),
+    );
   },
 );
 

@@ -83,6 +83,8 @@ export type ApiPayment = {
   paidAt: string;
   reference: string | null;
   notes: string | null;
+  proofFilename?: string | null;
+  proofUrl?: string | null;
 };
 
 export async function apiUpload<T>(
