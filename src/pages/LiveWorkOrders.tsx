@@ -671,6 +671,14 @@ export function LiveWorkOrderDetail() {
             {photoSaving ? "上載中…" : "上載工程相片（JPG／PNG／WebP，最多 4MB）"}
           </label>
         )}
+        <h2 className="section-title">工程項目成本</h2>
+        <div className="invoice-summary-grid">
+          <div><span>未安排項目</span><strong>{order.lines.filter((line) => !assignments.some((assignment) => assignment.lineIds?.includes(line.id))).length} / {order.lines.length}</strong></div>
+          <div><span>施工成本</span><strong>{money(assignments.reduce((sum, assignment) => sum + assignment.feeCents - assignment.materialDeductionAmountCents, 0) / 100)}</strong></div>
+          <div><span>額外工程</span><strong>{money(extraWorks.reduce((sum, work) => sum + work.priceCents, 0) / 100)}</strong></div>
+          <div><span>總成本</span><strong>{money((assignments.reduce((sum, assignment) => sum + assignment.feeCents - assignment.materialDeductionAmountCents, 0) + extraWorks.reduce((sum, work) => sum + work.priceCents, 0)) / 100)}</strong></div>
+        </div>
+        <div className="table-scroll"><table className="invoice-list-table live-work-table"><thead><tr><th>工程項目</th><th>施工人員</th><th>施工日期</th><th className="numeric">工程金額</th><th className="numeric">施工成本</th></tr></thead><tbody>{order.lines.map((line) => { const assignment = assignments.find((item) => item.lineIds?.includes(line.id)); return <tr key={line.id}><td><strong>{line.name}</strong><small>{line.position || ""}</small></td><td>{assignment ? assignment.workerName : <span className="muted">未安排</span>}</td><td>{assignment ? `${assignment.startDate || "—"}${assignment.endDate ? ` → ${assignment.endDate}` : ""}${assignment.time ? ` · ${assignment.time}` : ""}` : "—"}</td><td className="numeric">{money(line.amountCents / 100)}</td><td className="numeric">{assignment ? money((assignment.feeCents - assignment.materialDeductionAmountCents) / 100) : "—"}</td></tr>; })}</tbody></table></div>
         {order.dateChanges?.length ? <><h2 className="section-title">改期紀錄</h2><div className="table-scroll"><table className="invoice-list-table live-work-table"><thead><tr><th>舊日期</th><th>新日期</th><th>原因</th><th>時間</th></tr></thead><tbody>{order.dateChanges.map((change, index) => <tr key={index}><td>{change.start || "—"} → {change.end || "—"}</td><td>{change.newStart || change.start || "—"} → {change.newEnd || change.end || "—"}</td><td>{change.reason || "—"}</td><td>{change.at.slice(0, 16).replace("T", " ")}</td></tr>)}</tbody></table></div></> : null}
         <h2 className="section-title">施工人員及成本</h2>
         {assignments.length === 0 ? <p className="muted">尚未安排施工人員。</p> : (
