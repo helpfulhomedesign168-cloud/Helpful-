@@ -30,6 +30,7 @@ type Staff = { id: string; name: string; role: string };
 
 type Assignment = {
   id: string;
+  contractorId: string | null;
   workerName: string;
   trade: string | null;
   lineIds: string[];
@@ -298,6 +299,8 @@ export function LiveWorkOrderDetail() {
   const [dateReason, setDateReason] = useState("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [workerName, setWorkerName] = useState("");
+  const [assignmentContractorId, setAssignmentContractorId] = useState("");
+  const [resourceOptions, setResourceOptions] = useState<Array<{ id: string; name: string; specialty: string | null; feeMode: string | null; feeAmount: number }>>([]);
   const [trade, setTrade] = useState("");
   const [assignmentStart, setAssignmentStart] = useState("");
   const [assignmentEnd, setAssignmentEnd] = useState("");
@@ -325,13 +328,12 @@ export function LiveWorkOrderDetail() {
   const [extraResourceId, setExtraResourceId] = useState("");
   const [extraSupplierId, setExtraSupplierId] = useState("");
   const [extraCategory, setExtraCategory] = useState("");
-  const [resourceOptions, setResourceOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [supplierOptions, setSupplierOptions] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     if (!accessToken) return;
     Promise.all([
-      apiRequest<Array<{ id: string; name: string }>>("/contractors", accessToken).catch(() => []),
+      apiRequest<Array<{ id: string; name: string; specialty: string | null; feeMode: string | null; feeAmount: number }>>("/contractors", accessToken).catch(() => []),
       apiRequest<Array<{ id: string; name: string }>>("/suppliers", accessToken).catch(() => []),
     ]).then(([resources, suppliers]) => {
       setResourceOptions(resources.filter((item) => item.name));
@@ -434,6 +436,7 @@ export function LiveWorkOrderDetail() {
       await apiRequest(`/work-orders/${id}/assignments`, accessToken, {
         method: "POST",
         body: JSON.stringify({
+          contractorId: assignmentContractorId || undefined,
           workerName: workerName.trim(),
           trade: trade.trim() || undefined,
           startDate: assignmentStart || undefined,
@@ -447,6 +450,7 @@ export function LiveWorkOrderDetail() {
       });
       setWorkerName("");
       setTrade("");
+      setAssignmentContractorId("");
       setAssignmentStart("");
       setAssignmentEnd("");
       setFee("");
@@ -688,7 +692,7 @@ export function LiveWorkOrderDetail() {
               <tbody>
                 {assignments.map((assignment) => (
                   <tr key={assignment.id}>
-                    <td><strong>{assignment.workerName}</strong><small>{assignment.notes}</small></td>
+                    <td><strong>{assignment.contractorId ? (resourceOptions.find((item) => item.id === assignment.contractorId)?.name ?? assignment.workerName) : assignment.workerName}</strong><small>{assignment.notes}</small></td>
                     <td>{assignment.trade || "—"}{assignment.materialDeductionItem && <small>材料：{assignment.materialDeductionItem}</small>}</td>
                     <td>{assignment.startDate || "—"}{assignment.endDate ? ` → ${assignment.endDate}` : ""}{assignment.time ? ` · ${assignment.time}` : ""}{assignment.lineIds?.length ? <small>項目：{assignment.lineIds.map((lineId) => order.lines.find((line) => line.id === lineId)?.name).filter(Boolean).join("、")}</small> : null}</td>
                     <td>{money(assignment.feeCents / 100)}{assignment.materialDeductionAmountCents > 0 && <small>扣減 {money(assignment.materialDeductionAmountCents / 100)}</small>}</td>
@@ -704,6 +708,15 @@ export function LiveWorkOrderDetail() {
         {order.status !== "completed" && (
           <form className="live-engineering-form" onSubmit={addAssignment}>
             <div className="form-grid three">
+              <Field label="師傅資料"><select value={assignmentContractorId} onChange={(e) => {
+                const selected = resourceOptions.find((item) => item.id === e.target.value);
+                setAssignmentContractorId(e.target.value);
+                if (selected) {
+                  setWorkerName(selected.name);
+                  setTrade(selected.specialty ?? "");
+                  if (selected.feeMode === "daily" || selected.feeMode === "fixed") setFee(String(selected.feeAmount / 100));
+                }
+              }}><option value="">自由輸入</option>{resourceOptions.map((resource) => <option key={resource.id} value={resource.id}>{resource.name}{resource.specialty ? `（${resource.specialty}）` : ""}</option>)}</select></Field>
               <Field label="施工人員" required><input value={workerName} onChange={(e) => setWorkerName(e.target.value)} required /></Field>
               <Field label="工種"><input value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="例如：泥水" /></Field>
               <Field label="成本"><input type="number" min="0" step="0.01" value={fee} onChange={(e) => setFee(e.target.value)} /></Field>

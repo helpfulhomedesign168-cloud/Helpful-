@@ -23,7 +23,7 @@ Rule: backend entities, fields, state transitions and live UI must match the pro
 | Invoice.paymentPlan | `invoice_payment_plan` | ✅ 50/50, 30/20/50, 30/20/30/20 + gates |
 | Payment | `payments` | ✅ custody + cleared + validation gate |
 | Receipt | `receipts` | ✅ |
-| WorkOrder | `work_orders` + assignments/deductions/extra works | 🟡 line-level cost view + assignment/extra/date history + handoff filters done; resource picker/detail polish pending |
+| WorkOrder | `work_orders` + assignments/deductions/extra works | 🟡 line-level cost + contractor assignment picker + extra/date history + handoff filters done; detail polish pending |
 | ProductStyleSeries | `product_style_series` + images | ✅ |
 | MunicipalOrder | `municipal_orders` + lines | 🟡 editor parity pending |
 | CancellationCase | `cancellation_cases` | 🟡 full credit-note/transfer/commission flow missing |

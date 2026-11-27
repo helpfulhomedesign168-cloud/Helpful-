@@ -52,6 +52,7 @@ const deductionSchema = z.object({
 });
 
 const assignmentSchema = z.object({
+  contractorId: z.string().uuid().optional(),
   workerName: z.string().trim().min(1).max(120),
   trade: z.string().trim().max(80).optional(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -481,6 +482,7 @@ workOrdersRoute.post(
       .insert(workOrderAssignments)
       .values({
         workOrderId: order.id,
+        contractorId: parsed.data.contractorId,
         workerName: parsed.data.workerName,
         trade: parsed.data.trade,
         startDate: parsed.data.startDate,
