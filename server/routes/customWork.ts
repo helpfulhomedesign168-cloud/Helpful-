@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/client";
 import {
@@ -9,6 +9,7 @@ import {
   invoiceLines,
   invoiceVersions,
   invoices,
+  services,
   workOrders,
 } from "../db/schema";
 import type { AppEnv } from "../auth";
@@ -168,5 +169,74 @@ customWorkRoute.patch(
       requestId: c.get("requestId"),
     });
     return c.json(updated);
+  },
+);
+
+
+customWorkRoute.post(
+  "/:id/catalog",
+  requireAuth,
+  requireCapability("workorder.assign"),
+  async (c) => {
+    const body = await c.req.json().catch(() => null);
+    const category = typeof body?.category === "string" ? body.category.trim() : "";
+    const name = typeof body?.name === "string" ? body.name.trim() : "";
+    const details = typeof body?.details === "string" ? body.details.trim() : "";
+    if (!category || !name) {
+      return c.json({ error: { code: "VALIDATION_ERROR", message: "請填寫分類及工程名稱。" } }, 400);
+    }
+    const [request] = await getDb()
+      .select()
+      .from(customWorkRequests)
+      .where(eq(customWorkRequests.id, c.req.param("id")))
+      .limit(1);
+    if (!request) return c.json({ error: { code: "NOT_FOUND", message: "找不到自訂工程。" } }, 404);
+    if (request.status !== "approved" || !request.priceCents || request.priceCents <= 0) {
+      return c.json({ error: { code: "NOT_APPROVED", message: "需要先批核價錢才可加入價目表。" } }, 422);
+    }
+    if (request.catalogServiceId) {
+      return c.json({ error: { code: "ALREADY_ADDED", message: "此自訂工程已加入價目表。" } }, 409);
+    }
+    const sequence = await getDb()
+      .select({ count: sql<number>`count(*)::int` })
+      .from(services);
+    let code = `CW${String((sequence[0]?.count ?? 0) + 1).padStart(4, "0")}`;
+    const existing = await getDb().select({ id: services.id }).from(services).where(eq(services.code, code)).limit(1);
+    if (existing[0]) code = `CW${Date.now().toString().slice(-6)}`;
+    const [created] = await getDb()
+      .insert(services)
+      .values({
+        code,
+        name,
+        category,
+        unit: request.unit || "項",
+        priceCents: request.priceCents,
+        measure: "fixed",
+        costMode: "ratio",
+        published: true,
+        metadata: {
+          scope: "",
+          details: details || "由自訂工程請示加入",
+          needsProductStyle: false,
+          minQty: 0,
+          minAmount: 0,
+          minScope: "line",
+          linkedServiceIds: [],
+        },
+      })
+      .returning();
+    await getDb()
+      .update(customWorkRequests)
+      .set({ catalogServiceId: created.id })
+      .where(eq(customWorkRequests.id, request.id));
+    await getDb().insert(auditLogs).values({
+      actorId: c.get("user").id,
+      action: "custom_work_added_to_catalog",
+      entityType: "custom_work_request",
+      entityId: request.id,
+      after: { serviceId: created.id, code: created.code },
+      requestId: c.get("requestId"),
+    });
+    return c.json(created, 201);
   },
 );

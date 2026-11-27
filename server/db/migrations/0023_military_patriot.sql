@@ -1,0 +1,2 @@
+ALTER TABLE "custom_work_requests" ADD COLUMN "catalog_service_id" uuid;--> statement-breakpoint
+ALTER TABLE "custom_work_requests" ADD CONSTRAINT "custom_work_requests_catalog_service_id_services_id_fk" FOREIGN KEY ("catalog_service_id") REFERENCES "public"."services"("id") ON DELETE no action ON UPDATE no action;

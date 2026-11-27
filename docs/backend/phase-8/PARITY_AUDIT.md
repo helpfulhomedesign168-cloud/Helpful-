@@ -47,9 +47,9 @@ Reference: prototype commit `e54d5b9`
 4. **Handoff/order detail layout polish**
    - Domain fields mostly present; page hierarchy differs from prototype
 
-5. **Custom work add-to-catalog**
-   - Prototype lets CS supervisor add answered custom work to service catalog
-   - Live has approval only; no catalog creation
+5. ✅ Custom work add-to-catalog
+   - Approved custom work can create a service with CW code, category, price, details
+   - Request stores catalogServiceId
 
 6. **User login identity**
    - Prototype uses username; live uses Supabase email login

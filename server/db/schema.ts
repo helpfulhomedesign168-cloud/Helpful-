@@ -475,6 +475,7 @@ export const customWorkRequests = pgTable("custom_work_requests", {
   unit: text("unit").notNull(),
   status: customWorkStatusEnum("status").default("pending").notNull(),
   priceCents: integer("price_cents"),
+  catalogServiceId: uuid("catalog_service_id").references(() => services.id),
   notes: text("notes"),
   requestedBy: uuid("requested_by")
     .notNull()
