@@ -185,6 +185,16 @@ export function LiveWorkOrders({ mode }: { mode: "handoff" | "orders" }) {
                     key={row.id}
                     className="invoice-clickable-row"
                     tabIndex={0}
+                    onMouseEnter={() => {
+                      if (mode === "orders") {
+                        void apiRequest(`/work-orders/${row.id}`, accessToken).catch(() => {});
+                      }
+                    }}
+                    onFocus={() => {
+                      if (mode === "orders") {
+                        void apiRequest(`/work-orders/${row.id}`, accessToken).catch(() => {});
+                      }
+                    }}
                     onClick={() => mode === "orders" && nav(`/orders/${row.id}`)}
                     onKeyDown={(event) => {
                       if (mode === "orders" && (event.key === "Enter" || event.key === " ")) {

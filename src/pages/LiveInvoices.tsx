@@ -116,6 +116,12 @@ export function LiveInvoices() {
                       key={invoice.id}
                       className="invoice-clickable-row"
                       tabIndex={0}
+                      onMouseEnter={() =>
+                        void apiRequest(`/invoices/${invoice.id}`, accessToken).catch(() => {})
+                      }
+                      onFocus={() =>
+                        void apiRequest(`/invoices/${invoice.id}`, accessToken).catch(() => {})
+                      }
                       onClick={() => nav(`/invoices/${invoice.id}`)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {

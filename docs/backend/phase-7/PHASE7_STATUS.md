@@ -3,6 +3,7 @@
 ## Completed
 
 - Audit log viewer for admin/finance supervisor
+- Hover/focus prefetch for Invoice and work order detail
 - Live Invoice Excel export
   - uses current API Invoice data
   - client-side ExcelJS workbook
