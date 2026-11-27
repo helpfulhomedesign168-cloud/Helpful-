@@ -250,8 +250,22 @@ cancellationsRoute.post(
     if (item.refundAmountCents > row.invoice.validPaidCents) {
       return c.json(error("REFUND_EXCEEDS_PAID", "退款金額不可超過已收金額。"), 422);
     }
+    const shares: Array<{ actorId: string | null; actorName: string; amount: number }> = [];
+    const addShare = (actorName: string | null, rate: number) => {
+      if (!actorName || !actorName.trim() || rate <= 0) return;
+      shares.push({
+        actorId: null,
+        actorName: actorName.trim(),
+        amount: Math.round((row.invoice.totalCents * rate) / 100),
+      });
+    };
+    addShare(row.invoice.salesName, 0.08);
+    addShare(
+      row.invoice.supervisorName,
+      row.invoice.team === "B" ? 0.03 : 0.04,
+    );
     await getDb().transaction(async (tx) => {
-      await tx.update(cancellationCases).set({ status: "completed", completedAt: new Date(), completedBy: c.get("user").id, updatedAt: new Date() }).where(eq(cancellationCases.id, item.id));
+      await tx.update(cancellationCases).set({ status: "completed", commissionReversals: shares, completedAt: new Date(), completedBy: c.get("user").id, updatedAt: new Date() }).where(eq(cancellationCases.id, item.id));
       await tx.update(invoices).set({ status: "refunded", updatedAt: new Date() }).where(eq(invoices.id, row.invoice.id));
       await tx.insert(auditLogs).values({ actorId: c.get("user").id, action: "cancellation_completed", entityType: "cancellation_case", entityId: item.id, after: { refundAmountCents: item.refundAmountCents, invoiceId: row.invoice.id }, requestId: c.get("requestId") });
     });
