@@ -27,6 +27,7 @@
 - [ ] Production deployment green
 - [ ] Confirm `main` env points to production DB (currently staging DB)
 - [x] Co-locate API functions with DB: Vercel `sin1` (Singapore)
+- [x] 15s client GET cache; clears on write/login/logout
 
 ## 2. Post-deploy smoke test
 

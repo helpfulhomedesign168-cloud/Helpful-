@@ -1,5 +1,12 @@
 export const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 
+const responseCache = new Map<string, { expires: number; data: unknown }>();
+const CACHE_TTL_MS = 15_000;
+
+export function clearApiCache() {
+  responseCache.clear();
+}
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -15,6 +22,14 @@ export async function apiRequest<T>(
   token: string | null,
   init?: RequestInit,
 ): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const cacheKey = `${token ?? ""}|${path}`;
+  if (method === "GET") {
+    const cached = responseCache.get(cacheKey);
+    if (cached && cached.expires > Date.now()) return cached.data as T;
+  } else {
+    responseCache.clear();
+  }
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
@@ -32,6 +47,12 @@ export async function apiRequest<T>(
       body?.error?.code ?? "API_ERROR",
       body?.error?.message ?? "伺服器未能完成請求。",
     );
+  }
+  if (method === "GET") {
+    responseCache.set(cacheKey, {
+      expires: Date.now() + CACHE_TTL_MS,
+      data: body,
+    });
   }
   return body as T;
 }
@@ -107,5 +128,6 @@ export async function apiUpload<T>(
       body?.error?.message ?? "上載失敗。",
     );
   }
+  responseCache.clear();
   return body as T;
 }

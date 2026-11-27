@@ -6,6 +6,8 @@ import React, {
   useState,
 } from "react";
 
+import { clearApiCache } from "./api/client";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 export const LIVE_AUTH = import.meta.env.PROD
   ? import.meta.env.VITE_LIVE_AUTH !== "0"
@@ -181,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ...result,
       expires_at: Date.now() + result.expires_in * 1000,
     };
+    clearApiCache();
     writeSession(next);
     setSession(next);
     setUser(next.user);
@@ -189,6 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   function logout() {
     if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
+    clearApiCache();
     writeSession(null);
     setSession(null);
     setUser(null);
