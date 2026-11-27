@@ -28,10 +28,10 @@ Reference: prototype commit `e54d5b9`
 
 ### Medium
 
-1. **Cancellation commission attribution incomplete**
-   - Live invoice has salesName/supervisorName/team but no actor IDs/discount
-   - Missing low-discount 6/3/2 rates and Team B head 1%
-   - Current: sales 8%, supervisor 4/3%
+1. ✅ Commission rules completed
+   - Invoice discountRate drives low-discount 6/3/2 rates
+   - Team B head 1% uses first active `head` user
+   - Shared commission helper used by cancellation, accounting, business orders
 
 ### Resolved / low
 
@@ -40,16 +40,16 @@ Reference: prototype commit `e54d5b9`
    - UI shows 正單 A table + municipal line editor
    - B/C-specific sections not present in prototype detail reference used
 
-3. **Handoff/order detail layout polish**
+2. **Handoff/order detail visual polish**
    - Domain fields mostly present; page hierarchy differs from prototype
 
 4. ✅ Custom work add-to-catalog
    - Approved custom work can create a service with CW code, category, price, details
    - Request stores catalogServiceId
 
-5. **User login identity**
-   - Prototype uses username; live uses Supabase email login
-   - This is an intentional auth-platform difference, not required for domain parity unless product wants username login
+5. ✅ User login identity accepted
+   - Product decision: live uses Supabase email login
+   - Username login is waived as an accepted platform difference
 
 ### Low
 
@@ -82,3 +82,18 @@ Domain parity is complete for the implemented direct-invoice workflow. The follo
 - Username login (auth platform difference)
 
 Production should not be treated as final until these are reviewed/waived.
+
+
+## Commission test
+
+```text
+Invoice total = 100000 cents
+discountRate = 0.9
+Team B
+Sales = QA Sales
+Supervisor = QA Sup
+Head = QA Head
+
+Expected commission = 6000 + 2000 + 1000 = 9000 cents
+Actual = 9000 cents ✅
+```

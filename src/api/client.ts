@@ -76,6 +76,7 @@ export type InvoiceSummary = {
   number: string;
   status: string;
   categories: string[];
+  discountRate?: string | number;
   team?: string | null;
   isAdditional?: boolean;
   parentInvoiceId?: string | null;

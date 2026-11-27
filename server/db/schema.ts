@@ -145,6 +145,7 @@ export const invoices = pgTable("invoices", {
   currentVersion: integer("current_version").default(1).notNull(),
   categories: jsonb("categories").$type<string[]>().notNull(),
   salesName: text("sales_name"),
+  discountRate: numeric("discount_rate", { precision: 5, scale: 4 }).default("1").notNull(),
   team: text("team"),
   isAdditional: boolean("is_additional").default(false).notNull(),
   parentInvoiceId: uuid("parent_invoice_id"),

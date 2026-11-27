@@ -2560,12 +2560,12 @@ function pgEnumObjectWithSchema(enumName, values2, schema) {
 // node_modules/.pnpm/drizzle-orm@0.45.4_postgres@4.1.1/node_modules/drizzle-orm/subquery.js
 var Subquery = class {
   static [entityKind] = "Subquery";
-  constructor(sql2, fields, alias, isWith = false, usedTables = []) {
+  constructor(sql2, fields, alias2, isWith = false, usedTables = []) {
     this._ = {
       brand: "Subquery",
       sql: sql2,
       selectedFields: fields,
-      alias,
+      alias: alias2,
       isWith,
       usedTables
     };
@@ -2889,11 +2889,11 @@ var SQL = class _SQL {
   getSQL() {
     return this;
   }
-  as(alias) {
-    if (alias === void 0) {
+  as(alias2) {
+    if (alias2 === void 0) {
       return this;
     }
-    return new _SQL.Aliased(this, alias);
+    return new _SQL.Aliased(this, alias2);
   }
   mapWith(decoder2) {
     this.decoder = typeof decoder2 === "function" ? { mapFromDriverValue: decoder2 } : decoder2;
@@ -3089,8 +3089,8 @@ var ColumnAliasProxyHandler = class {
   }
 };
 var TableAliasProxyHandler = class {
-  constructor(alias, replaceOriginalName) {
-    this.alias = alias;
+  constructor(alias2, replaceOriginalName) {
+    this.alias = alias2;
     this.replaceOriginalName = replaceOriginalName;
   }
   static [entityKind] = "TableAliasProxyHandler";
@@ -3133,8 +3133,8 @@ var TableAliasProxyHandler = class {
   }
 };
 var RelationTableAliasProxyHandler = class {
-  constructor(alias) {
-    this.alias = alias;
+  constructor(alias2) {
+    this.alias = alias2;
   }
   static [entityKind] = "RelationTableAliasProxyHandler";
   get(target, prop) {
@@ -3153,19 +3153,19 @@ function aliasedTableColumn(column2, tableAlias) {
     new ColumnAliasProxyHandler(new Proxy(column2.table, new TableAliasProxyHandler(tableAlias, false)))
   );
 }
-function mapColumnsInAliasedSQLToAlias(query2, alias) {
-  return new SQL.Aliased(mapColumnsInSQLToAlias(query2.sql, alias), query2.fieldAlias);
+function mapColumnsInAliasedSQLToAlias(query2, alias2) {
+  return new SQL.Aliased(mapColumnsInSQLToAlias(query2.sql, alias2), query2.fieldAlias);
 }
-function mapColumnsInSQLToAlias(query2, alias) {
+function mapColumnsInSQLToAlias(query2, alias2) {
   return sql.join(query2.queryChunks.map((c2) => {
     if (is(c2, Column)) {
-      return aliasedTableColumn(c2, alias);
+      return aliasedTableColumn(c2, alias2);
     }
     if (is(c2, SQL)) {
-      return mapColumnsInSQLToAlias(c2, alias);
+      return mapColumnsInSQLToAlias(c2, alias2);
     }
     if (is(c2, SQL.Aliased)) {
-      return mapColumnsInAliasedSQLToAlias(c2, alias);
+      return mapColumnsInAliasedSQLToAlias(c2, alias2);
     }
     return c2;
   }));
@@ -10614,8 +10614,8 @@ var PgDialect = class {
     const tableName = table2[PgTable.Symbol.Name];
     const tableSchema = table2[PgTable.Symbol.Schema];
     const origTableName = table2[PgTable.Symbol.OriginalName];
-    const alias = tableName === origTableName ? void 0 : tableName;
-    const tableSql = sql`${tableSchema ? sql`${sql.identifier(tableSchema)}.` : void 0}${sql.identifier(origTableName)}${alias && sql` ${sql.identifier(alias)}`}`;
+    const alias2 = tableName === origTableName ? void 0 : tableName;
+    const tableSql = sql`${tableSchema ? sql`${sql.identifier(tableSchema)}.` : void 0}${sql.identifier(origTableName)}${alias2 && sql` ${sql.identifier(alias2)}`}`;
     const setSql = this.buildUpdateSet(table2, set2);
     const fromSql = from && sql.join([sql.raw(" from "), this.buildFromTable(from)]);
     const joinsSql = this.buildJoins(joins);
@@ -10699,17 +10699,17 @@ var PgDialect = class {
         const tableName = table2[PgTable.Symbol.Name];
         const tableSchema = table2[PgTable.Symbol.Schema];
         const origTableName = table2[PgTable.Symbol.OriginalName];
-        const alias = tableName === origTableName ? void 0 : joinMeta.alias;
+        const alias2 = tableName === origTableName ? void 0 : joinMeta.alias;
         joinsArray.push(
-          sql`${sql.raw(joinMeta.joinType)} join${lateralSql} ${tableSchema ? sql`${sql.identifier(tableSchema)}.` : void 0}${sql.identifier(origTableName)}${alias && sql` ${sql.identifier(alias)}`}${onSql}`
+          sql`${sql.raw(joinMeta.joinType)} join${lateralSql} ${tableSchema ? sql`${sql.identifier(tableSchema)}.` : void 0}${sql.identifier(origTableName)}${alias2 && sql` ${sql.identifier(alias2)}`}${onSql}`
         );
       } else if (is(table2, View)) {
         const viewName = table2[ViewBaseConfig].name;
         const viewSchema = table2[ViewBaseConfig].schema;
         const origViewName = table2[ViewBaseConfig].originalName;
-        const alias = viewName === origViewName ? void 0 : joinMeta.alias;
+        const alias2 = viewName === origViewName ? void 0 : joinMeta.alias;
         joinsArray.push(
-          sql`${sql.raw(joinMeta.joinType)} join${lateralSql} ${viewSchema ? sql`${sql.identifier(viewSchema)}.` : void 0}${sql.identifier(origViewName)}${alias && sql` ${sql.identifier(alias)}`}${onSql}`
+          sql`${sql.raw(joinMeta.joinType)} join${lateralSql} ${viewSchema ? sql`${sql.identifier(viewSchema)}.` : void 0}${sql.identifier(origViewName)}${alias2 && sql` ${sql.identifier(alias2)}`}${onSql}`
         );
       } else {
         joinsArray.push(
@@ -10751,7 +10751,7 @@ var PgDialect = class {
     const fieldsList = fieldsFlat ?? orderSelectedFields(fields);
     for (const f2 of fieldsList) {
       if (is(f2.field, Column) && getTableName(f2.field.table) !== (is(table2, Subquery) ? table2._.alias : is(table2, PgViewBase) ? table2[ViewBaseConfig].name : is(table2, SQL) ? void 0 : getTableName(table2)) && !((table22) => joins?.some(
-        ({ alias }) => alias === (table22[Table.Symbol.IsAlias] ? getTableName(table22) : table22[Table.Symbol.BaseName])
+        ({ alias: alias2 }) => alias2 === (table22[Table.Symbol.IsAlias] ? getTableName(table22) : table22[Table.Symbol.BaseName])
       ))(f2.field.table)) {
         const tableName = getTableName(f2.field.table);
         throw new Error(
@@ -12358,15 +12358,15 @@ var PgSelectQueryBuilderBase = class extends TypedQueryBuilder {
     const { typings: _typings, ...rest } = this.dialect.sqlToQuery(this.getSQL());
     return rest;
   }
-  as(alias) {
+  as(alias2) {
     const usedTables = [];
     usedTables.push(...extractUsedTable(this.config.table));
     if (this.config.joins) {
       for (const it of this.config.joins) usedTables.push(...extractUsedTable(it.table));
     }
     return new Proxy(
-      new Subquery(this.getSQL(), this.config.fields, alias, false, [...new Set(usedTables)]),
-      new SelectionProxyHandler({ alias, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
+      new Subquery(this.getSQL(), this.config.fields, alias2, false, [...new Set(usedTables)]),
+      new SelectionProxyHandler({ alias: alias2, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
     );
   }
   /** @internal */
@@ -12467,7 +12467,7 @@ var QueryBuilder = class {
     this.dialect = is(dialect, PgDialect) ? dialect : void 0;
     this.dialectConfig = is(dialect, PgDialect) ? void 0 : dialect;
   }
-  $with = (alias, selection) => {
+  $with = (alias2, selection) => {
     const queryBuilder = this;
     const as = (qb) => {
       if (typeof qb === "function") {
@@ -12477,10 +12477,10 @@ var QueryBuilder = class {
         new WithSubquery(
           qb.getSQL(),
           selection ?? ("getSelectedFields" in qb ? qb.getSelectedFields() ?? {} : {}),
-          alias,
+          alias2,
           true
         ),
-        new SelectionProxyHandler({ alias, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
+        new SelectionProxyHandler({ alias: alias2, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
       );
     };
     return { as };
@@ -13374,7 +13374,7 @@ var PgDatabase = class {
    * const result = await db.with(sq).select({ name: sq.name }).from(sq);
    * ```
    */
-  $with = (alias, selection) => {
+  $with = (alias2, selection) => {
     const self = this;
     const as = (qb) => {
       if (typeof qb === "function") {
@@ -13384,10 +13384,10 @@ var PgDatabase = class {
         new WithSubquery(
           qb.getSQL(),
           selection ?? ("getSelectedFields" in qb ? qb.getSelectedFields() ?? {} : {}),
-          alias,
+          alias2,
           true
         ),
-        new SelectionProxyHandler({ alias, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
+        new SelectionProxyHandler({ alias: alias2, sqlAliasedBehavior: "alias", sqlBehavior: "error" })
       );
     };
     return { as };
@@ -13611,6 +13611,11 @@ async function hashQuery(sql2, params) {
   const hashArray = [...new Uint8Array(hashBuffer)];
   const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   return hashHex;
+}
+
+// node_modules/.pnpm/drizzle-orm@0.45.4_postgres@4.1.1/node_modules/drizzle-orm/pg-core/alias.js
+function alias(table2, alias2) {
+  return new Proxy(table2, new TableAliasProxyHandler(alias2, false));
 }
 
 // node_modules/.pnpm/drizzle-orm@0.45.4_postgres@4.1.1/node_modules/drizzle-orm/pg-core/session.js
@@ -33906,6 +33911,10 @@ var invoices = pgTable("invoices", {
   currentVersion: integer("current_version").default(1).notNull(),
   categories: jsonb("categories").$type().notNull(),
   salesName: text("sales_name"),
+  discountRate: numeric("discount_rate", { precision: 5, scale: 4 }).default("1").notNull(),
+  team: text("team"),
+  isAdditional: boolean("is_additional").default(false).notNull(),
+  parentInvoiceId: uuid("parent_invoice_id"),
   supervisorName: text("supervisor_name"),
   idempotencyKey: text("idempotency_key").unique(),
   grantApplicationNumber: text("grant_application_number"),
@@ -33956,6 +33965,7 @@ var invoiceLines = pgTable("invoice_lines", {
   unit: text("unit").notNull(),
   unitPriceCents: integer("unit_price_cents").notNull(),
   amountCents: integer("amount_cents").notNull(),
+  productStyleText: text("product_style_text"),
   costSnapshot: jsonb("cost_snapshot").$type(),
   metadata: jsonb("metadata").$type()
 });
@@ -34008,6 +34018,8 @@ var workOrders = pgTable("work_orders", {
   startDate: date("start_date"),
   endDate: date("end_date"),
   notes: text("notes"),
+  groupId: text("group_id"),
+  dateChanges: jsonb("date_changes").$type().default([]).notNull(),
   releasedAt: timestamp("released_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   ...timestamps
@@ -34018,9 +34030,13 @@ var workOrderAssignments = pgTable("work_order_assignments", {
   contractorId: uuid("contractor_id").references(() => contractors.id),
   workerName: text("worker_name").notNull(),
   trade: text("trade"),
+  lineIds: jsonb("line_ids").$type().default([]).notNull(),
   startDate: date("start_date"),
   endDate: date("end_date"),
+  time: text("time"),
   feeCents: integer("fee_cents").default(0).notNull(),
+  materialDeductionItem: text("material_deduction_item"),
+  materialDeductionAmountCents: integer("material_deduction_amount_cents").default(0).notNull(),
   notes: text("notes"),
   createdBy: uuid("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
@@ -34039,6 +34055,9 @@ var workOrderExtraWorks = pgTable("work_order_extra_works", {
   workOrderId: uuid("work_order_id").notNull().references(() => workOrders.id, { onDelete: "cascade" }),
   kind: text("kind").notNull(),
   name: text("name").notNull(),
+  resourceId: uuid("resource_id").references(() => contractors.id),
+  supplierId: uuid("supplier_id").references(() => suppliers.id),
+  category: text("category"),
   startDate: date("start_date"),
   endDate: date("end_date"),
   time: text("time"),
@@ -34058,13 +34077,19 @@ var municipalOrders = pgTable("municipal_orders", {
 var municipalOrderLines = pgTable("municipal_order_lines", {
   id: uuid("id").defaultRandom().primaryKey(),
   municipalOrderId: uuid("municipal_order_id").notNull().references(() => municipalOrders.id, { onDelete: "cascade" }),
+  sourceLineId: uuid("source_line_id"),
   name: text("name").notNull(),
   description: text("description"),
   position: text("position"),
+  measure: text("measure"),
+  length: numeric("length", { precision: 12, scale: 2 }),
+  width: numeric("width", { precision: 12, scale: 2 }),
+  dimensionUnit: text("dimension_unit"),
   quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull(),
   unit: text("unit").notNull(),
   unitPriceCents: integer("unit_price_cents").notNull(),
-  amountCents: integer("amount_cents").notNull()
+  amountCents: integer("amount_cents").notNull(),
+  productStyleText: text("product_style_text")
 });
 var cancellationCases = pgTable("cancellation_cases", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -34077,10 +34102,16 @@ var cancellationCases = pgTable("cancellation_cases", {
   bankName: text("bank_name"),
   bankAccountName: text("bank_account_name"),
   bankAccountNumber: text("bank_account_number"),
+  transferReference: text("transfer_reference"),
+  creditNoteFileId: uuid("credit_note_file_id").references(() => files.id, { onDelete: "set null" }),
+  signedCreditNoteFileId: uuid("signed_credit_note_file_id").references(() => files.id, { onDelete: "set null" }),
+  transferProofFileId: uuid("transfer_proof_file_id").references(() => files.id, { onDelete: "set null" }),
+  commissionReversals: jsonb("commission_reversals").$type().default([]).notNull(),
   createdBy: uuid("created_by").notNull().references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  completedAt: timestamp("completed_at", { withTimezone: true })
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  completedBy: uuid("completed_by").references(() => users.id)
 });
 var contractors = pgTable("contractors", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -34115,12 +34146,21 @@ var suppliers = pgTable("suppliers", {
 });
 var customWorkRequests = pgTable("custom_work_requests", {
   id: uuid("id").defaultRandom().primaryKey(),
-  workOrderId: uuid("work_order_id").notNull().references(() => workOrders.id, { onDelete: "cascade" }),
+  workOrderId: uuid("work_order_id").references(() => workOrders.id, {
+    onDelete: "cascade"
+  }),
+  invoiceId: uuid("invoice_id").references(() => invoices.id, {
+    onDelete: "cascade"
+  }),
+  invoiceLineId: uuid("invoice_line_id").references(() => invoiceLines.id, {
+    onDelete: "set null"
+  }),
   description: text("description").notNull(),
   quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull(),
   unit: text("unit").notNull(),
   status: customWorkStatusEnum("status").default("pending").notNull(),
   priceCents: integer("price_cents"),
+  catalogServiceId: uuid("catalog_service_id").references(() => services.id),
   notes: text("notes"),
   requestedBy: uuid("requested_by").notNull().references(() => users.id),
   requestedAt: timestamp("requested_at", { withTimezone: true }).defaultNow().notNull(),
@@ -35002,6 +35042,7 @@ var CAPABILITIES = [
   "workorder.update",
   "workorder.complete",
   "contractor.manage",
+  "custom_work.create",
   "municipal.read",
   "municipal.write",
   "refund.manage",
@@ -35021,7 +35062,8 @@ var baseClerk = [
   "receipt.issue",
   "workorder.read",
   "municipal.read",
-  "municipal.write"
+  "municipal.write",
+  "custom_work.create"
 ];
 var finance = [
   "customer.read",
@@ -35041,12 +35083,14 @@ var cs = [
   "workorder.read",
   "workorder.update",
   "workorder.complete",
-  "contractor.manage"
+  "contractor.manage",
+  "custom_work.create"
 ];
 var csSupervisor = [
   ...cs,
   "workorder.assign",
-  "contractor.manage"
+  "contractor.manage",
+  "custom_work.create"
 ];
 var admin = [...CAPABILITIES];
 var adminStaff = CAPABILITIES.filter(
@@ -35571,6 +35615,30 @@ async function deleteUserAvatar(path) {
     throw new Error(`Storage delete failed (${res.status})`);
   }
 }
+var CANCELLATION_BUCKET = "cancellation-proofs";
+async function uploadCancellationProof(path, bytes2, mime) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${CANCELLATION_BUCKET}/${path}`, {
+    method: "POST",
+    headers: { apikey: key2, Authorization: `Bearer ${key2}`, "Content-Type": mime, "x-upsert": "false" },
+    body: bytes2,
+    signal: AbortSignal.timeout(3e4)
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+async function signedCancellationProof(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${CANCELLATION_BUCKET}/${path}`, {
+    method: "POST",
+    headers: { apikey: key2, Authorization: `Bearer ${key2}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = await res.json();
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}
 
 // server/routes/users.ts
 var patchSchema = external_exports.object({
@@ -36021,12 +36089,17 @@ var lineSchema = external_exports.object({
   quantity: external_exports.number().positive().max(1e5),
   unit: external_exports.string().trim().min(1).max(40),
   unitPriceCents: external_exports.number().int().nonnegative(),
-  amountCents: external_exports.number().int().nonnegative().optional()
+  amountCents: external_exports.number().int().nonnegative().optional(),
+  productStyleText: external_exports.string().trim().max(500).optional()
 });
 var createSchema3 = external_exports.object({
   date: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   salesName: external_exports.string().trim().max(120).optional(),
   supervisorName: external_exports.string().trim().max(120).optional(),
+  discountRate: external_exports.number().min(0).max(1).optional(),
+  team: external_exports.enum(["A", "B"]).nullable().optional(),
+  isAdditional: external_exports.boolean().optional().default(false),
+  parentInvoiceId: external_exports.string().uuid().nullable().optional(),
   categories: external_exports.array(categorySchema2).min(1),
   grant: external_exports.object({
     applicationNumber: external_exports.string().trim().max(120).optional(),
@@ -36087,6 +36160,7 @@ function buildPaymentPlan(categories, totalCents) {
 }
 async function invoiceDetail(id) {
   const db = getDb();
+  const parentInvoice = alias(invoices, "parent_invoice");
   const rows = await db.select({
     id: invoices.id,
     number: invoices.number,
@@ -36095,6 +36169,11 @@ async function invoiceDetail(id) {
     categories: invoices.categories,
     salesName: invoices.salesName,
     supervisorName: invoices.supervisorName,
+    discountRate: invoices.discountRate,
+    team: invoices.team,
+    isAdditional: invoices.isAdditional,
+    parentInvoiceId: invoices.parentInvoiceId,
+    parentInvoiceNumber: parentInvoice.number,
     grantApplicationNumber: invoices.grantApplicationNumber,
     grantApprovedAmountCents: invoices.grantApprovedAmountCents,
     totalCents: invoices.totalCents,
@@ -36108,7 +36187,7 @@ async function invoiceDetail(id) {
       address: customers.address,
       district: customers.district
     }
-  }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).where(eq(invoices.id, id)).limit(1);
+  }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).leftJoin(parentInvoice, eq(invoices.parentInvoiceId, parentInvoice.id)).where(eq(invoices.id, id)).limit(1);
   if (!rows[0]) return null;
   const versionRows = await db.select().from(invoiceVersions).where(
     and(
@@ -36163,7 +36242,8 @@ async function invoiceDetail(id) {
       quantity: line2.quantity,
       unit: line2.unit,
       unitPriceCents: line2.unitPriceCents,
-      amountCents: line2.amountCents
+      amountCents: line2.amountCents,
+      productStyleText: line2.productStyleText
     })),
     paymentStatus: {
       validPaidCents,
@@ -36182,6 +36262,7 @@ invoicesRoute.get(
   requireCapability("invoice.read"),
   async (c2) => {
     const db = getDb();
+    const parentInvoice = alias(invoices, "parent_invoice");
     const q = c2.req.query("q")?.trim();
     const status = c2.req.query("status");
     const limit3 = Math.min(Number(c2.req.query("limit") ?? 50) || 50, 100);
@@ -36204,10 +36285,15 @@ invoicesRoute.get(
       totalCents: invoices.totalCents,
       validPaidCents: invoices.validPaidCents,
       salesName: invoices.salesName,
+      discountRate: invoices.discountRate,
+      team: invoices.team,
+      isAdditional: invoices.isAdditional,
+      parentInvoiceId: invoices.parentInvoiceId,
+      parentInvoiceNumber: parentInvoice.number,
       createdAt: invoices.createdAt,
       customerName: customers.name,
       customerPhone: customers.phone
-    }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(invoices.createdAt)).limit(limit3);
+    }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).leftJoin(parentInvoice, eq(invoices.parentInvoiceId, parentInvoice.id)).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(invoices.createdAt)).limit(limit3);
     return c2.json(rows);
   }
 );
@@ -36245,6 +36331,13 @@ invoicesRoute.post(
     const currentRows = await db.select().from(invoices).where(eq(invoices.id, invoiceId)).limit(1);
     const current = currentRows[0];
     if (!current) return c2.json(error63("NOT_FOUND", "\u627E\u4E0D\u5230\u767C\u7968\u3002"), 404);
+    if (input2.parentInvoiceId) {
+      if (input2.parentInvoiceId === invoiceId) {
+        return c2.json(error63("INVALID_PARENT", "\u767C\u7968\u4E0D\u53EF\u4F5C\u70BA\u81EA\u5DF1\u7684\u539F\u55AE\u3002"), 422);
+      }
+      const [parent] = await db.select({ id: invoices.id }).from(invoices).where(eq(invoices.id, input2.parentInvoiceId)).limit(1);
+      if (!parent) return c2.json(error63("INVALID_PARENT", "\u627E\u4E0D\u5230\u539F\u55AE\u3002"), 422);
+    }
     if (current.status === "voided" || current.status === "refunded") {
       return c2.json(error63("INVOICE_CLOSED", "\u6B64\u767C\u7968\u5DF2\u95DC\u9589\uFF0C\u4E0D\u53EF\u4FEE\u6539\u3002"), 409);
     }
@@ -36303,6 +36396,10 @@ invoicesRoute.post(
         categories: input2.categories,
         salesName: input2.salesName,
         supervisorName: input2.supervisorName,
+        discountRate: String(input2.discountRate ?? Number(current.discountRate)),
+        team: input2.team ?? null,
+        isAdditional: input2.isAdditional ?? false,
+        parentInvoiceId: input2.parentInvoiceId ?? null,
         grantApplicationNumber: hasGrant ? input2.grant?.applicationNumber : null,
         grantApprovedAmountCents: hasGrant ? input2.grant?.approvedAmountCents : null,
         totalCents,
@@ -36318,6 +36415,9 @@ invoicesRoute.post(
           date: input2.date,
           salesName: input2.salesName,
           supervisorName: input2.supervisorName,
+          team: input2.team ?? null,
+          isAdditional: input2.isAdditional ?? false,
+          parentInvoiceId: input2.parentInvoiceId ?? null,
           categories: input2.categories,
           grant: input2.grant ?? null,
           customer: input2.customer
@@ -36332,7 +36432,8 @@ invoicesRoute.post(
           quantity: String(line2.quantity),
           unit: line2.unit,
           unitPriceCents: line2.unitPriceCents,
-          amountCents: line2.amountCents
+          amountCents: line2.amountCents,
+          productStyleText: line2.productStyleText ?? null
         }))
       );
       await tx.delete(invoicePaymentPlan).where(eq(invoicePaymentPlan.invoiceId, invoiceId));
@@ -36375,6 +36476,10 @@ invoicesRoute.post(
       );
     }
     const input2 = parsed.data;
+    if (input2.parentInvoiceId) {
+      const [parent] = await getDb().select({ id: invoices.id }).from(invoices).where(eq(invoices.id, input2.parentInvoiceId)).limit(1);
+      if (!parent) return c2.json(error63("INVALID_PARENT", "\u627E\u4E0D\u5230\u539F\u55AE\u3002"), 422);
+    }
     const hasGrant = input2.categories.includes("grant-80k");
     if (!hasGrant && (input2.grant?.applicationNumber || input2.grant?.approvedAmountCents)) {
       return c2.json(
@@ -36434,6 +36539,10 @@ invoicesRoute.post(
         categories: input2.categories,
         salesName: input2.salesName,
         supervisorName: input2.supervisorName,
+        discountRate: String(input2.discountRate ?? 1),
+        team: input2.team ?? null,
+        isAdditional: input2.isAdditional ?? false,
+        parentInvoiceId: input2.parentInvoiceId ?? null,
         grantApplicationNumber: hasGrant ? input2.grant?.applicationNumber : null,
         grantApprovedAmountCents: hasGrant ? input2.grant?.approvedAmountCents : null,
         totalCents,
@@ -36457,6 +36566,9 @@ invoicesRoute.post(
           date: input2.date,
           salesName: input2.salesName,
           supervisorName: input2.supervisorName,
+          team: input2.team ?? null,
+          isAdditional: input2.isAdditional ?? false,
+          parentInvoiceId: input2.parentInvoiceId ?? null,
           categories: input2.categories,
           grant: input2.grant ?? null,
           customer: input2.customer
@@ -36471,7 +36583,8 @@ invoicesRoute.post(
           quantity: String(line2.quantity),
           unit: line2.unit,
           unitPriceCents: line2.unitPriceCents,
-          amountCents: line2.amountCents
+          amountCents: line2.amountCents,
+          productStyleText: line2.productStyleText ?? null
         }))
       );
       await tx.insert(auditLogs).values({
@@ -36837,7 +36950,8 @@ var updateSchema2 = external_exports.object({
   startDate: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   endDate: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   notes: external_exports.string().trim().max(2e3).nullable().optional(),
-  status: external_exports.enum(["in_progress"]).optional()
+  status: external_exports.enum(["in_progress"]).optional(),
+  dateReason: external_exports.string().trim().max(500).optional()
 });
 var assignSchema = external_exports.object({
   csOwnerId: external_exports.string().uuid()
@@ -36849,7 +36963,10 @@ var extraWorkSchema = external_exports.object({
   endDate: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   time: external_exports.string().trim().max(40).optional(),
   notes: external_exports.string().trim().max(1e3).optional(),
-  priceCents: external_exports.number().int().nonnegative().default(0)
+  priceCents: external_exports.number().int().nonnegative().default(0),
+  resourceId: external_exports.string().uuid().optional(),
+  supplierId: external_exports.string().uuid().optional(),
+  category: external_exports.string().trim().max(80).optional()
 });
 var deductionSchema = external_exports.object({
   name: external_exports.string().trim().min(1).max(200),
@@ -36857,12 +36974,17 @@ var deductionSchema = external_exports.object({
   notes: external_exports.string().trim().max(1e3).optional()
 });
 var assignmentSchema = external_exports.object({
+  contractorId: external_exports.string().uuid().optional(),
   workerName: external_exports.string().trim().min(1).max(120),
   trade: external_exports.string().trim().max(80).optional(),
   startDate: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   endDate: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   feeCents: external_exports.number().int().nonnegative().default(0),
-  notes: external_exports.string().trim().max(1e3).optional()
+  notes: external_exports.string().trim().max(1e3).optional(),
+  lineIds: external_exports.array(external_exports.string().uuid()).max(300).optional(),
+  time: external_exports.string().trim().max(40).optional(),
+  materialDeductionItem: external_exports.string().trim().max(200).optional(),
+  materialDeductionAmountCents: external_exports.number().int().nonnegative().optional()
 });
 var error65 = (code, message2) => ({
   error: { code, message: message2 }
@@ -36887,6 +37009,8 @@ async function orderDetail(id) {
     startDate: workOrders.startDate,
     endDate: workOrders.endDate,
     notes: workOrders.notes,
+    groupId: workOrders.groupId,
+    dateChanges: workOrders.dateChanges,
     releasedAt: workOrders.releasedAt,
     completedAt: workOrders.completedAt,
     invoice: {
@@ -36967,6 +37091,7 @@ workOrdersRoute.get(
       releasedAt: workOrders.releasedAt,
       invoiceId: invoices.id,
       invoiceNumber: invoices.number,
+      salesName: invoices.salesName,
       totalCents: invoices.totalCents,
       validPaidCents: invoices.validPaidCents,
       categories: invoices.categories,
@@ -37075,7 +37200,28 @@ workOrdersRoute.patch(
     if (Object.keys(changes).length === 0) {
       return c2.json(error65("VALIDATION_ERROR", "\u6C92\u6709\u53EF\u66F4\u65B0\u6B04\u4F4D\u3002"), 400);
     }
-    await getDb().update(workOrders).set({ ...changes, updatedAt: /* @__PURE__ */ new Date() }).where(eq(workOrders.id, order2.id));
+    const dateChanged = parsed.data.startDate !== void 0 && parsed.data.startDate !== order2.startDate || parsed.data.endDate !== void 0 && parsed.data.endDate !== order2.endDate;
+    if (dateChanged && !parsed.data.dateReason) {
+      return c2.json(error65("DATE_REASON_REQUIRED", "\u66F4\u6539\u5DE5\u7A0B\u65E5\u671F\u5FC5\u9808\u586B\u5BEB\u539F\u56E0\u3002"), 422);
+    }
+    const updates = { ...parsed.data };
+    delete updates.dateReason;
+    if (dateChanged) {
+      const history = Array.isArray(order2.dateChanges) ? order2.dateChanges : [];
+      updates.dateChanges = [
+        ...history,
+        {
+          start: order2.startDate,
+          end: order2.endDate,
+          newStart: parsed.data.startDate ?? order2.startDate,
+          newEnd: parsed.data.endDate ?? order2.endDate,
+          reason: parsed.data.dateReason,
+          actorId: c2.get("user").id,
+          at: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      ];
+    }
+    await getDb().update(workOrders).set({ ...updates, updatedAt: /* @__PURE__ */ new Date() }).where(eq(workOrders.id, order2.id));
     await getDb().insert(auditLogs).values({
       actorId: c2.get("user").id,
       action: "work_order_updated",
@@ -37188,11 +37334,16 @@ workOrdersRoute.post(
     }
     const [created] = await getDb().insert(workOrderAssignments).values({
       workOrderId: order2.id,
+      contractorId: parsed.data.contractorId,
       workerName: parsed.data.workerName,
       trade: parsed.data.trade,
       startDate: parsed.data.startDate,
       endDate: parsed.data.endDate,
+      time: parsed.data.time,
+      lineIds: parsed.data.lineIds ?? [],
       feeCents: parsed.data.feeCents,
+      materialDeductionItem: parsed.data.materialDeductionItem,
+      materialDeductionAmountCents: parsed.data.materialDeductionAmountCents ?? 0,
       notes: parsed.data.notes,
       createdBy: c2.get("user").id
     }).returning();
@@ -37371,6 +37522,9 @@ workOrdersRoute.post(
       workOrderId: order2.id,
       kind: parsed.data.kind,
       name: parsed.data.name,
+      resourceId: parsed.data.resourceId,
+      supplierId: parsed.data.supplierId,
+      category: parsed.data.category,
       startDate: parsed.data.startDate,
       endDate: parsed.data.endDate,
       time: parsed.data.time,
@@ -37667,13 +37821,19 @@ photosRoute.delete(
 var updateSchema3 = external_exports.object({
   lines: external_exports.array(
     external_exports.object({
+      sourceLineId: external_exports.string().uuid().nullable().optional(),
       name: external_exports.string().trim().min(1).max(200),
-      description: external_exports.string().trim().max(500).optional(),
-      position: external_exports.string().trim().max(120).optional(),
+      description: external_exports.string().trim().max(500).nullable().optional(),
+      position: external_exports.string().trim().max(120).nullable().optional(),
+      measure: external_exports.enum(["area", "length", "quantity", "fixed"]).nullable().optional(),
+      length: external_exports.number().nonnegative().nullable().optional(),
+      width: external_exports.number().nonnegative().nullable().optional(),
+      dimensionUnit: external_exports.enum(["\u544E", "\u5BF8"]).nullable().optional(),
       quantity: external_exports.number().positive().max(1e5),
       unit: external_exports.string().trim().min(1).max(40),
       unitPriceCents: external_exports.number().int().nonnegative(),
-      amountCents: external_exports.number().int().nonnegative()
+      amountCents: external_exports.number().int().nonnegative(),
+      productStyleText: external_exports.string().trim().max(500).nullable().optional()
     })
   ).min(1).max(300)
 });
@@ -37751,16 +37911,40 @@ municipalRoute.get(
       ).limit(1);
       lines = version3[0] ? await getDb().select().from(invoiceLines).where(eq(invoiceLines.versionId, version3[0].id)) : [];
     }
+    const principalVersion = await getDb().select().from(invoiceVersions).where(
+      and(
+        eq(invoiceVersions.invoiceId, order2.invoice.id),
+        eq(invoiceVersions.versionNo, order2.invoice.currentVersion)
+      )
+    ).limit(1);
+    const principalLines = principalVersion[0] ? await getDb().select().from(invoiceLines).where(eq(invoiceLines.versionId, principalVersion[0].id)) : [];
     return c2.json({
       ...order2,
-      lines: lines.map((line2) => ({
+      principalLines: principalLines.map((line2) => ({
         id: line2.id,
         name: line2.name,
         position: line2.position,
         quantity: line2.quantity,
         unit: line2.unit,
         unitPriceCents: line2.unitPriceCents,
-        amountCents: line2.amountCents
+        amountCents: line2.amountCents,
+        productStyleText: line2.productStyleText
+      })),
+      lines: lines.map((line2) => ({
+        id: line2.id,
+        sourceLineId: line2.sourceLineId,
+        name: line2.name,
+        description: line2.description,
+        position: line2.position,
+        measure: line2.measure,
+        length: line2.length,
+        width: line2.width,
+        dimensionUnit: line2.dimensionUnit,
+        quantity: line2.quantity,
+        unit: line2.unit,
+        unitPriceCents: line2.unitPriceCents,
+        amountCents: line2.amountCents,
+        productStyleText: line2.productStyleText
       }))
     });
   }
@@ -37792,13 +37976,19 @@ municipalRoute.patch(
       await tx.insert(municipalOrderLines).values(
         parsed.data.lines.map((line2) => ({
           municipalOrderId: order2.id,
+          sourceLineId: line2.sourceLineId,
           name: line2.name,
           description: line2.description,
           position: line2.position,
+          measure: line2.measure,
+          length: line2.length === null || line2.length === void 0 ? null : String(line2.length),
+          width: line2.width === null || line2.width === void 0 ? null : String(line2.width),
+          dimensionUnit: line2.dimensionUnit,
           quantity: String(line2.quantity),
           unit: line2.unit,
           unitPriceCents: line2.unitPriceCents,
-          amountCents: line2.amountCents
+          amountCents: line2.amountCents,
+          productStyleText: line2.productStyleText
         }))
       );
       await tx.update(municipalOrders).set({ updatedAt: /* @__PURE__ */ new Date() }).where(eq(municipalOrders.id, order2.id));
@@ -37943,6 +38133,39 @@ suppliersRoute.post(
   }
 );
 
+// server/commission.ts
+function commissionRates(invoice) {
+  const rate = Number(invoice.discountRate ?? 1);
+  const low = Number.isFinite(rate) && rate < 0.95;
+  return {
+    low,
+    sales: low ? 0.06 : 0.08,
+    supervisor: invoice.team === "A" ? low ? 0.03 : 0.04 : low ? 0.02 : 0.03,
+    head: invoice.team === "B" ? 0.01 : 0
+  };
+}
+function commissionShares(invoice, headName) {
+  const rates = commissionRates(invoice);
+  const shares = [];
+  const add = (name, rate) => {
+    if (!name?.trim() || rate <= 0) return;
+    shares.push({
+      actorName: name.trim(),
+      amountCents: Math.round(invoice.totalCents * rate)
+    });
+  };
+  add(invoice.salesName, rates.sales);
+  add(invoice.supervisorName, rates.supervisor);
+  if (rates.head > 0) add(headName, rates.head);
+  return shares;
+}
+function commissionTotalCents(invoice, headName) {
+  return commissionShares(invoice, headName).reduce(
+    (sum, share) => sum + share.amountCents,
+    0
+  );
+}
+
 // server/routes/reports.ts
 var reportsRoute = new Hono3();
 reportsRoute.get(
@@ -37979,7 +38202,12 @@ reportsRoute.get(
   requireAuth,
   requireCapability("report.read"),
   async (c2) => {
-    const rows = await getDb().select({
+    const month = c2.req.query("month");
+    const statusFilter = c2.req.query("status") ?? "all";
+    const db = getDb();
+    const conditions = [];
+    if (month) conditions.push(sql`to_char(${invoices.createdAt}, 'YYYY-MM') = ${month}`);
+    const invoiceRows = await db.select({
       id: invoices.id,
       number: invoices.number,
       status: invoices.status,
@@ -37987,11 +38215,163 @@ reportsRoute.get(
       totalCents: invoices.totalCents,
       validPaidCents: invoices.validPaidCents,
       salesName: invoices.salesName,
+      supervisorName: invoices.supervisorName,
+      discountRate: invoices.discountRate,
+      team: invoices.team,
       createdAt: invoices.createdAt,
       customerName: customers.name,
       customerPhone: customers.phone
-    }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).orderBy(desc(invoices.createdAt)).limit(200);
-    return c2.json(rows);
+    }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).where(conditions.length ? and(...conditions) : void 0).orderBy(desc(invoices.createdAt)).limit(500);
+    const orderRows = await db.select({ id: workOrders.id, invoiceId: workOrders.invoiceId, number: workOrders.number, status: workOrders.status }).from(workOrders);
+    const assignmentRows = await db.select({ workOrderId: workOrderAssignments.workOrderId, feeCents: workOrderAssignments.feeCents }).from(workOrderAssignments);
+    const extraRows = await db.select({ workOrderId: workOrderExtraWorks.workOrderId, priceCents: workOrderExtraWorks.priceCents }).from(workOrderExtraWorks);
+    const orderByInvoice = new Map(orderRows.map((order2) => [order2.invoiceId, order2]));
+    const expenseByOrder = /* @__PURE__ */ new Map();
+    for (const assignment of assignmentRows) {
+      expenseByOrder.set(assignment.workOrderId, (expenseByOrder.get(assignment.workOrderId) ?? 0) + assignment.feeCents);
+    }
+    for (const extra of extraRows) {
+      expenseByOrder.set(extra.workOrderId, (expenseByOrder.get(extra.workOrderId) ?? 0) + extra.priceCents);
+    }
+    const [head] = await db.select({ name: users.name }).from(users).where(and(eq(users.role, "head"), eq(users.active, true))).limit(1);
+    const rows = invoiceRows.map((invoice) => {
+      const order2 = orderByInvoice.get(invoice.id);
+      const expensesCents = order2 ? expenseByOrder.get(order2.id) ?? 0 : 0;
+      const voided = ["voided", "refunded"].includes(invoice.status);
+      const completed = order2?.status === "completed";
+      return {
+        id: invoice.id,
+        invoiceNumber: invoice.number,
+        orderNumber: order2?.number ?? null,
+        createdAt: invoice.createdAt,
+        customerName: invoice.customerName,
+        customerPhone: invoice.customerPhone,
+        salesName: invoice.salesName,
+        category: invoice.categories.includes("grant-80k") ? "8\u842C\u8CC7\u52A9" : invoice.categories.includes("group-buy") ? "\u5718\u8CFC" : "\u81EA\u8CBB",
+        totalCents: invoice.totalCents,
+        validPaidCents: invoice.validPaidCents,
+        expensesCents,
+        grossProfitCents: invoice.totalCents - expensesCents,
+        margin: invoice.totalCents ? Number(((invoice.totalCents - expensesCents) / invoice.totalCents * 100).toFixed(1)) : 0,
+        commissionCents: commissionTotalCents(
+          {
+            totalCents: invoice.totalCents,
+            salesName: invoice.salesName,
+            supervisorName: invoice.supervisorName,
+            team: invoice.team,
+            discountRate: invoice.discountRate
+          },
+          head?.name ?? null
+        ),
+        voided,
+        completed,
+        status: voided ? "voided" : completed ? "completed" : "ongoing"
+      };
+    });
+    const filtered = statusFilter === "all" ? rows : rows.filter((row) => row.status === statusFilter);
+    return c2.json(filtered);
+  }
+);
+reportsRoute.get(
+  "/accounting",
+  requireAuth,
+  requireCapability("report.read"),
+  async (c2) => {
+    const month = c2.req.query("month") ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u6708\u4EFD\u683C\u5F0F\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    const db = getDb();
+    const monthInvoices = await db.select({
+      id: invoices.id,
+      number: invoices.number,
+      totalCents: invoices.totalCents,
+      validPaidCents: invoices.validPaidCents,
+      categories: invoices.categories,
+      salesName: invoices.salesName,
+      supervisorName: invoices.supervisorName,
+      discountRate: invoices.discountRate,
+      team: invoices.team,
+      status: invoices.status,
+      createdAt: invoices.createdAt,
+      customerName: customers.name
+    }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).where(sql`to_char(${invoices.createdAt}, 'YYYY-MM') = ${month}`);
+    const orderRows = await db.select({ id: workOrders.id, invoiceId: workOrders.invoiceId, number: workOrders.number, status: workOrders.status }).from(workOrders);
+    const assignmentRows = await db.select({ workOrderId: workOrderAssignments.workOrderId, feeCents: workOrderAssignments.feeCents }).from(workOrderAssignments);
+    const extraRows = await db.select({ workOrderId: workOrderExtraWorks.workOrderId, priceCents: workOrderExtraWorks.priceCents }).from(workOrderExtraWorks);
+    const orderByInvoice = new Map(orderRows.map((order2) => [order2.invoiceId, order2]));
+    const expenseByOrder = /* @__PURE__ */ new Map();
+    for (const assignment of assignmentRows) {
+      expenseByOrder.set(assignment.workOrderId, (expenseByOrder.get(assignment.workOrderId) ?? 0) + assignment.feeCents);
+    }
+    for (const extra of extraRows) {
+      expenseByOrder.set(extra.workOrderId, (expenseByOrder.get(extra.workOrderId) ?? 0) + extra.priceCents);
+    }
+    const categoryName = (categories) => categories.includes("grant-80k") ? "8\u842C\u8CC7\u52A9" : categories.includes("group-buy") ? "\u5718\u8CFC" : "\u81EA\u8CBB";
+    const [head] = await db.select({ name: users.name }).from(users).where(and(eq(users.role, "head"), eq(users.active, true))).limit(1);
+    const jobs = monthInvoices.filter((invoice) => !["voided", "refunded"].includes(invoice.status)).map((invoice) => {
+      const order2 = orderByInvoice.get(invoice.id);
+      const expensesCents2 = order2 ? expenseByOrder.get(order2.id) ?? 0 : 0;
+      const grossProfitCents = invoice.totalCents - expensesCents2;
+      const commissionCents = commissionTotalCents(
+        {
+          totalCents: invoice.totalCents,
+          salesName: invoice.salesName,
+          supervisorName: invoice.supervisorName,
+          team: invoice.team,
+          discountRate: invoice.discountRate
+        },
+        head?.name ?? null
+      );
+      return {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.number,
+        orderNumber: order2?.number ?? null,
+        customerName: invoice.customerName,
+        salesName: invoice.salesName ?? "\u2014",
+        category: categoryName(invoice.categories),
+        createdAt: invoice.createdAt,
+        revenueCents: invoice.totalCents,
+        collectedCents: invoice.validPaidCents,
+        outstandingCents: invoice.totalCents - invoice.validPaidCents,
+        expensesCents: expensesCents2,
+        grossProfitCents,
+        margin: invoice.totalCents ? Number((grossProfitCents / invoice.totalCents * 100).toFixed(1)) : 0,
+        commissionCents,
+        completed: order2?.status === "completed"
+      };
+    });
+    const sum = (key2) => jobs.reduce((total, job) => total + Number(job[key2] ?? 0), 0);
+    const turnoverCents = sum("revenueCents");
+    const collectedCents = sum("collectedCents");
+    const expensesCents = sum("expensesCents");
+    const commissionsCents = sum("commissionCents");
+    const trend = Array.from({ length: 6 }, (_, index) => {
+      const [year, value2] = month.split("-").map(Number);
+      const date6 = new Date(Date.UTC(year, value2 - 1 - (5 - index), 1));
+      const key2 = `${date6.getUTCFullYear()}-${String(date6.getUTCMonth() + 1).padStart(2, "0")}`;
+      const rows = monthInvoices.filter((invoice) => invoice.createdAt.toISOString().slice(0, 7) === key2);
+      const revenue = rows.reduce((total, invoice) => total + invoice.totalCents, 0);
+      const expense = rows.reduce((total, invoice) => {
+        const order2 = orderByInvoice.get(invoice.id);
+        return total + (order2 ? expenseByOrder.get(order2.id) ?? 0 : 0);
+      }, 0);
+      return { month: key2, turnoverCents: revenue, expensesCents: expense, grossProfitCents: revenue - expense };
+    });
+    return c2.json({
+      month,
+      turnoverCents,
+      collectedCents,
+      outstandingCents: turnoverCents - collectedCents,
+      expensesCents,
+      grossProfitCents: turnoverCents - expensesCents,
+      commissionsCents,
+      netProfitCents: turnoverCents - expensesCents - commissionsCents,
+      jobCount: jobs.length,
+      completedJobs: jobs.filter((job) => job.completed).length,
+      jobs,
+      months: trend
+    });
   }
 );
 
@@ -38118,7 +38498,9 @@ var updateSchema4 = external_exports.object({
   refundReason: external_exports.string().trim().max(1e3).nullable().optional(),
   bankName: external_exports.string().trim().max(120).nullable().optional(),
   bankAccountName: external_exports.string().trim().max(120).nullable().optional(),
-  bankAccountNumber: external_exports.string().trim().max(80).nullable().optional()
+  bankAccountNumber: external_exports.string().trim().max(80).nullable().optional(),
+  transferReference: external_exports.string().trim().max(200).nullable().optional(),
+  commissionReversals: external_exports.array(external_exports.record(external_exports.string(), external_exports.unknown())).max(20).optional()
 });
 var error67 = (code, message2) => ({
   error: { code, message: message2 }
@@ -38167,7 +38549,18 @@ cancellationsRoute.get(
       }
     }).from(cancellationCases).innerJoin(invoices, eq(cancellationCases.invoiceId, invoices.id)).innerJoin(customers, eq(invoices.customerId, customers.id)).where(eq(cancellationCases.id, c2.req.param("id"))).limit(1);
     if (!rows[0]) return c2.json(error67("NOT_FOUND", "\u627E\u4E0D\u5230\u9000\u6B3E\u500B\u6848\u3002"), 404);
-    return c2.json(rows[0]);
+    const filesById = async (id) => {
+      if (!id) return null;
+      const [file2] = await getDb().select().from(files).where(eq(files.id, id)).limit(1);
+      if (!file2) return null;
+      return { id: file2.id, filename: file2.filename, mime: file2.mime, url: await signedCancellationProof(file2.storageKey).catch(() => null) };
+    };
+    return c2.json({
+      ...rows[0],
+      creditNote: await filesById(rows[0].case.creditNoteFileId),
+      signedCreditNote: await filesById(rows[0].case.signedCreditNoteFileId),
+      transferProof: await filesById(rows[0].case.transferProofFileId)
+    });
   }
 );
 cancellationsRoute.post(
@@ -38235,6 +38628,82 @@ cancellationsRoute.patch(
       requestId: c2.get("requestId")
     });
     return c2.json(updated);
+  }
+);
+cancellationsRoute.post(
+  "/:id/proofs",
+  requireAuth,
+  requireCapability("refund.manage"),
+  async (c2) => {
+    const [current] = await getDb().select().from(cancellationCases).where(eq(cancellationCases.id, c2.req.param("id"))).limit(1);
+    if (!current) return c2.json(error67("NOT_FOUND", "\u627E\u4E0D\u5230\u9000\u6B3E\u500B\u6848\u3002"), 404);
+    const body = await c2.req.parseBody();
+    const file2 = body.file;
+    const kind = String(body.kind ?? "");
+    if (!["credit_note", "signed_credit_note", "transfer_proof"].includes(kind)) {
+      return c2.json(error67("VALIDATION_ERROR", "\u6587\u4EF6\u985E\u578B\u4E0D\u6B63\u78BA\u3002"), 400);
+    }
+    if (!(file2 instanceof File)) return c2.json(error67("VALIDATION_ERROR", "\u8ACB\u9078\u64C7\u6587\u4EF6\u3002"), 400);
+    if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(file2.type)) {
+      return c2.json(error67("UNSUPPORTED_FILE", "\u53EA\u652F\u63F4 JPG\uFF0FPNG\uFF0FWebP\uFF0FPDF\u3002"), 415);
+    }
+    if (file2.size > 10 * 1024 * 1024) return c2.json(error67("FILE_TOO_LARGE", "\u6587\u4EF6\u4E0A\u9650 10MB\u3002"), 413);
+    const safeName = file2.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
+    const storageKey = `cancellations/${current.id}/${crypto.randomUUID()}-${safeName}`;
+    await uploadCancellationProof(storageKey, await file2.arrayBuffer(), file2.type);
+    const [inserted] = await getDb().insert(files).values({
+      ownerType: "cancellation_case",
+      ownerId: current.id,
+      storageKey,
+      filename: file2.name.slice(0, 200),
+      mime: file2.type,
+      sizeBytes: file2.size,
+      createdBy: c2.get("user").id
+    }).returning();
+    const field2 = kind === "credit_note" ? "creditNoteFileId" : kind === "signed_credit_note" ? "signedCreditNoteFileId" : "transferProofFileId";
+    await getDb().update(cancellationCases).set({ [field2]: inserted.id, updatedAt: /* @__PURE__ */ new Date() }).where(eq(cancellationCases.id, current.id));
+    return c2.json({ id: inserted.id, filename: inserted.filename, url: await signedCancellationProof(storageKey).catch(() => null) }, 201);
+  }
+);
+cancellationsRoute.post(
+  "/:id/complete",
+  requireAuth,
+  requireCapability("refund.manage"),
+  async (c2) => {
+    const [row] = await getDb().select({ case: cancellationCases, invoice: invoices }).from(cancellationCases).innerJoin(invoices, eq(cancellationCases.invoiceId, invoices.id)).where(eq(cancellationCases.id, c2.req.param("id"))).limit(1);
+    if (!row) return c2.json(error67("NOT_FOUND", "\u627E\u4E0D\u5230\u9000\u6B3E\u500B\u6848\u3002"), 404);
+    const item = row.case;
+    if (item.status === "completed") return c2.json(error67("ALREADY_COMPLETED", "\u9000\u6B3E\u5DF2\u5B8C\u6210\u3002"), 409);
+    if (item.refundAmountCents <= 0 || !item.bankName || !item.bankAccountName || !item.bankAccountNumber) {
+      return c2.json(error67("REFUND_INCOMPLETE", "\u8ACB\u5148\u586B\u5BEB\u9000\u6B3E\u91D1\u984D\u53CA\u9280\u884C\u8CC7\u6599\u3002"), 422);
+    }
+    if (!item.creditNoteFileId || !item.signedCreditNoteFileId || !item.transferProofFileId) {
+      return c2.json(error67("DOCUMENTS_INCOMPLETE", "\u8ACB\u5148\u4E0A\u8F09 Credit Note\u3001\u5DF2\u7C3D Credit Note \u53CA\u8F49\u5E33\u8B49\u660E\u3002"), 422);
+    }
+    if (item.refundAmountCents > row.invoice.validPaidCents) {
+      return c2.json(error67("REFUND_EXCEEDS_PAID", "\u9000\u6B3E\u91D1\u984D\u4E0D\u53EF\u8D85\u904E\u5DF2\u6536\u91D1\u984D\u3002"), 422);
+    }
+    const [head] = await getDb().select({ name: users.name }).from(users).where(and(eq(users.role, "head"), eq(users.active, true))).limit(1);
+    const shares = commissionShares(
+      {
+        totalCents: row.invoice.totalCents,
+        salesName: row.invoice.salesName,
+        supervisorName: row.invoice.supervisorName,
+        team: row.invoice.team,
+        discountRate: row.invoice.discountRate
+      },
+      head?.name ?? null
+    ).map((share) => ({
+      actorId: null,
+      actorName: share.actorName,
+      amount: share.amountCents / 100
+    }));
+    await getDb().transaction(async (tx) => {
+      await tx.update(cancellationCases).set({ status: "completed", commissionReversals: shares, completedAt: /* @__PURE__ */ new Date(), completedBy: c2.get("user").id, updatedAt: /* @__PURE__ */ new Date() }).where(eq(cancellationCases.id, item.id));
+      await tx.update(invoices).set({ status: "refunded", updatedAt: /* @__PURE__ */ new Date() }).where(eq(invoices.id, row.invoice.id));
+      await tx.insert(auditLogs).values({ actorId: c2.get("user").id, action: "cancellation_completed", entityType: "cancellation_case", entityId: item.id, after: { refundAmountCents: item.refundAmountCents, invoiceId: row.invoice.id }, requestId: c2.get("requestId") });
+    });
+    return c2.json({ ok: true });
   }
 );
 
@@ -38442,10 +38911,14 @@ productStylesRoute.post(
 
 // server/routes/customWork.ts
 var createSchema5 = external_exports.object({
-  workOrderId: external_exports.string().uuid(),
+  workOrderId: external_exports.string().uuid().optional(),
+  invoiceId: external_exports.string().uuid().optional(),
+  invoiceLineId: external_exports.string().uuid().optional(),
   description: external_exports.string().trim().min(2).max(500),
   quantity: external_exports.number().positive().max(1e4),
   unit: external_exports.string().trim().min(1).max(30)
+}).refine((value2) => Boolean(value2.workOrderId || value2.invoiceId && value2.invoiceLineId), {
+  message: "\u9700\u8981\u5DE5\u7A0B\u55AE\u6216 Invoice \u9805\u76EE\u3002"
 });
 var respondSchema = external_exports.object({
   status: external_exports.enum(["approved", "rejected"]),
@@ -38453,43 +38926,67 @@ var respondSchema = external_exports.object({
   notes: external_exports.string().trim().max(500).nullable().optional()
 });
 var customWorkRoute = new Hono3();
+async function resolveRequest(row) {
+  let invoiceId = row.invoiceId;
+  let orderNumber = null;
+  if (row.workOrderId) {
+    const [order2] = await getDb().select({ number: workOrders.number, invoiceId: workOrders.invoiceId }).from(workOrders).where(eq(workOrders.id, row.workOrderId)).limit(1);
+    orderNumber = order2?.number ?? null;
+    invoiceId = invoiceId ?? order2?.invoiceId ?? null;
+  }
+  if (!invoiceId) {
+    return { ...row, orderNumber, invoiceNumber: null, customerName: null };
+  }
+  const [invoice] = await getDb().select({ number: invoices.number, customerName: customers.name }).from(invoices).innerJoin(customers, eq(invoices.customerId, customers.id)).where(eq(invoices.id, invoiceId)).limit(1);
+  return {
+    ...row,
+    orderNumber,
+    invoiceNumber: invoice?.number ?? null,
+    customerName: invoice?.customerName ?? null
+  };
+}
 customWorkRoute.get("/", requireAuth, requireCapability("workorder.read"), async (c2) => {
-  const rows = await getDb().select({
-    id: customWorkRequests.id,
-    workOrderId: customWorkRequests.workOrderId,
-    orderNumber: workOrders.number,
-    invoiceNumber: invoices.number,
-    customerName: customers.name,
-    description: customWorkRequests.description,
-    quantity: customWorkRequests.quantity,
-    unit: customWorkRequests.unit,
-    status: customWorkRequests.status,
-    priceCents: customWorkRequests.priceCents,
-    notes: customWorkRequests.notes,
-    requestedAt: customWorkRequests.requestedAt,
-    respondedAt: customWorkRequests.respondedAt
-  }).from(customWorkRequests).innerJoin(workOrders, eq(customWorkRequests.workOrderId, workOrders.id)).innerJoin(invoices, eq(workOrders.invoiceId, invoices.id)).innerJoin(customers, eq(invoices.customerId, customers.id)).orderBy(desc(customWorkRequests.requestedAt));
-  return c2.json(rows);
+  const rows = await getDb().select().from(customWorkRequests).orderBy(desc(customWorkRequests.requestedAt));
+  return c2.json(await Promise.all(rows.map(resolveRequest)));
 });
 customWorkRoute.post(
   "/",
   requireAuth,
-  requireCapability("workorder.update"),
+  requireCapability("custom_work.create"),
   async (c2) => {
     const parsed = createSchema5.safeParse(await c2.req.json().catch(() => null));
     if (!parsed.success) {
       return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u81EA\u8A02\u5DE5\u7A0B\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } }, 400);
     }
-    const [order2] = await getDb().select({ id: workOrders.id }).from(workOrders).where(eq(workOrders.id, parsed.data.workOrderId)).limit(1);
-    if (!order2) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5DE5\u7A0B\u55AE\u3002" } }, 404);
+    let workOrderId = null;
+    let invoiceId = parsed.data.invoiceId ?? null;
+    let invoiceLineId = parsed.data.invoiceLineId ?? null;
+    if (parsed.data.workOrderId) {
+      const [order2] = await getDb().select({ id: workOrders.id, invoiceId: workOrders.invoiceId }).from(workOrders).where(eq(workOrders.id, parsed.data.workOrderId)).limit(1);
+      if (!order2) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5DE5\u7A0B\u55AE\u3002" } }, 404);
+      workOrderId = order2.id;
+      invoiceId = invoiceId ?? order2.invoiceId;
+    }
+    if (invoiceId) {
+      const [invoice] = await getDb().select({ id: invoices.id }).from(invoices).where(eq(invoices.id, invoiceId)).limit(1);
+      if (!invoice) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u767C\u7968\u3002" } }, 404);
+      if (invoiceLineId) {
+        const [line2] = await getDb().select({ id: invoiceLines.id }).from(invoiceLines).innerJoin(invoiceVersions, eq(invoiceLines.versionId, invoiceVersions.id)).where(and(eq(invoiceLines.id, invoiceLineId), eq(invoiceVersions.invoiceId, invoiceId))).limit(1);
+        if (!line2) {
+          return c2.json({ error: { code: "INVALID_LINE", message: "\u6B64\u9805\u76EE\u4E0D\u5C6C\u65BC\u8A72\u767C\u7968\u3002" } }, 422);
+        }
+      }
+    }
     const [created] = await getDb().insert(customWorkRequests).values({
-      workOrderId: order2.id,
+      workOrderId,
+      invoiceId,
+      invoiceLineId,
       description: parsed.data.description,
       quantity: String(parsed.data.quantity),
       unit: parsed.data.unit,
       requestedBy: c2.get("user").id
     }).returning();
-    return c2.json(created, 201);
+    return c2.json(await resolveRequest(created), 201);
   }
 );
 customWorkRoute.patch(
@@ -38522,6 +39019,61 @@ customWorkRoute.patch(
       requestId: c2.get("requestId")
     });
     return c2.json(updated);
+  }
+);
+customWorkRoute.post(
+  "/:id/catalog",
+  requireAuth,
+  requireCapability("workorder.assign"),
+  async (c2) => {
+    const body = await c2.req.json().catch(() => null);
+    const category = typeof body?.category === "string" ? body.category.trim() : "";
+    const name = typeof body?.name === "string" ? body.name.trim() : "";
+    const details = typeof body?.details === "string" ? body.details.trim() : "";
+    if (!category || !name) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u8ACB\u586B\u5BEB\u5206\u985E\u53CA\u5DE5\u7A0B\u540D\u7A31\u3002" } }, 400);
+    }
+    const [request] = await getDb().select().from(customWorkRequests).where(eq(customWorkRequests.id, c2.req.param("id"))).limit(1);
+    if (!request) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u81EA\u8A02\u5DE5\u7A0B\u3002" } }, 404);
+    if (request.status !== "approved" || !request.priceCents || request.priceCents <= 0) {
+      return c2.json({ error: { code: "NOT_APPROVED", message: "\u9700\u8981\u5148\u6279\u6838\u50F9\u9322\u624D\u53EF\u52A0\u5165\u50F9\u76EE\u8868\u3002" } }, 422);
+    }
+    if (request.catalogServiceId) {
+      return c2.json({ error: { code: "ALREADY_ADDED", message: "\u6B64\u81EA\u8A02\u5DE5\u7A0B\u5DF2\u52A0\u5165\u50F9\u76EE\u8868\u3002" } }, 409);
+    }
+    const sequence = await getDb().select({ count: sql`count(*)::int` }).from(services);
+    let code = `CW${String((sequence[0]?.count ?? 0) + 1).padStart(4, "0")}`;
+    const existing = await getDb().select({ id: services.id }).from(services).where(eq(services.code, code)).limit(1);
+    if (existing[0]) code = `CW${Date.now().toString().slice(-6)}`;
+    const [created] = await getDb().insert(services).values({
+      code,
+      name,
+      category,
+      unit: request.unit || "\u9805",
+      priceCents: request.priceCents,
+      measure: "fixed",
+      costMode: "ratio",
+      published: true,
+      metadata: {
+        scope: "",
+        details: details || "\u7531\u81EA\u8A02\u5DE5\u7A0B\u8ACB\u793A\u52A0\u5165",
+        needsProductStyle: false,
+        minQty: 0,
+        minAmount: 0,
+        minScope: "line",
+        linkedServiceIds: []
+      }
+    }).returning();
+    await getDb().update(customWorkRequests).set({ catalogServiceId: created.id }).where(eq(customWorkRequests.id, request.id));
+    await getDb().insert(auditLogs).values({
+      actorId: c2.get("user").id,
+      action: "custom_work_added_to_catalog",
+      entityType: "custom_work_request",
+      entityId: request.id,
+      after: { serviceId: created.id, code: created.code },
+      requestId: c2.get("requestId")
+    });
+    return c2.json(created, 201);
   }
 );
 

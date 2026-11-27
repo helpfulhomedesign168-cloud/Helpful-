@@ -166,6 +166,7 @@ export function LiveInvoiceEdit() {
             team: team || null,
             isAdditional,
             categories,
+            discountRate: Number(invoice.discountRate ?? 1),
             grant: categories.includes("grant-80k")
               ? {
                   applicationNumber: grantApplicationNumber.trim() || undefined,

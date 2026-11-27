@@ -7,7 +7,9 @@ import {
   workOrders,
   workOrderAssignments,
   workOrderExtraWorks,
+  users,
 } from "../db/schema";
+import { commissionTotalCents } from "../commission";
 import type { AppEnv } from "../auth";
 import { requireAuth } from "../auth";
 import { requireCapability } from "../guards";
@@ -75,6 +77,7 @@ reportsRoute.get(
         validPaidCents: invoices.validPaidCents,
         salesName: invoices.salesName,
         supervisorName: invoices.supervisorName,
+        discountRate: invoices.discountRate,
         team: invoices.team,
         createdAt: invoices.createdAt,
         customerName: customers.name,
@@ -102,6 +105,11 @@ reportsRoute.get(
     for (const extra of extraRows) {
       expenseByOrder.set(extra.workOrderId, (expenseByOrder.get(extra.workOrderId) ?? 0) + extra.priceCents);
     }
+    const [head] = await db
+      .select({ name: users.name })
+      .from(users)
+      .where(and(eq(users.role, "head"), eq(users.active, true)))
+      .limit(1);
     const rows = invoiceRows.map((invoice) => {
       const order = orderByInvoice.get(invoice.id);
       const expensesCents = order ? expenseByOrder.get(order.id) ?? 0 : 0;
@@ -121,9 +129,16 @@ reportsRoute.get(
         expensesCents,
         grossProfitCents: invoice.totalCents - expensesCents,
         margin: invoice.totalCents ? Number((((invoice.totalCents - expensesCents) / invoice.totalCents) * 100).toFixed(1)) : 0,
-        commissionCents:
-          Math.round(invoice.totalCents * 0.08) +
-          (invoice.supervisorName ? Math.round(invoice.totalCents * (invoice.team === "B" ? 0.03 : 0.04)) : 0),
+        commissionCents: commissionTotalCents(
+          {
+            totalCents: invoice.totalCents,
+            salesName: invoice.salesName,
+            supervisorName: invoice.supervisorName,
+            team: invoice.team,
+            discountRate: invoice.discountRate,
+          },
+          head?.name ?? null,
+        ),
         voided,
         completed,
         status: voided ? "voided" : completed ? "completed" : "ongoing",
@@ -153,6 +168,7 @@ reportsRoute.get(
         categories: invoices.categories,
         salesName: invoices.salesName,
         supervisorName: invoices.supervisorName,
+        discountRate: invoices.discountRate,
         team: invoices.team,
         status: invoices.status,
         createdAt: invoices.createdAt,
@@ -180,15 +196,27 @@ reportsRoute.get(
     }
     const categoryName = (categories: string[]) =>
       categories.includes("grant-80k") ? "8萬資助" : categories.includes("group-buy") ? "團購" : "自費";
+    const [head] = await db
+      .select({ name: users.name })
+      .from(users)
+      .where(and(eq(users.role, "head"), eq(users.active, true)))
+      .limit(1);
     const jobs = monthInvoices
       .filter((invoice) => !["voided", "refunded"].includes(invoice.status))
       .map((invoice) => {
         const order = orderByInvoice.get(invoice.id);
         const expensesCents = order ? expenseByOrder.get(order.id) ?? 0 : 0;
         const grossProfitCents = invoice.totalCents - expensesCents;
-        const commissionCents =
-          Math.round(invoice.totalCents * 0.08) +
-          (invoice.supervisorName ? Math.round(invoice.totalCents * (invoice.team === "B" ? 0.03 : 0.04)) : 0);
+        const commissionCents = commissionTotalCents(
+          {
+            totalCents: invoice.totalCents,
+            salesName: invoice.salesName,
+            supervisorName: invoice.supervisorName,
+            team: invoice.team,
+            discountRate: invoice.discountRate,
+          },
+          head?.name ?? null,
+        );
         return {
           invoiceId: invoice.id,
           invoiceNumber: invoice.number,

@@ -1,9 +1,10 @@
 import { Hono } from "hono";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/client";
-import { auditLogs, cancellationCases, customers, files, invoices } from "../db/schema";
+import { auditLogs, cancellationCases, customers, files, invoices, users } from "../db/schema";
 import { signedCancellationProof, uploadCancellationProof } from "../storage";
+import { commissionShares } from "../commission";
 import type { AppEnv } from "../auth";
 import { requireAuth } from "../auth";
 import { requireCapability } from "../guards";
@@ -250,20 +251,25 @@ cancellationsRoute.post(
     if (item.refundAmountCents > row.invoice.validPaidCents) {
       return c.json(error("REFUND_EXCEEDS_PAID", "退款金額不可超過已收金額。"), 422);
     }
-    const shares: Array<{ actorId: string | null; actorName: string; amount: number }> = [];
-    const addShare = (actorName: string | null, rate: number) => {
-      if (!actorName || !actorName.trim() || rate <= 0) return;
-      shares.push({
-        actorId: null,
-        actorName: actorName.trim(),
-        amount: Math.round((row.invoice.totalCents * rate) / 100),
-      });
-    };
-    addShare(row.invoice.salesName, 0.08);
-    addShare(
-      row.invoice.supervisorName,
-      row.invoice.team === "B" ? 0.03 : 0.04,
-    );
+    const [head] = await getDb()
+      .select({ name: users.name })
+      .from(users)
+      .where(and(eq(users.role, "head"), eq(users.active, true)))
+      .limit(1);
+    const shares = commissionShares(
+      {
+        totalCents: row.invoice.totalCents,
+        salesName: row.invoice.salesName,
+        supervisorName: row.invoice.supervisorName,
+        team: row.invoice.team,
+        discountRate: row.invoice.discountRate,
+      },
+      head?.name ?? null,
+    ).map((share) => ({
+      actorId: null,
+      actorName: share.actorName,
+      amount: share.amountCents / 100,
+    }));
     await getDb().transaction(async (tx) => {
       await tx.update(cancellationCases).set({ status: "completed", commissionReversals: shares, completedAt: new Date(), completedBy: c.get("user").id, updatedAt: new Date() }).where(eq(cancellationCases.id, item.id));
       await tx.update(invoices).set({ status: "refunded", updatedAt: new Date() }).where(eq(invoices.id, row.invoice.id));

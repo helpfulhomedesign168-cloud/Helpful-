@@ -1118,6 +1118,7 @@ export function QuoteEditor() {
           isAdditional,
           parentInvoiceId: isAdditional && parentInvoiceId ? parentInvoiceId : null,
           categories: directCategories,
+          discountRate: discount,
           grant: hasGrant
             ? {
                 applicationNumber: grantApplicationNumber || undefined,

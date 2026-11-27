@@ -169,6 +169,13 @@
       "when": 1795768805745,
       "tag": "0023_military_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795771380518,
+      "tag": "0024_absent_agent_brand",
+      "breakpoints": true
     }
   ]
 }
