@@ -3,6 +3,7 @@
 ## Completed
 
 - Audit log viewer for admin/finance supervisor
+- Admin password reset with one-time temporary password
 - Admin system health dashboard
 - Admin feature-flag settings UI
 - Customer detail with Invoice history

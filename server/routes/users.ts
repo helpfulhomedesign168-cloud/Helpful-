@@ -195,3 +195,61 @@ usersRoute.patch(
     return c.json(updated[0]);
   },
 );
+
+usersRoute.post(
+  "/:id/reset-password",
+  requireAuth,
+  requireCapability("user.manage"),
+  async (c) => {
+    const serviceKey = getOptionalEnv().serviceRoleKey;
+    if (!serviceKey) {
+      return c.json(
+        { error: { code: "AUTH_NOT_CONFIGURED", message: "用戶服務未設定。" } },
+        503,
+      );
+    }
+    const [target] = await getDb()
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.id, c.req.param("id")))
+      .limit(1);
+    if (!target) {
+      return c.json({ error: { code: "NOT_FOUND", message: "找不到用戶。" } }, 404);
+    }
+    const password = `${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}Aa1!`;
+    const res = await fetch(
+      `${getEnv().SUPABASE_URL}/auth/v1/admin/users/${target.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({ password }),
+        signal: AbortSignal.timeout(15000),
+      },
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      return c.json(
+        {
+          error: {
+            code: "AUTH_UPDATE_FAILED",
+            message: body?.msg ?? "未能重設密碼。",
+          },
+        },
+        502,
+      );
+    }
+    await getDb().insert(auditLogs).values({
+      actorId: c.get("user").id,
+      action: "user_password_reset",
+      entityType: "user",
+      entityId: target.id,
+      after: { email: target.email },
+      requestId: c.get("requestId"),
+    });
+    return c.json({ ok: true, password });
+  },
+);

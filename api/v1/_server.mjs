@@ -35356,6 +35356,59 @@ usersRoute.patch(
     return c2.json(updated[0]);
   }
 );
+usersRoute.post(
+  "/:id/reset-password",
+  requireAuth,
+  requireCapability("user.manage"),
+  async (c2) => {
+    const serviceKey = getOptionalEnv().serviceRoleKey;
+    if (!serviceKey) {
+      return c2.json(
+        { error: { code: "AUTH_NOT_CONFIGURED", message: "\u7528\u6236\u670D\u52D9\u672A\u8A2D\u5B9A\u3002" } },
+        503
+      );
+    }
+    const [target] = await getDb().select({ id: users.id, email: users.email }).from(users).where(eq(users.id, c2.req.param("id"))).limit(1);
+    if (!target) {
+      return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u7528\u6236\u3002" } }, 404);
+    }
+    const password2 = `${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}Aa1!`;
+    const res = await fetch(
+      `${getEnv().SUPABASE_URL}/auth/v1/admin/users/${target.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`
+        },
+        body: JSON.stringify({ password: password2 }),
+        signal: AbortSignal.timeout(15e3)
+      }
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      return c2.json(
+        {
+          error: {
+            code: "AUTH_UPDATE_FAILED",
+            message: body?.msg ?? "\u672A\u80FD\u91CD\u8A2D\u5BC6\u78BC\u3002"
+          }
+        },
+        502
+      );
+    }
+    await getDb().insert(auditLogs).values({
+      actorId: c2.get("user").id,
+      action: "user_password_reset",
+      entityType: "user",
+      entityId: target.id,
+      after: { email: target.email },
+      requestId: c2.get("requestId")
+    });
+    return c2.json({ ok: true, password: password2 });
+  }
+);
 
 // server/routes/featureFlags.ts
 var patchSchema2 = external_exports.object({

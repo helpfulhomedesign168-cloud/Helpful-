@@ -34,6 +34,8 @@ export function LiveUsers() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "invoice_clerk" });
   const [busy, setBusy] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetUser, setResetUser] = useState<StaffUser | null>(null);
 
   async function load() {
     setLoading(true);
@@ -68,6 +70,25 @@ export function LiveUsers() {
       setError(e instanceof ApiError ? e.message : "未能建立用戶。");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function reset(user: StaffUser) {
+    if (!confirm(`確定要重設 ${user.name} 的密碼？`)) return;
+    setBusy(user.id);
+    setError("");
+    try {
+      const result = await apiRequest<{ password: string }>(
+        `/users/${user.id}/reset-password`,
+        accessToken,
+        { method: "POST" },
+      );
+      setResetUser(user);
+      setResetPassword(result.password);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "未能重設密碼。");
+    } finally {
+      setBusy("");
     }
   }
 
@@ -117,6 +138,17 @@ export function LiveUsers() {
           </div>
         )}
       </div>
+      {resetUser && (
+        <Dialog title="臨時密碼" onClose={() => { setResetUser(null); setResetPassword(""); }}>
+          <p>已重設 <strong>{resetUser.name}</strong> 的密碼。請將以下臨時密碼交給他，並要求登入後更改。</p>
+          <div className="temp-password"><code>{resetPassword}</code></div>
+          <p className="muted">此密碼只會顯示一次。</p>
+          <div className="dialog-actions">
+            <Button variant="secondary" onClick={() => void navigator.clipboard.writeText(resetPassword)}>複製密碼</Button>
+            <Button variant="primary" onClick={() => { setResetUser(null); setResetPassword(""); }}>完成</Button>
+          </div>
+        </Dialog>
+      )}
       {open && (
         <Dialog title="新增用戶" onClose={() => setOpen(false)}>
           <form onSubmit={create}>
