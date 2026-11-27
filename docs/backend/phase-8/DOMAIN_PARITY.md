@@ -50,6 +50,8 @@ self-pay:   30 / 20 / 30 / 20
   - receipted
 - Work order released at 50% valid paid
 
+| AccountingDashboard | `/reports/accounting` | ✅ KPI + jobs + 6-month trend + commission + expenses; MYOB remains not connected |
+
 ## Remaining parity work
 
 1. Invoice team / additional order / parent relation
