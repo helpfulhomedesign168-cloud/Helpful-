@@ -35,6 +35,7 @@ type MunicipalDetail = Omit<MunicipalRow, "invoiceId" | "invoiceNumber" | "princ
   };
   principal: { id: string; number: string; status: string };
   customer: { name: string; phone: string; address: string | null; district: string | null };
+  principalLines: Array<{ id: string; name: string; position: string | null; quantity: string; unit: string; unitPriceCents: number; amountCents: number; productStyleText: string | null }>;
   lines: { id: string; sourceLineId: string | null; name: string; description: string | null; position: string | null; measure: string | null; length: string | null; width: string | null; dimensionUnit: string | null; quantity: string; unit: string; unitPriceCents: number; amountCents: number; productStyleText: string | null }[];
 };
 
@@ -161,6 +162,15 @@ export function LiveMunicipalOrderDetail() {
         <Badge strong>{order.status}</Badge>
       </div>
       <div className="list-panel">
+        <h2 className="section-title">正單 A</h2>
+        <div className="invoice-summary-grid">
+          <div><span>正單</span><strong>{order.principal.number}</strong><small>{order.principal.status}</small></div>
+          <div><span>客戶</span><strong>{order.customer.name}</strong><small>{order.customer.phone}</small></div>
+          <div><span>工程地址</span><strong>{order.customer.address || order.customer.district || "—"}</strong></div>
+        </div>
+        <p className="muted">市政單用途：政府8萬資助申請，不作會計。</p>
+        <div className="table-scroll"><table className="municipal-principal-table"><thead><tr><th>工程項目</th><th>位置</th><th>數量</th><th>產品款式</th></tr></thead><tbody>{order.principalLines.map((line) => <tr key={line.id}><td><strong>{line.name}</strong></td><td>{line.position || "—"}</td><td>{line.quantity} {line.unit}</td><td>{line.productStyleText || "—"}</td></tr>)}</tbody></table></div>
+        <h2 className="section-title">市政單項目</h2>
         <div className="invoice-summary-grid">
           <div><span>正單工程單</span><strong>{order.principal.number}</strong><small>{order.principal.status}</small></div>
           <div><span>Invoice</span><strong>{order.invoice.number}</strong><small>{money(order.invoice.totalCents / 100)}</small></div>

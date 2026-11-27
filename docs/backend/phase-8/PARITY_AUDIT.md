@@ -39,9 +39,10 @@ Reference: prototype commit `e54d5b9`
 
 ### Medium
 
-3. **Municipal A/B/C sections**
-   - Line editor supports measure/dimensions/product style
-   - Prototype detail has principal A/B/C, grant/payment summary sections
+3. ✅ Municipal principal A section
+   - Detail returns principal invoice lines with product style
+   - UI shows 正單 A table + municipal line editor
+   - B/C-specific sections not present in prototype detail reference used
 
 4. **Handoff/order detail layout polish**
    - Domain fields mostly present; page hierarchy differs from prototype

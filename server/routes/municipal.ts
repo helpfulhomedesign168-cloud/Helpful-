@@ -155,8 +155,34 @@ municipalRoute.get(
             .where(eq(invoiceLines.versionId, version[0].id))
         : [];
     }
+    const principalVersion = await getDb()
+      .select()
+      .from(invoiceVersions)
+      .where(
+        and(
+          eq(invoiceVersions.invoiceId, order.invoice.id),
+          eq(invoiceVersions.versionNo, order.invoice.currentVersion),
+        ),
+      )
+      .limit(1);
+    const principalLines = principalVersion[0]
+      ? await getDb()
+          .select()
+          .from(invoiceLines)
+          .where(eq(invoiceLines.versionId, principalVersion[0].id))
+      : [];
     return c.json({
       ...order,
+      principalLines: principalLines.map((line) => ({
+        id: line.id,
+        name: line.name,
+        position: line.position,
+        quantity: line.quantity,
+        unit: line.unit,
+        unitPriceCents: line.unitPriceCents,
+        amountCents: line.amountCents,
+        productStyleText: line.productStyleText,
+      })),
       lines: lines.map((line) => ({
         id: line.id,
         sourceLineId: line.sourceLineId,
