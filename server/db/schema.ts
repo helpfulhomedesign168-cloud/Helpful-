@@ -411,12 +411,18 @@ export const cancellationCases = pgTable("cancellation_cases", {
   bankName: text("bank_name"),
   bankAccountName: text("bank_account_name"),
   bankAccountNumber: text("bank_account_number"),
+  transferReference: text("transfer_reference"),
+  creditNoteFileId: uuid("credit_note_file_id").references(() => files.id, { onDelete: "set null" }),
+  signedCreditNoteFileId: uuid("signed_credit_note_file_id").references(() => files.id, { onDelete: "set null" }),
+  transferProofFileId: uuid("transfer_proof_file_id").references(() => files.id, { onDelete: "set null" }),
+  commissionReversals: jsonb("commission_reversals").$type<Array<Record<string, unknown>>>().default([]).notNull(),
   createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  completedBy: uuid("completed_by").references(() => users.id),
 });
 
 export const contractors = pgTable("contractors", {

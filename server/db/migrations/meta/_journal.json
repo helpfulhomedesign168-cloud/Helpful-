@@ -148,6 +148,13 @@
       "when": 1795768272049,
       "tag": "0020_good_devos",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795768379444,
+      "tag": "0021_friendly_firelord",
+      "breakpoints": true
     }
   ]
 }

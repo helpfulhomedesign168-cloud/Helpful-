@@ -275,3 +275,30 @@ export async function deleteUserAvatar(path: string) {
     throw new Error(`Storage delete failed (${res.status})`);
   }
 }
+
+const CANCELLATION_BUCKET = "cancellation-proofs";
+
+export async function uploadCancellationProof(path: string, bytes: ArrayBuffer, mime: string) {
+  const { base, key } = storageConfig();
+  const res = await fetch(`${base}/object/${CANCELLATION_BUCKET}/${path}`, {
+    method: "POST",
+    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": mime, "x-upsert": "false" },
+    body: bytes,
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+
+export async function signedCancellationProof(path: string) {
+  const { base, key } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${CANCELLATION_BUCKET}/${path}`, {
+    method: "POST",
+    headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = (await res.json()) as { signedURL?: string };
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}

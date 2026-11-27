@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../auth";
-import { apiRequest, ApiError } from "../api/client";
+import { apiRequest, apiUpload, ApiError } from "../api/client";
 import { Badge, Button, Empty, Field, PageHead } from "../components/ui";
 import { money } from "../domain/types";
 
@@ -39,11 +39,19 @@ type CancellationDetail = {
     bankName: string | null;
     bankAccountName: string | null;
     bankAccountNumber: string | null;
+    transferReference: string | null;
+    creditNoteFileId: string | null;
+    signedCreditNoteFileId: string | null;
+    transferProofFileId: string | null;
+    commissionReversals: Array<{ actorName?: string; amount?: number }>;
     createdAt: string;
     updatedAt: string;
   };
   invoice: { id: string; number: string; totalCents: number; validPaidCents: number; status: string };
   customer: { name: string; phone: string; address: string | null; district: string | null };
+  creditNote: { id: string; filename: string; url: string | null } | null;
+  signedCreditNote: { id: string; filename: string; url: string | null } | null;
+  transferProof: { id: string; filename: string; url: string | null } | null;
 };
 
 export function LiveCancellationCases() {
@@ -78,7 +86,9 @@ export function LiveCancellationDetail() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
-  const [form, setForm] = useState({ status: "pending", refundAmount: "", deductions: "", refundReason: "", bankName: "", bankAccountName: "", bankAccountNumber: "" });
+  const [form, setForm] = useState({ status: "pending", refundAmount: "", deductions: "", refundReason: "", bankName: "", bankAccountName: "", bankAccountNumber: "", transferReference: "" });
+  const [uploading, setUploading] = useState("");
+  const [completing, setCompleting] = useState(false);
 
   async function load() {
     try {
@@ -92,6 +102,7 @@ export function LiveCancellationDetail() {
         bankName: detail.case.bankName ?? "",
         bankAccountName: detail.case.bankAccountName ?? "",
         bankAccountNumber: detail.case.bankAccountNumber ?? "",
+        transferReference: detail.case.transferReference ?? "",
       });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能讀取退款個案。");
@@ -115,6 +126,7 @@ export function LiveCancellationDetail() {
           bankName: form.bankName || null,
           bankAccountName: form.bankAccountName || null,
           bankAccountNumber: form.bankAccountNumber || null,
+          transferReference: form.transferReference || null,
         }),
       });
       await load();
@@ -125,6 +137,28 @@ export function LiveCancellationDetail() {
       setSaving(false);
     }
   }
+
+  async function upload(kind: "credit_note" | "signed_credit_note" | "transfer_proof", file: File) {
+    setUploading(kind);
+    setError("");
+    try {
+      const body = new FormData();
+      body.append("kind", kind);
+      body.append("file", file);
+      await apiUpload(`/cancellation-cases/${id}/proofs`, accessToken, body);
+      await load();
+    } catch (e) { setError(e instanceof ApiError ? e.message : "文件上載失敗。"); }
+    finally { setUploading(""); }
+  }
+  async function completeRefund() {
+    setCompleting(true); setError("");
+    try {
+      await apiRequest(`/cancellation-cases/${id}/complete`, accessToken, { method: "POST" });
+      await load(); setNotice("退款已完成。");
+    } catch (e) { setError(e instanceof ApiError ? e.message : "未能完成退款。"); }
+    finally { setCompleting(false); }
+  }
+  const readyToTransfer = data && data.case.refundAmountCents > 0 && data.case.bankName && data.case.bankAccountName && data.case.bankAccountNumber && data.case.creditNoteFileId && data.case.signedCreditNoteFileId && data.case.transferProofFileId;
 
   if (error && !data) return <Empty title="未能讀取退款個案" description={error} />;
   if (!data) return <p className="muted">正在讀取退款個案…</p>;
@@ -148,9 +182,15 @@ export function LiveCancellationDetail() {
             <Field label="銀行"><input value={form.bankName} onChange={(e) => setForm({ ...form, bankName: e.target.value })} /></Field>
             <Field label="戶口名稱"><input value={form.bankAccountName} onChange={(e) => setForm({ ...form, bankAccountName: e.target.value })} /></Field>
             <Field label="戶口號碼"><input value={form.bankAccountNumber} onChange={(e) => setForm({ ...form, bankAccountNumber: e.target.value })} /></Field>
+            <Field label="轉帳參考"><input value={form.transferReference} onChange={(e) => setForm({ ...form, transferReference: e.target.value })} /></Field>
           </div>
+          <h2 className="section-title">文件</h2>
+          <div className="form-grid three">
+            {([["credit_note", "Credit Note", data.creditNote], ["signed_credit_note", "已簽 Credit Note", data.signedCreditNote], ["transfer_proof", "轉帳證明", data.transferProof]] as const).map(([kind, label, file]) => <Field key={kind} label={label}>{file?.url ? <a href={file.url} target="_blank" rel="noreferrer">{file.filename}</a> : <span className="muted">未上載</span>}<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={Boolean(uploading) || data.case.status === "completed"} onChange={(e) => { const selected = e.target.files?.[0]; if (selected) void upload(kind, selected); e.target.value = ""; }} /></Field>)}
+          </div>
+          {(data.case.commissionReversals ?? []).length > 0 && <><h2 className="section-title">佣金扣回</h2><div className="table-scroll"><table className="invoice-list-table live-work-table"><thead><tr><th>同事</th><th>金額</th></tr></thead><tbody>{data.case.commissionReversals.map((item, index) => <tr key={index}><td>{item.actorName || "—"}</td><td>{money(Number(item.amount) || 0)}</td></tr>)}</tbody></table></div></>}
           {notice && <p className="muted">{notice}</p>}
-          <div className="dialog-actions live-form-actions"><Button type="submit" variant="primary" disabled={saving}>{saving ? "儲存中…" : "儲存退款個案"}</Button></div>
+          <div className="dialog-actions live-form-actions"><Button type="submit" variant="primary" disabled={saving || data.case.status === "completed"}>{saving ? "儲存中…" : "儲存退款個案"}</Button>{data.case.status !== "completed" && <Button type="button" variant="danger" disabled={!readyToTransfer || completing} onClick={() => void completeRefund()}>{completing ? "處理中…" : "完成退款"}</Button>}</div>
         </form>
       </div>
     </>
