@@ -115,8 +115,8 @@
 ## Verification snapshot (2026-11-27)
 
 ```text
-public tables: 22
-migrations: 6 (0000–0005)
+public tables: 23
+migrations: 7 (0000–0006)
 users: 1 (real admin)
 invoices: 0
 customers: 0
