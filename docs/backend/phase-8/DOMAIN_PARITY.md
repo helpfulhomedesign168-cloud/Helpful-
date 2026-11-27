@@ -69,3 +69,7 @@ self-pay:   30 / 20 / 30 / 20
 - Unit + build
 - Targeted API tests with temp data
 - Live Playwright parity checks (do not run write tests against shared production/staging after cutover without cleanup)
+
+## Audit
+
+- [Parity audit](./PARITY_AUDIT.md)
