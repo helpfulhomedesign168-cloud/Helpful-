@@ -296,7 +296,7 @@ export function LiveInvoiceDetail() {
         </div>
         <h2 className="section-title">工程項目</h2>
         <div className="table-scroll">
-          <table className="invoice-list-table">
+          <table className="invoice-list-table live-work-table">
             <thead><tr><th>項目</th><th>位置</th><th>數量</th><th>單價</th><th className="numeric">金額</th></tr></thead>
             <tbody>
               {invoice.lines.map((line) => (
