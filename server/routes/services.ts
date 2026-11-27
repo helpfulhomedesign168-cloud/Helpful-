@@ -16,6 +16,7 @@ const serviceSchema = z.object({
   measure: z.enum(["area", "length", "quantity", "fixed"]),
   costMode: z.enum(["ratio", "fixed", "self"]).default("ratio"),
   published: z.boolean().default(true),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const servicesRoute = new Hono<AppEnv>();
@@ -59,5 +60,22 @@ servicesRoute.patch(
       .returning();
     if (!updated) return c.json({ error: { code: "NOT_FOUND", message: "找不到工程項目。" } }, 404);
     return c.json(updated);
+  },
+);
+
+
+servicesRoute.delete(
+  "/:id",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c) => {
+    const [deleted] = await getDb()
+      .delete(services)
+      .where(eq(services.id, c.req.param("id")))
+      .returning({ id: services.id });
+    if (!deleted) {
+      return c.json({ error: { code: "NOT_FOUND", message: "找不到工程項目。" } }, 404);
+    }
+    return c.json({ ok: true });
   },
 );

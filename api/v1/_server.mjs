@@ -35211,7 +35211,8 @@ var serviceSchema = external_exports.object({
   priceCents: external_exports.number().int().nonnegative(),
   measure: external_exports.enum(["area", "length", "quantity", "fixed"]),
   costMode: external_exports.enum(["ratio", "fixed", "self"]).default("ratio"),
-  published: external_exports.boolean().default(true)
+  published: external_exports.boolean().default(true),
+  metadata: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
 });
 var servicesRoute = new Hono3();
 servicesRoute.get("/", requireAuth, async (c2) => {
@@ -35243,6 +35244,18 @@ servicesRoute.patch(
     const [updated] = await getDb().update(services).set(parsed.data).where(eq(services.id, c2.req.param("id"))).returning();
     if (!updated) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5DE5\u7A0B\u9805\u76EE\u3002" } }, 404);
     return c2.json(updated);
+  }
+);
+servicesRoute.delete(
+  "/:id",
+  requireAuth,
+  requireCapability("feature_flags.manage"),
+  async (c2) => {
+    const [deleted] = await getDb().delete(services).where(eq(services.id, c2.req.param("id"))).returning({ id: services.id });
+    if (!deleted) {
+      return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5DE5\u7A0B\u9805\u76EE\u3002" } }, 404);
+    }
+    return c2.json({ ok: true });
   }
 );
 
