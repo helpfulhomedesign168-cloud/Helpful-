@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useAuth } from "../auth";
+import { LiveCancellationCases, LiveCancellationDetail } from "./LiveCancellation";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Badge,
@@ -21,6 +23,11 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function CancellationCases() {
+  const { live } = useAuth();
+  return live ? <LiveCancellationCases /> : <DemoCancellationCases />;
+}
+
+function DemoCancellationCases() {
   const { actor, engine } = useApp();
   const cases = engine.listCancellationCases(actor);
   const pager = usePagination(cases, "cancellations");
@@ -90,6 +97,11 @@ export function CancellationCases() {
 }
 
 export function CancellationCaseDetail() {
+  const { live } = useAuth();
+  return live ? <LiveCancellationDetail /> : <DemoCancellationCaseDetail />;
+}
+
+function DemoCancellationCaseDetail() {
   const { id = "" } = useParams();
   const { actor, engine, run } = useApp();
   const nav = useNavigate();

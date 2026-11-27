@@ -40,6 +40,12 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "valid",
   "rejected",
 ]);
+export const cancellationStatusEnum = pgEnum("cancellation_status", [
+  "pending",
+  "awaiting_credit_note",
+  "awaiting_transfer",
+  "completed",
+]);
 export const workOrderStatusEnum = pgEnum("work_order_status", [
   "unassigned",
   "assigned",
@@ -328,6 +334,27 @@ export const municipalOrderLines = pgTable("municipal_order_lines", {
   unit: text("unit").notNull(),
   unitPriceCents: integer("unit_price_cents").notNull(),
   amountCents: integer("amount_cents").notNull(),
+});
+
+export const cancellationCases = pgTable("cancellation_cases", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  invoiceId: uuid("invoice_id")
+    .notNull()
+    .references(() => invoices.id),
+  reason: text("reason").notNull(),
+  status: cancellationStatusEnum("status").default("pending").notNull(),
+  refundAmountCents: integer("refund_amount_cents").default(0).notNull(),
+  deductionsCents: integer("deductions_cents").default(0).notNull(),
+  refundReason: text("refund_reason"),
+  bankName: text("bank_name"),
+  bankAccountName: text("bank_account_name"),
+  bankAccountNumber: text("bank_account_number"),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
 });
 
 export const contractors = pgTable("contractors", {

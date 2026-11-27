@@ -185,6 +185,10 @@ export function LiveInvoiceDetail() {
   const [paymentNotice, setPaymentNotice] = useState("");
   const [receipts, setReceipts] = useState<Record<string, { id: string; number: string }>>({});
   const [exporting, setExporting] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundSaving, setRefundSaving] = useState(false);
+  const [refundError, setRefundError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -296,6 +300,11 @@ export function LiveInvoiceDetail() {
           >
             {exporting ? "匯出中…" : "匯出 Excel"}
           </Button>
+          {["finance", "finance_supervisor", "admin"].includes(user?.role ?? "") && (
+            <Button variant="secondary" onClick={() => setRefundOpen(true)}>
+              退款
+            </Button>
+          )}
           <Badge strong={invoice.status === "completed"}>{statusLabel(invoice.status)}</Badge>
         </div>
       </div>
@@ -386,7 +395,52 @@ export function LiveInvoiceDetail() {
             </div>
           )}
         </Section>
-        {paymentOpen && (
+        {refundOpen && (
+        <Dialog title="建立退款個案" onClose={() => setRefundOpen(false)}>
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!accessToken) return;
+              setRefundSaving(true);
+              setRefundError("");
+              try {
+                const created = await apiRequest<{ id: string; invoiceId: string; status: string }>(
+                  "/cancellation-cases",
+                  accessToken,
+                  {
+                    method: "POST",
+                    body: JSON.stringify({ invoiceId: invoice.id, reason: refundReason }),
+                  },
+                );
+                setRefundOpen(false);
+                nav(`/cancellation-cases/${created.id}`);
+              } catch (e) {
+                setRefundError(e instanceof ApiError ? e.message : "未能建立退款個案。");
+              } finally {
+                setRefundSaving(false);
+              }
+            }}
+          >
+            <p className="muted">此個案會交會計處理；Invoice 及收款紀錄不會即時改動。</p>
+            <Field label="退款原因" required>
+              <textarea
+                rows={3}
+                value={refundReason}
+                onChange={(event) => setRefundReason(event.target.value)}
+                required
+              />
+            </Field>
+            {refundError && <p className="auth-error">{refundError}</p>}
+            <div className="dialog-actions">
+              <Button type="button" onClick={() => setRefundOpen(false)}>取消</Button>
+              <Button type="submit" variant="danger" disabled={refundSaving}>
+                {refundSaving ? "建立中…" : "建立退款個案"}
+              </Button>
+            </div>
+          </form>
+        </Dialog>
+      )}
+      {paymentOpen && (
           <Dialog title="登記付款" onClose={() => setPaymentOpen(false)}>
             <form onSubmit={(event) => registerPayment(event, true)}>
               <div className="form-grid two">

@@ -195,7 +195,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                     "admin",
                   ]}
                 >
-                  <LiveBlocked><CancellationCases /></LiveBlocked>
+                  <CancellationCases />
                 </Guard>
               }
             />
@@ -210,7 +210,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                     "admin",
                   ]}
                 >
-                  <LiveBlocked><CancellationCaseDetail /></LiveBlocked>
+                  <CancellationCaseDetail />
                 </Guard>
               }
             />

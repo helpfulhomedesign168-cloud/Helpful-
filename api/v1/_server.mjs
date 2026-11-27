@@ -5258,28 +5258,28 @@ var Errors = {
   notSupported
 };
 function connection(code, options, host, port) {
-  const address = options.path || host, error67 = Object.assign(
+  const address = options.path || host, error68 = Object.assign(
     new Error("write " + code + " " + (options.path || host + ":" + port)),
     { code, errno: code, address },
     options.path ? {} : { port }
   );
-  Error.captureStackTrace(error67, connection);
-  return error67;
+  Error.captureStackTrace(error68, connection);
+  return error68;
 }
 function postgres(x) {
-  const error67 = new PostgresError(x);
-  Error.captureStackTrace(error67, postgres);
-  return error67;
+  const error68 = new PostgresError(x);
+  Error.captureStackTrace(error68, postgres);
+  return error68;
 }
 function generic(code, message2) {
-  const error67 = Object.assign(new Error(code + ": " + message2), { code });
-  Error.captureStackTrace(error67, generic);
-  return error67;
+  const error68 = Object.assign(new Error(code + ": " + message2), { code });
+  Error.captureStackTrace(error68, generic);
+  return error68;
 }
 function notSupported(x) {
-  const error67 = Object.assign(new Error(x + " (B) is not supported"), { code: "MESSAGE_NOT_SUPPORTED", name: x });
-  Error.captureStackTrace(error67, notSupported);
-  return error67;
+  const error68 = Object.assign(new Error(x + " (B) is not supported"), { code: "MESSAGE_NOT_SUPPORTED", name: x });
+  Error.captureStackTrace(error68, notSupported);
+  return error68;
 }
 var places = locations();
 var ours = (line2) => places.some((here) => line2.includes(here) && !line2.slice(line2.indexOf(here) + here.length).split(":")[0].includes("/"));
@@ -5287,35 +5287,35 @@ function locations() {
   try {
     const url2 = new URL(".", import.meta.url);
     return url2.protocol === "file:" ? [url2.href, decodeURIComponent(url2.pathname)] : [url2.href];
-  } catch (error67) {
+  } catch (error68) {
     return [];
   }
 }
-function withOrigin(error67, origin) {
-  origin && Object.defineProperty(error67, "stack", {
-    value: [firstLine(error67), ...origin.split("\n").slice(1).filter((x) => !ours(x))].join("\n"),
+function withOrigin(error68, origin) {
+  origin && Object.defineProperty(error68, "stack", {
+    value: [firstLine(error68), ...origin.split("\n").slice(1).filter((x) => !ours(x))].join("\n"),
     writable: true,
     configurable: true,
     enumerable: false
   });
-  return error67;
+  return error68;
 }
-function firstLine(error67) {
-  return typeof error67.stack === "string" ? error67.stack.split("\n")[0] : (error67.name || "Error") + (error67.message ? ": " + error67.message : "");
+function firstLine(error68) {
+  return typeof error68.stack === "string" ? error68.stack.split("\n")[0] : (error68.name || "Error") + (error68.message ? ": " + error68.message : "");
 }
-function queryError(error67, q, debug) {
-  if (!error67 || typeof error67 !== "object")
-    error67 = new Error(error67);
-  if (!q || "query" in error67)
-    return error67;
+function queryError(error68, q, debug) {
+  if (!error68 || typeof error68 !== "object")
+    error68 = new Error(error68);
+  if (!q || "query" in error68)
+    return error68;
   const built = q.built;
-  Object.defineProperties(error67, {
+  Object.defineProperties(error68, {
     query: { value: built ? built.text : q.strings[0], enumerable: !!debug, configurable: true, writable: true },
     parameters: { value: built ? built.values : [], enumerable: !!debug, configurable: true, writable: true },
     args: { value: q.args, enumerable: !!debug, configurable: true, writable: true },
     types: { value: built ? built.oids : [], enumerable: !!debug, configurable: true, writable: true }
   });
-  return withOrigin(error67, q.origin);
+  return withOrigin(error68, q.origin);
 }
 
 // node_modules/.pnpm/postgres@4.1.1/node_modules/postgres/src/types.js
@@ -6086,12 +6086,12 @@ function start(t, context4, fn) {
     }
   }
 }
-function finish(t, context4, error67, result) {
+function finish(t, context4, error68, result) {
   if (context4[done])
     return;
   context4[done] = true;
-  if (error67) {
-    context4.error = error67;
+  if (error68) {
+    context4.error = error68;
     t.error.publish(context4);
   } else {
     context4.result = result;
@@ -6102,14 +6102,14 @@ function finish(t, context4, error67, result) {
 function tracing(name) {
   try {
     return typeof dc.tracingChannel === "function" ? dc.tracingChannel(name) : null;
-  } catch (error67) {
+  } catch (error68) {
     return null;
   }
 }
 function plain2(name) {
   try {
     return dc.channel(name);
-  } catch (error67) {
+  } catch (error68) {
     return null;
   }
 }
@@ -6245,8 +6245,8 @@ var Query = class _Query extends Promise {
     let x;
     try {
       x = this.build();
-    } catch (error67) {
-      return "Query { " + error67.message + " }";
+    } catch (error68) {
+      return "Query { " + error68.message + " }";
     }
     return "Query " + inspect({ text: x.text, parameters: x.values }, options);
   }
@@ -6370,9 +6370,9 @@ function untime(q) {
 function timedOut(x) {
   return x.code === "57014" || x.code === "CONNECTION_DESTROYED" && !!x.cause && x.cause.code === "CANCEL_UNANSWERED";
 }
-function late(q, error67) {
+function late(q, error68) {
   const x = Errors.generic("QUERY_TIMEOUT", "The query did not finish within query_timeout (" + q.handler.options.query_timeout + " seconds)");
-  x.cause = error67.code === "CONNECTION_DESTROYED" ? error67.cause : error67;
+  x.cause = error68.code === "CONNECTION_DESTROYED" ? error68.cause : error68;
   return queryError(x, q, q.handler.debug);
 }
 function context2(q) {
@@ -6381,7 +6381,7 @@ function context2(q) {
   if (q.strings.length) {
     try {
       text4 = q.text;
-    } catch (error67) {
+    } catch (error68) {
       text4 = null;
     }
   }
@@ -6402,7 +6402,7 @@ function context2(q) {
     complete: null
   };
 }
-function traced(q, error67, result) {
+function traced(q, error68, result) {
   const x = q.trace;
   q.trace = null;
   x.complete = now();
@@ -6410,14 +6410,14 @@ function traced(q, error67, result) {
     x.command = result.command;
     x.count = result.count;
   }
-  finish(channels.query, x, error67, result);
+  finish(channels.query, x, error68, result);
 }
 function located() {
   const limit3 = Error.stackTraceLimit;
   Error.stackTraceLimit = 8;
   try {
     return trim(String(new Error().stack));
-  } catch (error67) {
+  } catch (error68) {
     return "";
   } finally {
     Error.stackTraceLimit = limit3;
@@ -6580,9 +6580,9 @@ function one(fn) {
   return (...xs) => {
     try {
       fn(own, ...xs);
-    } catch (error67) {
+    } catch (error68) {
       own.truncate(0);
-      throw error67;
+      throw error68;
     }
     return own.take();
   };
@@ -6687,8 +6687,8 @@ function Frames(onframe, shared = false, onerror = null) {
     chunks.length = 0;
     data = part2 = null;
     at = filled = 0;
-    const error67 = Object.assign(new Error("The server sent a message with an invalid length (" + length + ")"), { code: "PROTOCOL_ERROR" });
-    onerror && onerror(error67);
+    const error68 = Object.assign(new Error("The server sent a message with an invalid length (" + length + ")"), { code: "PROTOCOL_ERROR" });
+    onerror && onerror(error68);
     return true;
   }
   function next() {
@@ -6912,8 +6912,8 @@ function wrap(socket, host) {
     end(data2) {
       closed || (data2 ? socket.end(data2) : socket.end());
     },
-    destroy(error68) {
-      error68 && !failure2 && (failure2 = error68);
+    destroy(error69) {
+      error69 && !failure2 && (failure2 = error69);
       socket.destroy();
     },
     keepAlive(seconds) {
@@ -6925,13 +6925,13 @@ function wrap(socket, host) {
   function listen() {
     socket.on("data", data);
     socket.on("drain", drain);
-    socket.on("error", error67);
+    socket.on("error", error68);
     socket.on("close", close2);
   }
   function unlisten() {
     socket.off("data", data);
     socket.off("drain", drain);
-    socket.off("error", error67);
+    socket.off("error", error68);
     socket.off("close", close2);
   }
   function data(buffer) {
@@ -6940,7 +6940,7 @@ function wrap(socket, host) {
   function drain() {
     x.ondrain();
   }
-  function error67(err) {
+  function error68(err) {
     failure2 || (failure2 = err);
     socket.destroy();
     close2();
@@ -6991,11 +6991,11 @@ async function open(options, signal = { aborted: false, sockets: /* @__PURE__ */
   let last;
   for (const want of passes) {
     for (let n = 0; n < hosts2.length; n++) {
-      const i = (first + n) % hosts2.length, host = hosts2[i], port = options.port[i] || options.port[0], [failed, error67, ready] = await traced2(options, host, port, signal).then((x) => [false, null, x], (x) => [true, x]);
+      const i = (first + n) % hosts2.length, host = hosts2[i], port = options.port[i] || options.port[0], [failed, error68, ready] = await traced2(options, host, port, signal).then((x) => [false, null, x], (x) => [true, x]);
       if (!failed && fits(want, ready.attributes))
         return ready.index = i, ready;
       failed || ready.socket.end(Terminate());
-      last = failed ? error67 : Errors.connection("CONNECTION_DESTROYED", options, host, port);
+      last = failed ? error68 : Errors.connection("CONNECTION_DESTROYED", options, host, port);
       if (signal.aborted)
         throw last;
     }
@@ -7024,9 +7024,9 @@ function traced2(options, host, port, signal) {
       standby: ready.attributes.standby
     });
     return ready;
-  }, (error67) => {
-    finish(channels.connect, context4, error67);
-    throw error67;
+  }, (error68) => {
+    finish(channels.connect, context4, error68);
+    throw error68;
   });
 }
 function fits(want, { readOnly, standby }) {
@@ -7038,16 +7038,16 @@ function attempt(options, host, port, signal) {
     const timer = options.connect_timeout && setTimeout2(() => done2(true, fail("CONNECT_TIMEOUT")), options.connect_timeout * 1e3);
     let socket = null, raw2 = null, settled = false;
     session().then((x) => done2(false, null, x), (e) => done2(true, e));
-    function done2(failed, error67, ready) {
+    function done2(failed, error68, ready) {
       if (settled)
         return;
       settled = true;
       timer && clearTimeout2(timer);
       socket && signal.sockets.delete(socket);
-      signal.aborted && !failed && (failed = true, error67 = fail("CONNECTION_DESTROYED"));
+      signal.aborted && !failed && (failed = true, error68 = fail("CONNECTION_DESTROYED"));
       if (failed) {
         socket ? socket.destroy() : raw2 && raw2.destroy();
-        return reject(error67);
+        return reject(error68);
       }
       ready.socket.onclose = () => {
       };
@@ -7058,7 +7058,7 @@ function attempt(options, host, port, signal) {
       if (settled || signal.aborted)
         return socket.destroy(), done2(true, fail("CONNECTION_DESTROYED"));
       signal.sockets.add(socket);
-      socket.onclose = (error67) => done2(true, signal.aborted ? fail("CONNECTION_DESTROYED") : error67 && error67.code ? error67 : fail("CONNECTION_CLOSED"));
+      socket.onclose = (error68) => done2(true, signal.aborted ? fail("CONNECTION_DESTROYED") : error68 && error68.code ? error68 : fail("CONNECTION_CLOSED"));
       socket.keepAlive(options.keep_alive);
       await negotiate(socket, options);
       const user = typeof options.user === "function" ? await options.user() : options.user;
@@ -7066,27 +7066,27 @@ function attempt(options, host, port, signal) {
     }
     function startup2(user, database2) {
       return new Promise((resolve2, reject2) => {
-        const stored = () => pgpass(options.passfile, options.path ? "localhost" : host, port, database2, user) || "", auth = Auth({ user, pass: options.pass || stored, binding: options.channel_binding, socket }), parameters = {}, backend = { pid: null, secret: null }, frames = Frames(frame, false, (error67) => (reject2(error67), socket.destroy())), rows = [];
+        const stored = () => pgpass(options.passfile, options.path ? "localhost" : host, port, database2, user) || "", auth = Auth({ user, pass: options.pass || stored, binding: options.channel_binding, socket }), parameters = {}, backend = { pid: null, secret: null }, frames = Frames(frame, false, (error68) => (reject2(error68), socket.destroy())), rows = [];
         let probing = false, status = null, authing = Promise.resolve();
         socket.ondata = (x) => frames.push(x);
         socket.write(Startup({ user, database: database2, client_encoding: "UTF8", ...options.connection }));
         function frame(type, x, start2, end) {
           try {
             type === R ? authenticate(Buffer.from(x.subarray(start2, end))) : type === S2 ? (([k, v]) => parameters[k] = v)(parameterStatus(x, start2)) : type === K ? Object.assign(backend, backendKeyData(x, start2)) : type === E2 ? reject2(Errors.postgres(error(x, start2, end))) : type === N ? notice(error(x, start2, end)) : type === D2 ? rows.push(x.toString("utf8", start2 + 11, start2 + 11 + x.readInt32BE(start2 + 7))) : type === Z && settled2(readyForQuery(x, start2), Buffer.from(x.subarray(end)));
-          } catch (error67) {
-            reject2(error67);
+          } catch (error68) {
+            reject2(error68);
           }
         }
         function notice(x) {
           try {
             options.onnotice ? options.onnotice(x) : options.onnotice === false || console.log(x);
-          } catch (error67) {
-            noop3(error67);
+          } catch (error68) {
+            noop3(error68);
           }
         }
         function authenticate(x) {
           authing = authing.then(() => auth(x)).then((reply) => reply && socket.write(reply));
-          authing.catch((error67) => (reject2(error67), socket.destroy()));
+          authing.catch((error68) => (reject2(error68), socket.destroy()));
         }
         function settled2(x, rest) {
           authing.then(() => ready(x, rest), () => {
@@ -7151,13 +7151,13 @@ function cancel2(options, host, port, { pid, secret }) {
       written = true;
       socket.end(Cancel(pid, secret));
     }).catch(done2);
-    function done2(error67) {
+    function done2(error68) {
       if (settled)
         return;
       settled = true;
       timer && clearTimeout2(timer);
       socket ? socket.destroy() : raw2 && raw2.destroy();
-      error67 ? reject(error67) : resolve();
+      error68 ? reject(error68) : resolve();
     }
   });
 }
@@ -7345,7 +7345,7 @@ var variety = 16;
 var ids = 1;
 var compiles = true;
 function Connection(ready, options, events) {
-  const { socket } = ready, timers = options.timers, defer = timers.nextTick || process.nextTick, { transform: transform2 } = options, sent = [], pending = [], running = /* @__PURE__ */ new Set(), open3 = /* @__PURE__ */ new Set(), prepared = /* @__PURE__ */ new Map(), out = Writer(), frames = Frames(frame, socket.shared, (error67) => (connection2.fatal = error67, socket.destroy()));
+  const { socket } = ready, timers = options.timers, defer = timers.nextTick || process.nextTick, { transform: transform2 } = options, sent = [], pending = [], running = /* @__PURE__ */ new Set(), open3 = /* @__PURE__ */ new Set(), prepared = /* @__PURE__ */ new Map(), out = Writer(), frames = Frames(frame, socket.shared, (error68) => (connection2.fatal = error68, socket.destroy()));
   let blocker = null, stash = null, heard = timers.now(), rolling = false, fence = null, drained = null, status = ready.status, flushing = false, closed = null, closing = null, portals = 0, traced3 = 0, epoch3 = 0, headSince = 0, notables = 0;
   const connection2 = {
     id: ids++,
@@ -7451,8 +7451,8 @@ function Connection(ready, options, events) {
     let result;
     try {
       result = x.write(x);
-    } catch (error67) {
-      x.own = error67;
+    } catch (error68) {
+      x.own = error68;
       result = skip;
     }
     if (result === held) {
@@ -7542,7 +7542,7 @@ function Connection(ready, options, events) {
     };
     parts2.forEach((part3, i) => {
       part3.resolve = (result) => batched(b, i, null, result);
-      part3.reject = (error67) => batched(b, i, error67);
+      part3.reject = (error68) => batched(b, i, error68);
       if (b.aborted)
         return batched(b, i, skipped(b.aborted, i));
       const x = Exchange("query", part3, connection2.lease, extended2);
@@ -7554,12 +7554,12 @@ function Connection(ready, options, events) {
       queue(x);
     });
   }
-  function batched(b, i, error67, result) {
+  function batched(b, i, error68, result) {
     if (b.settled[i])
       return;
     b.settled[i] = true;
     b.left--;
-    error67 ? (b.error === null || i < b.index && !error67.skipped) && (b.error = error67, b.index = i) : b.results[i] = result;
+    error68 ? (b.error === null || i < b.index && !error68.skipped) && (b.error = error68, b.index = i) : b.results[i] = result;
     if (b.left)
       return;
     const { query: query2, parts: parts2, results } = b;
@@ -7574,8 +7574,8 @@ function Connection(ready, options, events) {
     parts2.forEach((part3, j) => Query.prototype.resolve.call(part3, results[j]));
     query2.resolve(results);
   }
-  function skipped(error67, index) {
-    const x = copy(error67);
+  function skipped(error68, index) {
+    const x = copy(error68);
     x.index = index;
     x.skipped = true;
     return x;
@@ -7599,8 +7599,8 @@ function Connection(ready, options, events) {
     if (x.aborted)
       return;
     x.aborted = true;
-    const b = x.batch, error67 = x.own || x.error;
-    b.aborted = error67;
+    const b = x.batch, error68 = x.own || x.error;
+    b.aborted = error68;
     let synced = !x.nosync && x.synced;
     const at = sent.indexOf(x);
     for (let i = at === -1 ? sent.length : at + 1; i < sent.length; ) {
@@ -7627,7 +7627,7 @@ function Connection(ready, options, events) {
       y.done = true;
       y.trace && traced3--;
       y.cost >= notable && notables--;
-      settleError(y, skipped(error67, b.parts.indexOf(y.query)));
+      settleError(y, skipped(error68, b.parts.indexOf(y.query)));
     }
   }
   function cost(x) {
@@ -7752,9 +7752,9 @@ function Connection(ready, options, events) {
     const mark = out.length;
     try {
       x.nosync ? (bind(out, x.portal, name, x.values, void 0, x.formats || void 0), execute(out, x.portal, x.rows)) : run(out, x.portal, name, x.values, x.rows, x.flushing, x.formats);
-    } catch (error67) {
+    } catch (error68) {
       out.truncate(mark);
-      throw error67;
+      throw error68;
     }
     x.flushing || (x.synced = true);
     const oids = x.entry ? x.entry.oids : x.params || (x.loose ? null : x.query.wire.built.oids);
@@ -7815,8 +7815,8 @@ function Connection(ready, options, events) {
       entry && (entry.oids = params, entry.columns = columns2, learned(entry, x.statement));
       x.values = serialize(params, built, entry || {});
       run2(x, name);
-    } catch (error67) {
-      x.own = error67;
+    } catch (error68) {
+      x.own = error68;
       x.batch ? (parse(out, "", refused), x.parses.push(""), abort(x)) : sync2(x, !!connection2.lease);
     }
   }
@@ -7850,9 +7850,9 @@ function Connection(ready, options, events) {
     options.scheduler && cost(x);
     queue(x);
   }
-  function local(query2, error67) {
+  function local(query2, error68) {
     queue(Exchange("query", query2, connection2.lease, () => {
-      throw error67;
+      throw error68;
     }));
   }
   function cancel3(query2) {
@@ -7959,11 +7959,11 @@ function Connection(ready, options, events) {
     flush2();
     socket.end(Terminate());
   }
-  function destroy(error67) {
+  function destroy(error68) {
     closing || (closing = Promise.resolve());
-    socket.destroy(error67);
+    socket.destroy(error68);
   }
-  function onclose(error67) {
+  function onclose(error68) {
     if (closed)
       return;
     out.take();
@@ -7973,7 +7973,7 @@ function Connection(ready, options, events) {
     const head = sent[0], failed2 = head && head.error && head.error.severity === "FATAL" ? head.error : null, fatal = connection2.fatal || failed2;
     connection2.uncertain = !!(fatal && head && head.ends);
     closed = Errors.connection(closing ? "CONNECTION_DESTROYED" : "CONNECTION_CLOSED", options, ready.host, ready.port);
-    closed.cause = fatal || error67 || void 0;
+    closed.cause = fatal || error68 || void 0;
     sent.concat(pending).forEach((x) => x.cancel && x.cancel.resolve());
     sent.splice(0).forEach((x) => {
       x.stream && x.stream.destroy(closed);
@@ -7986,12 +7986,12 @@ function Connection(ready, options, events) {
     connection2.onended && connection2.onended();
     events.onclose(connection2, closed);
   }
-  function decorate(query2, error67) {
-    return queryError(error67, query2, options.debug);
+  function decorate(query2, error68) {
+    return queryError(error68, query2, options.debug);
   }
-  function settleError(x, error67) {
+  function settleError(x, error68) {
     answered(x);
-    x.kind === "describe" ? x.reject(error67) : x.query && !x.query.settled && x.query.reject(decorate(x.query, error67));
+    x.kind === "describe" ? x.reject(error68) : x.query && !x.query.settled && x.query.reject(decorate(x.query, error68));
   }
   function debug(text4, values2, oids) {
     typeof options.debug === "function" && options.debug(connection2.id, text4, values2, oids);
@@ -8031,15 +8031,15 @@ function Connection(ready, options, events) {
     traced3 && first();
     try {
       type === 68 ? DataRow(x, start2) : type === 100 ? CopyData2(x, start2, end) : type === 90 ? ReadyForQuery(x, start2) : type === 67 ? CommandComplete(x, start2, end) : type === 50 ? BindComplete() : type === 49 ? ParseComplete() : type === 51 ? null : type === 116 ? ParameterDescription(x, start2) : type === 84 ? RowDescription(x, start2) : type === 110 ? NoData() : type === 69 ? ErrorResponse(x, start2, end) : type === 115 ? PortalSuspended() : type === 73 ? EmptyQueryResponse() : type === 65 ? NotificationResponse(x, start2) : type === 78 ? NoticeResponse(x, start2, end) : type === 83 ? ParameterStatus(x, start2) : type === 71 ? CopyInResponse() : type === 72 ? CopyOutResponse() : type === 87 ? CopyBothResponse() : type === 99 ? CopyDone2() : type === 86 ? unsupported("FunctionCallResponse") : type === 118 ? unsupported("NegotiateProtocolVersion") : null;
-    } catch (error67) {
+    } catch (error68) {
       const x2 = sent[0];
-      x2 ? fail(x2, error67) : destroy(error67);
+      x2 ? fail(x2, error68) : destroy(error68);
     }
     blocker && !holds(blocker) && (blocker = null, release());
     out.length && schedule();
   }
-  function fail(x, error67) {
-    x.error = x.error || error67;
+  function fail(x, error68) {
+    x.error = x.error || error68;
     x.describing = false;
     x.open = false;
     x.batch ? abort(x) : sync2(x);
@@ -8142,10 +8142,10 @@ function Connection(ready, options, events) {
     item.nosync && !item.error && part2(item);
   }
   function unsafe(item) {
-    const error67 = () => Errors.generic("UNSAFE_TRANSACTION", "Only use sql.begin, sql.reserved or max: 1");
+    const error68 = () => Errors.generic("UNSAFE_TRANSACTION", "Only use sql.begin, sql.reserved or max: 1");
     rolling = true;
-    item.own = error67();
-    sent.forEach((x) => x.kind !== "local" && (x.own = error67()));
+    item.own = error68();
+    sent.forEach((x) => x.kind !== "local" && (x.own = error68()));
     pending.unshift(Exchange("internal", null, null, (x) => (query(out, "rollback"), x.synced = true)));
   }
   function EmptyQueryResponse() {
@@ -8167,21 +8167,21 @@ function Connection(ready, options, events) {
       if (item.query.aborted)
         throw item.query.aborted;
       next === CLOSE ? (close(out, "P", ""), sync2(item)) : (execute(out, "", item.rows), flush(out), schedule());
-    } catch (error67) {
+    } catch (error68) {
       item.awaiting = false;
       if (closed || item.synced || sent[0] !== item)
         return;
-      fail(item, error67);
+      fail(item, error68);
     }
     refresh();
   }
   function ErrorResponse(x, start2, end) {
-    const item = sent[0], error67 = Errors.postgres(error(x, start2, end));
+    const item = sent[0], error68 = Errors.postgres(error(x, start2, end));
     if (!item)
-      return connection2.fatal = error67;
-    item.stream && item.stream.destroy(error67);
-    item.final && (item.final(error67), item.final = null);
-    fail(item, error67);
+      return connection2.fatal = error68;
+    item.stream && item.stream.destroy(error68);
+    item.final && (item.final(error68), item.final = null);
+    fail(item, error68);
   }
   function ReadyForQuery(x, start2) {
     status = readyForQuery(x, start2);
@@ -8226,7 +8226,7 @@ function Connection(ready, options, events) {
       return failed(x);
     if (x.suspended)
       return suspended(x);
-    x.last ? x.last.then(() => query2.settled || finish2(x), (error67) => query2.settled || query2.reject(decorate(query2, error67))) : query2.settled || finish2(x);
+    x.last ? x.last.then(() => query2.settled || finish2(x), (error68) => query2.settled || query2.reject(decorate(query2, error68))) : query2.settled || finish2(x);
   }
   function unfence(cursor) {
     if (!open3.delete(cursor) || open3.size || !fence)
@@ -8285,11 +8285,11 @@ function Connection(ready, options, events) {
       if (query2.settled)
         return unfence(cursor);
       queue(step(cursor, next === CLOSE || !!query2.aborted, query2.aborted || null));
-    }, (error67) => {
+    }, (error68) => {
       running.delete(query2);
       if (query2.settled)
         return unfence(cursor);
-      queue(step(cursor, true, error67));
+      queue(step(cursor, true, error68));
     });
   }
   function step(cursor, end, failure2) {
@@ -8336,8 +8336,8 @@ function Connection(ready, options, events) {
   function guard(fn, ...xs) {
     try {
       fn(...xs);
-    } catch (error67) {
-      noop4(error67);
+    } catch (error68) {
+      noop4(error68);
     }
   }
   function NoticeResponse(x, start2, end) {
@@ -8366,11 +8366,11 @@ function Connection(ready, options, events) {
       write(chunk, encoding, callback) {
         writeData(chunk, callback);
       },
-      destroy(error67, callback) {
-        callback(error67);
+      destroy(error68, callback) {
+        callback(error68);
         item.stream = null;
         if (!item.copied && !closed && !item.error) {
-          copyFail(out, (error67 || "The COPY stream was destroyed") + "");
+          copyFail(out, (error68 || "The COPY stream was destroyed") + "");
           item.copied = true;
           item.open = false;
           schedule(true);
@@ -8402,8 +8402,8 @@ function Connection(ready, options, events) {
     };
   }
   function abandoned(item) {
-    return (error67, callback) => {
-      callback(error67);
+    return (error68, callback) => {
+      callback(error68);
       if (!item.stream)
         return;
       item.stream = null;
@@ -8446,9 +8446,9 @@ function Connection(ready, options, events) {
 function oidOf(name, table2, number5, type) {
   return type;
 }
-function copy(error67) {
-  const x = Object.create(Object.getPrototypeOf(error67), Object.getOwnPropertyDescriptors(error67));
-  Object.defineProperty(x, "stack", { value: error67.stack, writable: true, configurable: true });
+function copy(error68) {
+  const x = Object.create(Object.getPrototypeOf(error68), Object.getOwnPropertyDescriptors(error68));
+  Object.defineProperty(x, "stack", { value: error68.stack, writable: true, configurable: true });
   ["query", "parameters", "args", "types"].forEach((k) => delete x[k]);
   return x;
 }
@@ -8644,8 +8644,8 @@ function Pool(options, types2) {
     let built;
     try {
       built = q.build();
-    } catch (error67) {
-      return unbuilt(q, error67, lease2);
+    } catch (error68) {
+      return unbuilt(q, error68, lease2);
     }
     const free = !lease2 && options.max !== 1;
     if (q.options.simple && !built.values.length) {
@@ -8682,9 +8682,9 @@ function Pool(options, types2) {
     for (let i = 0; i < parts2.length; i++) {
       try {
         parts2[i].build();
-      } catch (error67) {
-        error67 && typeof error67 === "object" && (error67.index = i);
-        return unbuilt(q, error67, lease2);
+      } catch (error68) {
+        error68 && typeof error68 === "object" && (error68.index = i);
+        return unbuilt(q, error68, lease2);
       }
     }
     parts2.forEach((x) => {
@@ -8697,16 +8697,16 @@ function Pool(options, types2) {
   function describeOnly(q, built, lease2) {
     const statement2 = { name: "", text: built.text, oids: built.oids, columns: null }, run3 = (c2) => (q.connection = c2, c2.describe(statement2, built.oids, q).then(
       ({ params, columns: columns2 }) => q.resolve({ string: built.text, types: params, name: "", columns: columns2 }),
-      (error67) => q.reject(queryError(error67, q, options.debug))
+      (error68) => q.reject(queryError(error68, q, options.debug))
     ), q.onwrite && q.onwrite());
-    lease2 ? run3(lease2.connection) : place({ run: run3, q, reject: (error67) => q.reject(queryError(error67, q, options.debug)) });
+    lease2 ? run3(lease2.connection) : place({ run: run3, q, reject: (error68) => q.reject(queryError(error68, q, options.debug)) });
   }
-  function unbuilt(q, error67, lease2) {
-    error67 = queryError(error67, q, options.debug);
+  function unbuilt(q, error68, lease2) {
+    error68 = queryError(error68, q, options.debug);
     if (!lease2 || lease2.released || lease2.connection.closed)
-      return q.reject(error67);
+      return q.reject(error68);
     q.connection = lease2.connection;
-    lease2.connection.local(q, error67);
+    lease2.connection.local(q, error68);
     q.onwrite && q.onwrite();
   }
   function place(job, lease2) {
@@ -8871,11 +8871,11 @@ function Pool(options, types2) {
     retryTimer && (clearTimeout2(retryTimer), retryTimer = null);
     (options.open || open)(options, signal, replacing.length ? replacing.shift() : 0).then(opened, failed);
   }
-  function copy2(error67) {
-    if (!error67 || typeof error67 !== "object")
-      return error67;
-    const x = Object.create(Object.getPrototypeOf(error67), Object.getOwnPropertyDescriptors(error67));
-    Object.defineProperty(x, "stack", { value: error67.stack, writable: true, configurable: true });
+  function copy2(error68) {
+    if (!error68 || typeof error68 !== "object")
+      return error68;
+    const x = Object.create(Object.getPrototypeOf(error68), Object.getOwnPropertyDescriptors(error68));
+    Object.defineProperty(x, "stack", { value: error68.stack, writable: true, configurable: true });
     ["query", "parameters", "args", "types"].forEach((k) => delete x[k]);
     return x;
   }
@@ -8926,11 +8926,11 @@ function Pool(options, types2) {
       }, need: () => {
       } });
       fetched(types2.load(runner(c3)).finally(() => c3.close()));
-    }, (error67) => fetched(Promise.reject(error67)));
+    }, (error68) => fetched(Promise.reject(error68)));
   }
   function fetched(loading) {
     let failure3 = null;
-    loading.then(() => typesLoaded = true, (error67) => error67 instanceof PostgresError ? typesLoaded = true : failure3 = error67).then(() => {
+    loading.then(() => typesLoaded = true, (error68) => error68 instanceof PostgresError ? typesLoaded = true : failure3 = error68).then(() => {
       typesLoading = false;
       events.typed = typesLoaded;
       if (typesLoaded) {
@@ -8999,7 +8999,7 @@ function Pool(options, types2) {
       c2.simple(q, text4);
     })).then(
       () => typesLoaded = true,
-      (error67) => error67 instanceof PostgresError ? typesLoaded = true : error67 && error67.code === "TYPE_NOT_FOUND" && (typesError = error67, typesFailed = now2())
+      (error68) => error68 instanceof PostgresError ? typesLoaded = true : error68 && error68.code === "TYPE_NOT_FOUND" && (typesError = error68, typesFailed = now2())
     ).then(() => {
       typesLoading = false;
       events.typed = typesLoaded;
@@ -9010,24 +9010,24 @@ function Pool(options, types2) {
       drain();
     });
   }
-  function failed(error67) {
+  function failed(error68) {
     opening--;
     if (signal.aborted)
       return finishing();
-    attempted(error67);
+    attempted(error68);
     ending2 ? finishing() : grow();
   }
-  function attempted(error67) {
+  function attempted(error68) {
     failingSince === null && (failingSince = now2());
     retries++;
     nextAttempt = now2() + 1e3 * (typeof options.backoff === "function" ? options.backoff(retries) : options.backoff);
-    const transient = !!error67 && (error67.code === "CONNECTION_CLOSED" || error67.code === "53300"), expired = options.connect_timeout && now2() - failingSince >= options.connect_timeout * 1e3;
-    failure2 = !transient || expired ? { error: error67 } : null;
-    stuck() && opening === 0 && (failure2 || ending2) && waiting.take().forEach((job, i) => reject(job, i ? copy2(error67) : error67));
+    const transient = !!error68 && (error68.code === "CONNECTION_CLOSED" || error68.code === "53300"), expired = options.connect_timeout && now2() - failingSince >= options.connect_timeout * 1e3;
+    failure2 = !transient || expired ? { error: error68 } : null;
+    stuck() && opening === 0 && (failure2 || ending2) && waiting.take().forEach((job, i) => reject(job, i ? copy2(error68) : error68));
   }
-  function reject(job, error67) {
+  function reject(job, error68) {
     started(job);
-    job.lease ? job.reject(error67) : job.q ? job.q.reject(queryError(error67, job.q, options.debug)) : job.reject(error67);
+    job.lease ? job.reject(error68) : job.q ? job.q.reject(queryError(error68, job.q, options.debug)) : job.reject(error68);
   }
   function lifetime(c2) {
     const life = typeof options.max_lifetime === "function" ? options.max_lifetime() : options.max_lifetime;
@@ -9090,9 +9090,9 @@ function Pool(options, types2) {
     waiting.length && !c2.lease && c2.inflight < options.max_pipeline && drain();
     ending2 && waiting.length === 0 && finishing();
   }
-  function onclose(c2, error67) {
+  function onclose(c2, error68) {
     connections.delete(c2);
-    (c2.loading || c2.typing) && !signal.aborted && attempted(copy2(error67));
+    (c2.loading || c2.typing) && !signal.aborted && attempted(copy2(error68));
     paused.delete(c2);
     ending2 || replacing.push((c2.index + 1) % (options.path ? 1 : options.host.length));
     replacing.length > options.max && replacing.shift();
@@ -9100,10 +9100,10 @@ function Pool(options, types2) {
     c2.idleTimer && clearTimeout2(c2.idleTimer);
     c2.lifeTimer && clearTimeout2(c2.lifeTimer);
     c2.lease && c2.lease.onclose && c2.lease.onclose(
-      error67.cause && error67.cause.severity === "FATAL" && !c2.uncertain ? error67.cause : error67.code === "CONNECTION_DESTROYED" ? Errors.connection("CONNECTION_CLOSED", options, c2.host, c2.port) : error67
+      error68.cause && error68.cause.severity === "FATAL" && !c2.uncertain ? error68.cause : error68.code === "CONNECTION_DESTROYED" ? Errors.connection("CONNECTION_CLOSED", options, c2.host, c2.port) : error68
     );
     options.onclose && options.onclose(c2.id);
-    listened(channels.pool) && event("close", c2, { error: error67 });
+    listened(channels.pool) && event("close", c2, { error: error68 });
     connections.size === 0 && opening === 0 && statements.clear();
     drain();
     ending2 && finishing();
@@ -9165,9 +9165,9 @@ function Pool(options, types2) {
           return c2.releasing = true;
         c2.status === "I" ? onready(c2) : c2.close();
       },
-      onclose(error67) {
-        x.error = error67;
-        lost(error67);
+      onclose(error68) {
+        x.error = error68;
+        lost(error68);
       }
     };
     c2.lease = x;
@@ -9204,8 +9204,8 @@ function Pool(options, types2) {
     if (waiting.length === 0)
       connections.forEach((c2) => c2.inflight === 0 && !c2.lease && c2.close());
     if (connections.size === 0 && opening === 0 && waiting.length) {
-      const error67 = Errors.connection("CONNECTION_ENDED", options, options.host[0], options.port[0]);
-      waiting.take().forEach((job) => reject(job, error67));
+      const error68 = Errors.connection("CONNECTION_ENDED", options, options.host[0], options.port[0]);
+      waiting.take().forEach((job) => reject(job, error68));
     }
     if (connections.size === 0 && (opening === 0 || signal.aborted) && waiting.length === 0) {
       endTimer && clearTimeout2(endTimer);
@@ -9220,8 +9220,8 @@ function Pool(options, types2) {
     endTimer = null;
     signal.aborted = true;
     signal.sockets.forEach((x) => x.destroy());
-    const error67 = Errors.connection("CONNECTION_DESTROYED", options, options.host[0], options.port[0]);
-    waiting.take().forEach((job) => reject(job, error67));
+    const error68 = Errors.connection("CONNECTION_DESTROYED", options, options.host[0], options.port[0]);
+    waiting.take().forEach((job) => reject(job, error68));
     connections.forEach((c2) => c2.destroy());
     connections.size === 0 && finishing();
   }
@@ -9414,10 +9414,10 @@ function Subscribe(postgres2, options) {
     return connection2.then(() => {
       onsubscribe();
       return { unsubscribe, state, sql: sql2 };
-    }, (error67) => {
+    }, (error68) => {
       unsubscribe();
       connection2 = null;
-      throw error67;
+      throw error68;
     });
   }
   function restart() {
@@ -9428,8 +9428,8 @@ function Subscribe(postgres2, options) {
         ended || subscribers.forEach((event) => event.forEach(({ onsubscribe }) => onsubscribe()));
         return x;
       },
-      (error67) => {
-        report(error67);
+      (error68) => {
+        report(error68);
         ended || restart();
       }
     );
@@ -9438,9 +9438,9 @@ function Subscribe(postgres2, options) {
   async function init() {
     if (!options.publications)
       throw new Error("Missing publication names");
-    await sql2.unsafe(`CREATE_REPLICATION_SLOT ${slot}${persistent ? "" : " TEMPORARY"} LOGICAL pgoutput NOEXPORT_SNAPSHOT`).catch((error67) => {
-      if (!persistent || error67.code !== "42710")
-        throw error67;
+    await sql2.unsafe(`CREATE_REPLICATION_SLOT ${slot}${persistent ? "" : " TEMPORARY"} LOGICAL pgoutput NOEXPORT_SNAPSHOT`).catch((error68) => {
+      if (!persistent || error68.code !== "42710")
+        throw error68;
     });
     const query2 = sql2.unsafe(`START_REPLICATION SLOT ${slot} LOGICAL 0/0 (proto_version '1', publication_names '${options.publications}')`);
     query2.catch(noop6);
@@ -9454,7 +9454,7 @@ function Subscribe(postgres2, options) {
     const relations = {};
     let acked = 0n, received = 0n, transaction2 = null, queue = null, failed = false, stopped = false, timer = timers.setTimeout(tick, statusInterval), soon = null;
     stream.on("data", data);
-    stream.on("error", (error67) => failed || report(error67));
+    stream.on("error", (error68) => failed || report(error68));
     stream.on("close", () => {
       const unexpected = !stopped;
       stop();
@@ -9528,14 +9528,14 @@ function Subscribe(postgres2, options) {
         let result;
         try {
           result = subscriber.fn(row, info, event);
-        } catch (error67) {
-          return fail(error67, subscriber);
+        } catch (error68) {
+          return fail(error68, subscriber);
         }
-        result && typeof result.then === "function" && pending.push(result.catch((error67) => fail(error67, subscriber)));
+        result && typeof result.then === "function" && pending.push(result.catch((error68) => fail(error68, subscriber)));
       });
     }
-    function fail(error67, subscriber) {
-      report(error67, subscriber);
+    function fail(error68, subscriber) {
+      report(error68, subscriber);
       if (!persistent || failed)
         return;
       failed = true;
@@ -9583,10 +9583,10 @@ function Subscribe(postgres2, options) {
       timer = soon = null;
     }
   }
-  function report(error67, subscriber) {
+  function report(error68, subscriber) {
     const handlers = subscriber ? [subscriber.onerror] : [...subscribers.values()].flatMap((x) => [...x].map((x2) => x2.onerror));
     const listeners = handlers.filter(Boolean);
-    listeners.length ? listeners.forEach((fn) => fn(error67)) : console.error("postgres.js: logical replication error", error67);
+    listeners.length ? listeners.forEach((fn) => fn(error68)) : console.error("postgres.js: logical replication error", error68);
   }
 }
 function max(a, b) {
@@ -9886,9 +9886,9 @@ function Postgres(a, b) {
     start(channels.transaction, context4, () => promise2 = transaction2(mode, fn, context4));
     return promise2.then(
       (result) => (finish(channels.transaction, context4, null, result), result),
-      (error67) => {
-        finish(channels.transaction, context4, error67);
-        throw error67;
+      (error68) => {
+        finish(channels.transaction, context4, error68);
+        throw error68;
       }
     );
   }
@@ -9940,12 +9940,12 @@ function Postgres(a, b) {
           throw uncaught;
         if (lease.connection.closed)
           throw lease.error || lease.connection.closed;
-      } catch (error67) {
+      } catch (error68) {
         ending2 = true;
         context4 && !name && (context4.outcome = "rollback");
         stopped() ? rolled && await rolled.catch(() => {
         }) : lease.connection.closed || await control(lease, name ? "rollback to " + identifier(name) : "rollback");
-        throw error67 instanceof PostgresError && error67.code === "25P02" && uncaught || error67;
+        throw error68 instanceof PostgresError && error68.code === "25P02" && uncaught || error68;
       }
       if (stopped()) {
         rolled && await rolled;
@@ -10066,11 +10066,11 @@ function Listen(options) {
     let result;
     try {
       result = await channel.result;
-    } catch (error67) {
+    } catch (error68) {
       channel.listeners.delete(listener);
       channel.listeners.size || channels2.delete(name);
       channels2.size || release();
-      throw error67;
+      throw error68;
     }
     Object.assign(channel.state, result.state);
     listener.onlisten && listener.onlisten();
@@ -15599,10 +15599,10 @@ function node2(obj, key2, make) {
   }
   return obj[key2];
 }
-function flattenError(error67, mapper = (issue2) => issue2.message) {
+function flattenError(error68, mapper = (issue2) => issue2.message) {
   const fieldErrors = {};
   const formErrors = [];
-  for (const sub of error67.issues) {
+  for (const sub of error68.issues) {
     if (sub.path.length > 0) {
       node2(fieldErrors, sub.path[0], () => []).push(mapper(sub));
     } else {
@@ -15611,10 +15611,10 @@ function flattenError(error67, mapper = (issue2) => issue2.message) {
   }
   return { formErrors, fieldErrors };
 }
-function formatError(error67, mapper = (issue2) => issue2.message) {
+function formatError(error68, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error68, path = []) => {
-    for (const issue2 of error68.issues) {
+  const processError = (error69, path = []) => {
+    for (const issue2 of error69.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
         issue2.errors.map((issues) => processError({ issues }, [...path, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
@@ -15656,14 +15656,14 @@ function formatError(error67, mapper = (issue2) => issue2.message) {
       }
     }
   };
-  processError(error67);
+  processError(error68);
   return fieldErrors;
 }
-function treeifyError(error67, mapper = (issue2) => issue2.message) {
+function treeifyError(error68, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error68, path = []) => {
+  const processError = (error69, path = []) => {
     var _a3;
-    for (const issue2 of error68.issues) {
+    for (const issue2 of error69.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
         issue2.errors.map((issues) => processError({ issues }, [...path, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
@@ -15705,7 +15705,7 @@ function treeifyError(error67, mapper = (issue2) => issue2.message) {
       }
     }
   };
-  processError(error67);
+  processError(error68);
   return result;
 }
 function toDotPath(_path) {
@@ -15726,9 +15726,9 @@ function toDotPath(_path) {
   }
   return segs.join("");
 }
-function prettifyError(error67) {
+function prettifyError(error68) {
   const lines = [];
-  const issues = [...error67.issues].sort((a, b) => (a.path ?? []).length - (b.path ?? []).length);
+  const issues = [...error68.issues].sort((a, b) => (a.path ?? []).length - (b.path ?? []).length);
   for (const issue2 of issues) {
     lines.push(`\u2716 ${issue2.message}`);
     if (issue2.path?.length)
@@ -15784,19 +15784,19 @@ var _safeParse = (_Err) => (schema, value2, _ctx) => {
 };
 var safeParse = /* @__PURE__ */ _safeParse($ZodRealError);
 function failure(Err, issues, ctx) {
-  let error67;
+  let error68;
   return {
     success: false,
     get error() {
-      if (!error67) {
-        error67 = new Err(issues.map((iss) => finalizeIssue(iss, ctx, config())));
+      if (!error68) {
+        error68 = new Err(issues.map((iss) => finalizeIssue(iss, ctx, config())));
         issues = void 0;
         ctx = void 0;
       }
-      return error67;
+      return error68;
     },
     set error(e) {
-      error67 = e;
+      error68 = e;
       issues = void 0;
       ctx = void 0;
     }
@@ -33736,6 +33736,8 @@ function getOptionalEnv() {
 var schema_exports = {};
 __export(schema_exports, {
   auditLogs: () => auditLogs,
+  cancellationCases: () => cancellationCases,
+  cancellationStatusEnum: () => cancellationStatusEnum,
   contractors: () => contractors,
   customers: () => customers,
   featureFlags: () => featureFlags,
@@ -33806,6 +33808,12 @@ var paymentStatusEnum = pgEnum("payment_status", [
   "pending",
   "valid",
   "rejected"
+]);
+var cancellationStatusEnum = pgEnum("cancellation_status", [
+  "pending",
+  "awaiting_credit_note",
+  "awaiting_transfer",
+  "completed"
 ]);
 var workOrderStatusEnum = pgEnum("work_order_status", [
   "unassigned",
@@ -34010,6 +34018,22 @@ var municipalOrderLines = pgTable("municipal_order_lines", {
   unit: text("unit").notNull(),
   unitPriceCents: integer("unit_price_cents").notNull(),
   amountCents: integer("amount_cents").notNull()
+});
+var cancellationCases = pgTable("cancellation_cases", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  invoiceId: uuid("invoice_id").notNull().references(() => invoices.id),
+  reason: text("reason").notNull(),
+  status: cancellationStatusEnum("status").default("pending").notNull(),
+  refundAmountCents: integer("refund_amount_cents").default(0).notNull(),
+  deductionsCents: integer("deductions_cents").default(0).notNull(),
+  refundReason: text("refund_reason"),
+  bankName: text("bank_name"),
+  bankAccountName: text("bank_account_name"),
+  bankAccountNumber: text("bank_account_number"),
+  createdBy: uuid("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true })
 });
 var contractors = pgTable("contractors", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -34684,8 +34708,8 @@ async function importWithAlgCache(cache2, jwk, entry) {
       if (key2.type !== "public")
         throw new JWKSInvalid("JSON Web Key Set members must be public keys");
       return cached3[alg] = key2, key2;
-    }).catch((error67) => {
-      throw cached3[alg] === pending && delete cached3[alg], error67;
+    }).catch((error68) => {
+      throw cached3[alg] === pending && delete cached3[alg], error68;
     });
     cached3[alg] = pending;
   }
@@ -34712,14 +34736,14 @@ function createLocalJWKSet(jwks) {
     if (!length)
       throw new JWKSNoMatchingKey();
     if (length !== 1) {
-      const error67 = new JWKSMultipleMatchingKeys();
-      throw error67[Symbol.asyncIterator] = async function* () {
+      const error68 = new JWKSMultipleMatchingKeys();
+      throw error68[Symbol.asyncIterator] = async function* () {
         for (const jwk2 of candidates)
           try {
             yield await importWithAlgCache(cached3, jwk2, entry);
           } catch {
           }
-      }, error67;
+      }, error68;
     }
     return importWithAlgCache(cached3, jwk, entry);
   }, "jwks", {
@@ -35229,13 +35253,13 @@ usersRoute.post(
         requestId: c2.get("requestId")
       });
       return c2.json(created, 201);
-    } catch (error67) {
+    } catch (error68) {
       await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${authUser.id}`, {
         method: "DELETE",
         headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }
       }).catch(() => {
       });
-      throw error67;
+      throw error68;
     }
   }
 );
@@ -37341,10 +37365,10 @@ paymentProofsRoute.post(
         sizeBytes: file2.size,
         createdBy: c2.get("user").id
       }).returning();
-    } catch (error67) {
+    } catch (error68) {
       await deletePaymentProof(storageKey).catch(() => {
       });
-      throw error67;
+      throw error68;
     }
     return c2.json(
       {
@@ -37356,6 +37380,138 @@ paymentProofsRoute.post(
       },
       201
     );
+  }
+);
+
+// server/routes/cancellations.ts
+var createSchema4 = external_exports.object({
+  invoiceId: external_exports.string().uuid(),
+  reason: external_exports.string().trim().min(3).max(1e3)
+});
+var updateSchema4 = external_exports.object({
+  status: external_exports.enum(["pending", "awaiting_credit_note", "awaiting_transfer", "completed"]).optional(),
+  refundAmountCents: external_exports.number().int().nonnegative().optional(),
+  deductionsCents: external_exports.number().int().nonnegative().optional(),
+  refundReason: external_exports.string().trim().max(1e3).nullable().optional(),
+  bankName: external_exports.string().trim().max(120).nullable().optional(),
+  bankAccountName: external_exports.string().trim().max(120).nullable().optional(),
+  bankAccountNumber: external_exports.string().trim().max(80).nullable().optional()
+});
+var error67 = (code, message2) => ({
+  error: { code, message: message2 }
+});
+var cancellationsRoute = new Hono3();
+cancellationsRoute.get(
+  "/",
+  requireAuth,
+  requireCapability("refund.manage"),
+  async (c2) => {
+    const rows = await getDb().select({
+      id: cancellationCases.id,
+      invoiceId: invoices.id,
+      invoiceNumber: invoices.number,
+      customerName: customers.name,
+      customerPhone: customers.phone,
+      reason: cancellationCases.reason,
+      status: cancellationCases.status,
+      refundAmountCents: cancellationCases.refundAmountCents,
+      deductionsCents: cancellationCases.deductionsCents,
+      createdAt: cancellationCases.createdAt,
+      updatedAt: cancellationCases.updatedAt
+    }).from(cancellationCases).innerJoin(invoices, eq(cancellationCases.invoiceId, invoices.id)).innerJoin(customers, eq(invoices.customerId, customers.id)).orderBy(desc(cancellationCases.createdAt));
+    return c2.json(rows);
+  }
+);
+cancellationsRoute.get(
+  "/:id",
+  requireAuth,
+  requireCapability("refund.manage"),
+  async (c2) => {
+    const rows = await getDb().select({
+      case: cancellationCases,
+      invoice: {
+        id: invoices.id,
+        number: invoices.number,
+        totalCents: invoices.totalCents,
+        validPaidCents: invoices.validPaidCents,
+        status: invoices.status
+      },
+      customer: {
+        name: customers.name,
+        phone: customers.phone,
+        address: customers.address,
+        district: customers.district
+      }
+    }).from(cancellationCases).innerJoin(invoices, eq(cancellationCases.invoiceId, invoices.id)).innerJoin(customers, eq(invoices.customerId, customers.id)).where(eq(cancellationCases.id, c2.req.param("id"))).limit(1);
+    if (!rows[0]) return c2.json(error67("NOT_FOUND", "\u627E\u4E0D\u5230\u9000\u6B3E\u500B\u6848\u3002"), 404);
+    return c2.json(rows[0]);
+  }
+);
+cancellationsRoute.post(
+  "/",
+  requireAuth,
+  requireCapability("refund.manage"),
+  async (c2) => {
+    const parsed = createSchema4.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json(error67("VALIDATION_ERROR", "\u9000\u6B3E\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002"), 400);
+    }
+    const [invoice] = await getDb().select().from(invoices).where(eq(invoices.id, parsed.data.invoiceId)).limit(1);
+    if (!invoice) return c2.json(error67("NOT_FOUND", "\u627E\u4E0D\u5230\u767C\u7968\u3002"), 404);
+    const [created] = await getDb().insert(cancellationCases).values({
+      invoiceId: invoice.id,
+      reason: parsed.data.reason,
+      createdBy: c2.get("user").id
+    }).returning();
+    await getDb().insert(auditLogs).values({
+      actorId: c2.get("user").id,
+      action: "cancellation_case_created",
+      entityType: "cancellation_case",
+      entityId: created.id,
+      after: { invoiceNumber: invoice.number, reason: parsed.data.reason },
+      requestId: c2.get("requestId")
+    });
+    return c2.json(created, 201);
+  }
+);
+cancellationsRoute.patch(
+  "/:id",
+  requireAuth,
+  requireCapability("refund.manage"),
+  async (c2) => {
+    const parsed = updateSchema4.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json(
+        { error: { code: "VALIDATION_ERROR", message: "\u9000\u6B3E\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } },
+        400
+      );
+    }
+    const [current] = await getDb().select({
+      case: cancellationCases,
+      invoice: invoices
+    }).from(cancellationCases).innerJoin(invoices, eq(cancellationCases.invoiceId, invoices.id)).where(eq(cancellationCases.id, c2.req.param("id"))).limit(1);
+    if (!current) return c2.json(error67("NOT_FOUND", "\u627E\u4E0D\u5230\u9000\u6B3E\u500B\u6848\u3002"), 404);
+    if (parsed.data.refundAmountCents !== void 0 && parsed.data.refundAmountCents > current.invoice.validPaidCents) {
+      return c2.json(error67("REFUND_EXCEEDS_PAID", "\u9000\u6B3E\u91D1\u984D\u4E0D\u53EF\u8D85\u904E\u5DF2\u6536\u91D1\u984D\u3002"), 422);
+    }
+    const [updated] = await getDb().update(cancellationCases).set({
+      ...parsed.data,
+      updatedAt: /* @__PURE__ */ new Date(),
+      completedAt: parsed.data.status === "completed" ? /* @__PURE__ */ new Date() : current.case.completedAt
+    }).where(eq(cancellationCases.id, current.case.id)).returning();
+    await getDb().insert(auditLogs).values({
+      actorId: c2.get("user").id,
+      action: "cancellation_case_updated",
+      entityType: "cancellation_case",
+      entityId: current.case.id,
+      before: {
+        status: current.case.status,
+        refundAmountCents: current.case.refundAmountCents
+      },
+      after: parsed.data,
+      requestId: c2.get("requestId")
+    });
+    return c2.json(updated);
   }
 );
 
@@ -37377,6 +37533,7 @@ app.route("/feature-flags", featureFlagsRoute);
 app.route("/invoices", invoicesRoute);
 app.route("/invoices", paymentsRoute);
 app.route("/invoices", paymentProofsRoute);
+app.route("/cancellation-cases", cancellationsRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);
@@ -37396,8 +37553,8 @@ app.notFound(
     404
   )
 );
-app.onError((error67, c2) => {
-  console.error(error67);
+app.onError((error68, c2) => {
+  console.error(error68);
   return c2.json(
     {
       error: { code: "INTERNAL_ERROR", message: "\u4F3A\u670D\u5668\u66AB\u6642\u7121\u6CD5\u8655\u7406\u8ACB\u6C42\u3002" },
