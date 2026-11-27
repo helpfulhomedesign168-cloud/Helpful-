@@ -26,32 +26,28 @@ Reference: prototype commit `e54d5b9`
 
 ## Remaining mismatches
 
-### High
+### Medium
 
-1. ✅ Direct invoice product-style picker now reads live `/product-styles` API
-   - API images mapped to product-style snapshots with signed URLs
-   - Selected style text persists on invoice_lines.product_style_text
-
-2. **Cancellation commission attribution incomplete**
+1. **Cancellation commission attribution incomplete**
    - Live invoice has salesName/supervisorName/team but no actor IDs/discount
    - Missing low-discount 6/3/2 rates and Team B head 1%
    - Current: sales 8%, supervisor 4/3%
 
-### Medium
+### Resolved / low
 
-3. ✅ Municipal principal A section
+2. ✅ Municipal principal A section
    - Detail returns principal invoice lines with product style
    - UI shows 正單 A table + municipal line editor
    - B/C-specific sections not present in prototype detail reference used
 
-4. **Handoff/order detail layout polish**
+3. **Handoff/order detail layout polish**
    - Domain fields mostly present; page hierarchy differs from prototype
 
-5. ✅ Custom work add-to-catalog
+4. ✅ Custom work add-to-catalog
    - Approved custom work can create a service with CW code, category, price, details
    - Request stores catalogServiceId
 
-6. **User login identity**
+5. **User login identity**
    - Prototype uses username; live uses Supabase email login
    - This is an intentional auth-platform difference, not required for domain parity unless product wants username login
 
@@ -65,3 +61,24 @@ Reference: prototype commit `e54d5b9`
 - Typecheck/build/unit pass
 - Staging data kept clean between tests
 - Production must not be treated as final until high items resolved
+
+
+## Final regression (2026-11-27)
+
+```text
+Typecheck: passed
+Build: passed
+Unit: 34 passed
+Full E2E: 67 passed
+Staging: 1 admin / 0 invoices / 0 customers / 0 work orders / 38 services
+```
+
+## Goal status
+
+Domain parity is complete for the implemented direct-invoice workflow. The following remain before claiming exact prototype parity:
+
+- Low-discount / Team B head commission attribution
+- Handoff/order detail visual polish
+- Username login (auth platform difference)
+
+Production should not be treated as final until these are reviewed/waived.
