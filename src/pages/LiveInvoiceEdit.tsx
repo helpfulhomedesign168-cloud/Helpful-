@@ -37,6 +37,8 @@ export function LiveInvoiceEdit() {
   const [invoice, setInvoice] = useState<InvoiceDetailData | null>(null);
   const [salesName, setSalesName] = useState("");
   const [supervisorName, setSupervisorName] = useState("");
+  const [team, setTeam] = useState<"" | "A" | "B">("");
+  const [isAdditional, setIsAdditional] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [grantApplicationNumber, setGrantApplicationNumber] = useState("");
   const [grantApprovedAmount, setGrantApprovedAmount] = useState("");
@@ -61,6 +63,8 @@ export function LiveInvoiceEdit() {
         setInvoice(data);
         setSalesName(data.salesName ?? "");
         setSupervisorName(data.supervisorName ?? "");
+        setTeam((data.team as "" | "A" | "B") ?? "");
+        setIsAdditional(Boolean(data.isAdditional));
         setCategories(data.categories);
         setGrantApplicationNumber(data.grantApplicationNumber ?? "");
         setGrantApprovedAmount(
@@ -157,6 +161,8 @@ export function LiveInvoiceEdit() {
             date: invoice.createdAt.slice(0, 10) || todayLocal(),
             salesName: salesName.trim() || undefined,
             supervisorName: supervisorName.trim() || undefined,
+            team: team || null,
+            isAdditional,
             categories,
             grant: categories.includes("grant-80k")
               ? {
@@ -220,6 +226,8 @@ export function LiveInvoiceEdit() {
           <Field label="Sales主管">
             <input value={supervisorName} onChange={(e) => setSupervisorName(e.target.value)} />
           </Field>
+          <Field label="Team"><select value={team} onChange={(e) => setTeam(e.target.value as "" | "A" | "B")}><option value="">未指定</option><option value="A">Team A</option><option value="B">Team B</option></select></Field>
+          <Field label="單類"><label className="checkbox-label"><input type="checkbox" checked={isAdditional} onChange={(e) => setIsAdditional(e.target.checked)} /> 後加單</label></Field>
           <Field label="修改原因" required>
             <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="例如：客戶加項" />
           </Field>

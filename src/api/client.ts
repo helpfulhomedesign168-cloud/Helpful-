@@ -76,6 +76,9 @@ export type InvoiceSummary = {
   number: string;
   status: string;
   categories: string[];
+  team?: string | null;
+  isAdditional?: boolean;
+  parentInvoiceId?: string | null;
   totalCents: number;
   validPaidCents: number;
   salesName: string | null;
@@ -89,6 +92,9 @@ export type InvoiceDetailData = InvoiceSummary & {
   supervisorName: string | null;
   grantApplicationNumber: string | null;
   grantApprovedAmountCents: number | null;
+  team?: string | null;
+  isAdditional?: boolean;
+  parentInvoiceId?: string | null;
   customer: {
     id: string;
     name: string;

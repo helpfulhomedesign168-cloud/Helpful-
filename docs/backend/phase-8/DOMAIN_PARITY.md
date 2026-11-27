@@ -19,7 +19,7 @@ Rule: backend entities, fields, state transitions and live UI must match the pro
 | Supplier | `suppliers` + `files` | ✅ logo/address/2 contacts/categories/product-style flag |
 | Resource (contractor) | `contractors` | ✅ kind/specialty/trades/scope/fee |
 | ServiceItem | `services` + `metadata` + `service_categories` | ✅ category management, measure/price/min/linked |
-| Invoice | `invoices` + versions + lines | 🟡 payment plan added; team/add-on/quote relation missing |
+| Invoice | `invoices` + versions + lines | 🟡 payment plan + team/add-on added; parent/quote relation/UI create pending |
 | Invoice.paymentPlan | `invoice_payment_plan` | ✅ 50/50, 30/20/50, 30/20/30/20 + gates |
 | Payment | `payments` | ✅ custody + cleared + validation gate |
 | Receipt | `receipts` | ✅ |

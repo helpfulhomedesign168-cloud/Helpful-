@@ -43,6 +43,8 @@ export function LiveInvoices() {
   const [status, setStatus] = useState("all");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [salesFilter, setSalesFilter] = useState("all");
+  const [teamFilter, setTeamFilter] = useState("all");
+  const [orderFilter, setOrderFilter] = useState<"all" | "new" | "additional">("all");
   const [rows, setRows] = useState<InvoiceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -72,6 +74,8 @@ export function LiveInvoices() {
   const salesNames = Array.from(new Set(rows.map((row) => row.salesName).filter((name): name is string => Boolean(name)))).sort();
   const visibleRows = rows
     .filter((row) => salesFilter === "all" || row.salesName === salesFilter)
+    .filter((row) => teamFilter === "all" || row.team === teamFilter)
+    .filter((row) => orderFilter === "all" || (orderFilter === "additional" ? row.isAdditional : !row.isAdditional))
     .sort((a, b) => {
       const byDate = b.createdAt.localeCompare(a.createdAt);
       if (byDate !== 0) return sortOrder === "newest" ? byDate : -byDate;
@@ -97,6 +101,8 @@ export function LiveInvoices() {
             </select>
             <select aria-label="排序" value={sortOrder} onChange={(e) => setSortOrder(e.target.value as "newest" | "oldest")}><option value="newest">最新至最舊</option><option value="oldest">最舊至最新</option></select>
             <select aria-label="Invoice Sales" value={salesFilter} onChange={(e) => setSalesFilter(e.target.value)}><option value="all">全部 Sales</option>{salesNames.map((name) => <option key={name} value={name}>{name}</option>)}</select>
+            <select aria-label="Invoice Team" value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}><option value="all">全部 Team</option><option value="A">Team A</option><option value="B">Team B</option></select>
+            <select aria-label="單類" value={orderFilter} onChange={(e) => setOrderFilter(e.target.value as "all" | "new" | "additional")}><option value="all">全部單類</option><option value="new">新訂單</option><option value="additional">後加單</option></select>
           </div>
         </div>
         {loading ? (
@@ -144,7 +150,7 @@ export function LiveInvoices() {
                         }
                       }}
                     >
-                      <td><strong>{invoice.number}</strong></td>
+                      <td><div className="invoice-number-cell"><strong>{invoice.number}</strong>{invoice.isAdditional && <small>後加單</small>}</div></td>
                       <td>{invoice.createdAt.slice(0, 10)}</td>
                       <td><strong>{invoice.customerName}</strong><small>{invoice.customerPhone}</small></td>
                       <td>{invoice.salesName || "—"}</td>
@@ -342,7 +348,7 @@ export function LiveInvoiceDetail() {
         {invoice.paymentStatus && !invoice.paymentStatus.completed && <p className="release-gate-note">尚未收足：累計有效收款需達 {money(invoice.paymentStatus.csReleaseDueCents / 100)}（成交額50%）。核對付款後會自動建立工程單及通知CS。</p>}
         <div className="form-grid two">
           <div><span className="muted">發票日期</span><p>{invoice.createdAt.slice(0, 10)}</p></div>
-          <div><span className="muted">Sales</span><p>{invoice.salesName || "—"}</p></div>
+          <div><span className="muted">Sales</span><p>{invoice.salesName || "—"}{invoice.team ? ` · Team ${invoice.team}` : ""}{invoice.isAdditional ? " · 後加單" : ""}</p></div>
         </div>
         <h2 className="section-title">工程項目</h2>
         <div className="table-scroll">
