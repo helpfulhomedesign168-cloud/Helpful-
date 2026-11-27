@@ -221,8 +221,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/custom-work-requests"
               element={
-                <Guard roles={["cs_supervisor", "admin"]}>
-                  <LiveBlocked><CustomWorkRequests /></LiveBlocked>
+                <Guard roles={["cs", "cs_supervisor", "admin"]}>
+                  <CustomWorkRequests />
                 </Guard>
               }
             />

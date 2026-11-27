@@ -57,6 +57,13 @@
       "when": 1795751684198,
       "tag": "0007_amazing_shinko_yamashiro",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795754961287,
+      "tag": "0008_small_nextwave",
+      "breakpoints": true
     }
   ]
 }

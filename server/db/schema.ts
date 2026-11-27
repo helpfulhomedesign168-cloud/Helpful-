@@ -40,6 +40,11 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "valid",
   "rejected",
 ]);
+export const customWorkStatusEnum = pgEnum("custom_work_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);
 export const cancellationStatusEnum = pgEnum("cancellation_status", [
   "pending",
   "awaiting_credit_note",
@@ -370,6 +375,25 @@ export const suppliers = pgTable("suppliers", {
   phone: text("phone"),
   contact: text("contact"),
   active: boolean("active").default(true).notNull(),
+});
+
+export const customWorkRequests = pgTable("custom_work_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workOrderId: uuid("work_order_id")
+    .notNull()
+    .references(() => workOrders.id, { onDelete: "cascade" }),
+  description: text("description").notNull(),
+  quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull(),
+  unit: text("unit").notNull(),
+  status: customWorkStatusEnum("status").default("pending").notNull(),
+  priceCents: integer("price_cents"),
+  notes: text("notes"),
+  requestedBy: uuid("requested_by")
+    .notNull()
+    .references(() => users.id),
+  requestedAt: timestamp("requested_at", { withTimezone: true }).defaultNow().notNull(),
+  respondedBy: uuid("responded_by").references(() => users.id),
+  respondedAt: timestamp("responded_at", { withTimezone: true }),
 });
 
 export const productStyleSeries = pgTable("product_style_series", {

@@ -199,7 +199,6 @@ export function Shell() {
     ? new Set([
         "/quotes",
         "/cancellation-cases",
-        "/custom-work-requests",
       ])
     : new Set<string>();
   const navItems = [

@@ -25,6 +25,7 @@ import { cancellationsRoute } from "./routes/cancellations";
 import { auditRoute } from "./routes/audit";
 import { systemRoute } from "./routes/system";
 import { productStylesRoute } from "./routes/productStyles";
+import { customWorkRoute } from "./routes/customWork";
 
 export const app = new Hono<AppEnv>().basePath("/api/v1");
 
@@ -49,6 +50,7 @@ app.route("/cancellation-cases", cancellationsRoute);
 app.route("/audit-logs", auditRoute);
 app.route("/system", systemRoute);
 app.route("/product-styles", productStylesRoute);
+app.route("/custom-work-requests", customWorkRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);

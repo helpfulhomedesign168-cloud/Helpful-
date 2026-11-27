@@ -33739,6 +33739,8 @@ __export(schema_exports, {
   cancellationCases: () => cancellationCases,
   cancellationStatusEnum: () => cancellationStatusEnum,
   contractors: () => contractors,
+  customWorkRequests: () => customWorkRequests,
+  customWorkStatusEnum: () => customWorkStatusEnum,
   customers: () => customers,
   featureFlags: () => featureFlags,
   files: () => files,
@@ -33809,6 +33811,11 @@ var paymentMethodEnum = pgEnum("payment_method", [
 var paymentStatusEnum = pgEnum("payment_status", [
   "pending",
   "valid",
+  "rejected"
+]);
+var customWorkStatusEnum = pgEnum("custom_work_status", [
+  "pending",
+  "approved",
   "rejected"
 ]);
 var cancellationStatusEnum = pgEnum("cancellation_status", [
@@ -34049,6 +34056,20 @@ var suppliers = pgTable("suppliers", {
   phone: text("phone"),
   contact: text("contact"),
   active: boolean("active").default(true).notNull()
+});
+var customWorkRequests = pgTable("custom_work_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workOrderId: uuid("work_order_id").notNull().references(() => workOrders.id, { onDelete: "cascade" }),
+  description: text("description").notNull(),
+  quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull(),
+  unit: text("unit").notNull(),
+  status: customWorkStatusEnum("status").default("pending").notNull(),
+  priceCents: integer("price_cents"),
+  notes: text("notes"),
+  requestedBy: uuid("requested_by").notNull().references(() => users.id),
+  requestedAt: timestamp("requested_at", { withTimezone: true }).defaultNow().notNull(),
+  respondedBy: uuid("responded_by").references(() => users.id),
+  respondedAt: timestamp("responded_at", { withTimezone: true })
 });
 var productStyleSeries = pgTable("product_style_series", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -37837,6 +37858,91 @@ productStylesRoute.post(
   }
 );
 
+// server/routes/customWork.ts
+var createSchema5 = external_exports.object({
+  workOrderId: external_exports.string().uuid(),
+  description: external_exports.string().trim().min(2).max(500),
+  quantity: external_exports.number().positive().max(1e4),
+  unit: external_exports.string().trim().min(1).max(30)
+});
+var respondSchema = external_exports.object({
+  status: external_exports.enum(["approved", "rejected"]),
+  priceCents: external_exports.number().int().nonnegative().optional(),
+  notes: external_exports.string().trim().max(500).nullable().optional()
+});
+var customWorkRoute = new Hono3();
+customWorkRoute.get("/", requireAuth, requireCapability("workorder.read"), async (c2) => {
+  const rows = await getDb().select({
+    id: customWorkRequests.id,
+    workOrderId: customWorkRequests.workOrderId,
+    orderNumber: workOrders.number,
+    invoiceNumber: invoices.number,
+    customerName: customers.name,
+    description: customWorkRequests.description,
+    quantity: customWorkRequests.quantity,
+    unit: customWorkRequests.unit,
+    status: customWorkRequests.status,
+    priceCents: customWorkRequests.priceCents,
+    notes: customWorkRequests.notes,
+    requestedAt: customWorkRequests.requestedAt,
+    respondedAt: customWorkRequests.respondedAt
+  }).from(customWorkRequests).innerJoin(workOrders, eq(customWorkRequests.workOrderId, workOrders.id)).innerJoin(invoices, eq(workOrders.invoiceId, invoices.id)).innerJoin(customers, eq(invoices.customerId, customers.id)).orderBy(desc(customWorkRequests.requestedAt));
+  return c2.json(rows);
+});
+customWorkRoute.post(
+  "/",
+  requireAuth,
+  requireCapability("workorder.update"),
+  async (c2) => {
+    const parsed = createSchema5.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u81EA\u8A02\u5DE5\u7A0B\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    const [order2] = await getDb().select({ id: workOrders.id }).from(workOrders).where(eq(workOrders.id, parsed.data.workOrderId)).limit(1);
+    if (!order2) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u5DE5\u7A0B\u55AE\u3002" } }, 404);
+    const [created] = await getDb().insert(customWorkRequests).values({
+      workOrderId: order2.id,
+      description: parsed.data.description,
+      quantity: String(parsed.data.quantity),
+      unit: parsed.data.unit,
+      requestedBy: c2.get("user").id
+    }).returning();
+    return c2.json(created, 201);
+  }
+);
+customWorkRoute.patch(
+  "/:id/respond",
+  requireAuth,
+  requireCapability("workorder.assign"),
+  async (c2) => {
+    const parsed = respondSchema.safeParse(await c2.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u5BE9\u6279\u8CC7\u6599\u4E0D\u6B63\u78BA\u3002" } }, 400);
+    }
+    const [request] = await getDb().select().from(customWorkRequests).where(eq(customWorkRequests.id, c2.req.param("id"))).limit(1);
+    if (!request) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u81EA\u8A02\u5DE5\u7A0B\u3002" } }, 404);
+    if (request.status !== "pending") {
+      return c2.json({ error: { code: "ALREADY_RESPONDED", message: "\u6B64\u7533\u8ACB\u5DF2\u8655\u7406\u3002" } }, 409);
+    }
+    const [updated] = await getDb().update(customWorkRequests).set({
+      status: parsed.data.status,
+      priceCents: parsed.data.priceCents,
+      notes: parsed.data.notes,
+      respondedBy: c2.get("user").id,
+      respondedAt: /* @__PURE__ */ new Date()
+    }).where(eq(customWorkRequests.id, request.id)).returning();
+    await getDb().insert(auditLogs).values({
+      actorId: c2.get("user").id,
+      action: "custom_work_responded",
+      entityType: "custom_work_request",
+      entityId: request.id,
+      after: parsed.data,
+      requestId: c2.get("requestId")
+    });
+    return c2.json(updated);
+  }
+);
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -37859,6 +37965,7 @@ app.route("/cancellation-cases", cancellationsRoute);
 app.route("/audit-logs", auditRoute);
 app.route("/system", systemRoute);
 app.route("/product-styles", productStylesRoute);
+app.route("/custom-work-requests", customWorkRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);
