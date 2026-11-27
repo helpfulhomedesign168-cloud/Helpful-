@@ -35,6 +35,10 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "transfer",
   "cheque",
 ]);
+export const paymentCustodyEnum = pgEnum("payment_custody", [
+  "company",
+  "sales",
+]);
 export const paymentStatusEnum = pgEnum("payment_status", [
   "pending",
   "valid",
@@ -221,6 +225,7 @@ export const payments = pgTable("payments", {
   installment: integer("installment").notNull(),
   amountCents: integer("amount_cents").notNull(),
   method: paymentMethodEnum("method").notNull(),
+  custody: paymentCustodyEnum("custody").default("company").notNull(),
   status: paymentStatusEnum("status").default("pending").notNull(),
   paidAt: date("paid_at").notNull(),
   reference: text("reference"),

@@ -183,6 +183,7 @@ export function LiveInvoiceDetail() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("fps");
+  const [paymentCustody, setPaymentCustody] = useState<"company" | "sales">("company");
   const [paymentDate, setPaymentDate] = useState(todayLocal);
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [proofFileId, setProofFileId] = useState("");
@@ -240,6 +241,7 @@ export function LiveInvoiceDetail() {
           installment: payments.length + 1,
           amountCents: Math.round(Number(paymentAmount) * 100),
           method: paymentMethod,
+          custody: paymentCustody,
           paidAt: paymentDate,
           confirm,
           proofFileId: proofFileId || undefined,
@@ -247,6 +249,7 @@ export function LiveInvoiceDetail() {
       });
       setPaymentOpen(false);
       setPaymentAmount("");
+      setPaymentCustody("company");
       setProofFileId("");
       setProofName("");
       await reload();
@@ -477,6 +480,12 @@ export function LiveInvoiceDetail() {
                   </select>
                 </Field>
               </div>
+              <Field label="收款位置">
+                <select value={paymentCustody} onChange={(event) => setPaymentCustody(event.target.value as "company" | "sales")}>
+                  <option value="company">公司戶口／公司</option>
+                  <option value="sales">Sales 保管</option>
+                </select>
+              </Field>
               <Field label="付款證明">
                 <input
                   type="file"

@@ -33753,6 +33753,7 @@ __export(schema_exports, {
   municipalOrders: () => municipalOrders,
   notifications: () => notifications,
   numberSequences: () => numberSequences,
+  paymentCustodyEnum: () => paymentCustodyEnum,
   paymentMethodEnum: () => paymentMethodEnum,
   paymentStatusEnum: () => paymentStatusEnum,
   payments: () => payments,
@@ -33808,6 +33809,10 @@ var paymentMethodEnum = pgEnum("payment_method", [
   "fps",
   "transfer",
   "cheque"
+]);
+var paymentCustodyEnum = pgEnum("payment_custody", [
+  "company",
+  "sales"
 ]);
 var paymentStatusEnum = pgEnum("payment_status", [
   "pending",
@@ -33958,6 +33963,7 @@ var payments = pgTable("payments", {
   installment: integer("installment").notNull(),
   amountCents: integer("amount_cents").notNull(),
   method: paymentMethodEnum("method").notNull(),
+  custody: paymentCustodyEnum("custody").default("company").notNull(),
   status: paymentStatusEnum("status").default("pending").notNull(),
   paidAt: date("paid_at").notNull(),
   reference: text("reference"),
@@ -36380,6 +36386,7 @@ var paymentSchema = external_exports.object({
   installment: external_exports.number().int().min(1).max(20),
   amountCents: external_exports.number().int().positive(),
   method: external_exports.enum(["cash", "fps", "transfer", "cheque"]),
+  custody: external_exports.enum(["company", "sales"]).default("company"),
   paidAt: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   reference: external_exports.string().trim().max(200).optional(),
   notes: external_exports.string().trim().max(1e3).optional(),
@@ -36544,6 +36551,7 @@ paymentsRoute.post(
         installment: parsed.data.installment,
         amountCents: parsed.data.amountCents,
         method: parsed.data.method,
+        custody: parsed.data.custody,
         status: "pending",
         paidAt: parsed.data.paidAt,
         reference: parsed.data.reference,
@@ -36568,6 +36576,7 @@ paymentsRoute.post(
         installment: parsed.data.installment,
         amountCents: parsed.data.amountCents,
         method: parsed.data.method,
+        custody: parsed.data.custody,
         status: "valid",
         paidAt: parsed.data.paidAt,
         reference: parsed.data.reference,

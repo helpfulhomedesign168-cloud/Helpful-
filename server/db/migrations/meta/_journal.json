@@ -99,6 +99,13 @@
       "when": 1795766440983,
       "tag": "0013_supreme_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795766733147,
+      "tag": "0014_bent_ultimo",
+      "breakpoints": true
     }
   ]
 }

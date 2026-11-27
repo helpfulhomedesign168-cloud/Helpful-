@@ -6,7 +6,7 @@ import { money } from "../domain/types";
 
 type PaymentRow = {
   id: string; invoiceId: string; invoiceNumber: string; invoiceTotalCents: number; validPaidCents: number;
-  installment: number; amountCents: number; method: string; status: "pending" | "valid" | "rejected";
+  installment: number; amountCents: number; method: string; custody: "company" | "sales"; status: "pending" | "valid" | "rejected";
   paidAt: string; reference: string | null; notes: string | null; createdAt: string;
   customerName: string; customerPhone: string; proofFilename: string | null; proofUrl: string | null;
 };
@@ -65,7 +65,7 @@ export function LiveFinance() {
           <button className={tab === "all" ? "selected" : ""} onClick={() => setTab("all")}>全部收款 <span>{rows.length}</span></button>
         </div>
         {loading ? <p className="muted">正在讀取收款…</p> : error ? <Empty title="未能讀取收款" description={error} /> : shown.length === 0 ? <Empty title={tab === "pending" ? "暫無待核對的收款" : "暫無收款"} /> : (
-          <div className="table-scroll"><table><thead><tr><th>來源／客戶</th><th>方式／收款位置</th><th className="numeric">本筆金額</th><th>首期進度</th><th>狀態</th><th /></tr></thead><tbody>{shown.map((row) => <tr key={row.id}><td><strong>{row.invoiceNumber}</strong><small>{row.customerName} · {row.paidAt}</small></td><td>{METHOD_LABELS[row.method] ?? row.method.toUpperCase()}<small>公司戶口／公司</small></td><td className="numeric money">{money(row.amountCents / 100)}</td><td><strong>已核 {money(row.validPaidCents / 100)}</strong><small>Invoice 總額 {money(row.invoiceTotalCents / 100)}</small></td><td><Badge strong={row.status === "valid"}>{STATUS[row.status] ?? row.status}</Badge></td><td>{row.status === "pending" ? <Button onClick={() => { setActive(row); setNotes(""); }}>核對收款</Button> : <Button variant="ghost" onClick={() => setActive(row)}>查看</Button>}</td></tr>)}</tbody></table></div>
+          <div className="table-scroll"><table><thead><tr><th>來源／客戶</th><th>方式／收款位置</th><th className="numeric">本筆金額</th><th>首期進度</th><th>狀態</th><th /></tr></thead><tbody>{shown.map((row) => <tr key={row.id}><td><strong>{row.invoiceNumber}</strong><small>{row.customerName} · {row.paidAt}</small></td><td>{METHOD_LABELS[row.method] ?? row.method.toUpperCase()}<small>{row.custody === "sales" ? "Sales保管" : "公司戶口／公司"}</small></td><td className="numeric money">{money(row.amountCents / 100)}</td><td><strong>已核 {money(row.validPaidCents / 100)}</strong><small>Invoice 總額 {money(row.invoiceTotalCents / 100)}</small></td><td><Badge strong={row.status === "valid"}>{STATUS[row.status] ?? row.status}</Badge></td><td>{row.status === "pending" ? <Button onClick={() => { setActive(row); setNotes(""); }}>核對收款</Button> : <Button variant="ghost" onClick={() => setActive(row)}>查看</Button>}</td></tr>)}</tbody></table></div>
         )}
       </div>
       {active && <Dialog wide title="核對收款" onClose={() => setActive(null)}>
@@ -74,7 +74,7 @@ export function LiveFinance() {
             <div className="payment-review-field"><span>Invoice</span><strong>{active.invoiceNumber}</strong></div>
             <div className="payment-review-field"><span>來訂金額</span><strong>{money(active.amountCents / 100)}</strong></div>
             <div className="payment-review-field"><span>繳交日期</span><strong>{active.paidAt.replaceAll("-", "/")}</strong></div>
-            <div className="payment-review-field"><span>入帳戶口</span><strong>公司戶口／公司</strong></div>
+            <div className="payment-review-field"><span>入帳戶口</span><strong>{active.custody === "sales" ? "Sales 保管" : "公司戶口／公司"}</strong></div>
             <div className="payment-review-notes"><span>備註</span><textarea aria-label="備註" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="按銀行紀錄或合法現金來源核對" disabled={active.status !== "pending"} /></div>
           </div>
           <div className="payment-review-proof"><strong>付款證明</strong>{active.proofUrl ? (active.proofFilename?.toLowerCase().endsWith(".pdf") ? <a href={active.proofUrl} target="_blank" rel="noreferrer">開啟付款證明 PDF</a> : <a href={active.proofUrl} target="_blank" rel="noreferrer"><img src={active.proofUrl} alt="付款證明" /></a>) : <div className="payment-review-proof-empty">未上載付款證明</div>}</div>
