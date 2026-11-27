@@ -3,6 +3,7 @@
 ## Completed
 
 - Audit log viewer for admin/finance supervisor
+- Admin feature-flag settings UI
 - Customer detail with Invoice history
 - Hover/focus prefetch for Invoice and work order detail
 - Live Invoice Excel export

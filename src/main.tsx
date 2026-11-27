@@ -30,6 +30,7 @@ import { UserProfile, Users } from "./pages/Users";
 import { Notifications } from "./pages/Notifications";
 import { LiveAudit } from "./pages/LiveAudit";
 import { LiveCustomerDetail } from "./pages/LiveCustomerDetail";
+import { LiveSettings } from "./pages/LiveSettings";
 import { DirectInvoices } from "./pages/DirectInvoices";
 import { LiveInvoiceEdit } from "./pages/LiveInvoiceEdit";
 import { AccountingDashboard } from "./pages/AccountingDashboard";
@@ -362,6 +363,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             />
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers/:id" element={<LiveCustomerDetail />} />
+            <Route
+              path="/settings"
+              element={
+                <Guard roles={["admin"]}>
+                  <LiveSettings />
+                </Guard>
+              }
+            />
             <Route
               path="/audit-logs"
               element={

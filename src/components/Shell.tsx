@@ -15,6 +15,7 @@ import {
   Hammer,
   ArrowRightLeft,
   SlidersHorizontal,
+  Settings,
   ChartNoAxesCombined,
   CalendarDays,
   Menu,
@@ -176,7 +177,7 @@ export function Shell() {
             ]
           : [
               ...(actor.role === "admin"
-                ? [["/users", "用戶管理", UserCog], ["/audit-logs", "審計紀錄", FileText]]
+                ? [["/users", "用戶管理", UserCog], ["/settings", "系統設定", Settings], ["/audit-logs", "審計紀錄", FileText]]
                 : []),
               ["/quotes/new?direct=1", "建立發票", Receipt],
               ["/invoices", "單據管理", Files],
