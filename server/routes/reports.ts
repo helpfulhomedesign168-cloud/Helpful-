@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { getDb } from "../db/client";
 import {
   customers,
@@ -60,7 +60,12 @@ reportsRoute.get(
   requireAuth,
   requireCapability("report.read"),
   async (c) => {
-    const rows = await getDb()
+    const month = c.req.query("month");
+    const statusFilter = c.req.query("status") ?? "all";
+    const db = getDb();
+    const conditions = [];
+    if (month) conditions.push(sql`to_char(${invoices.createdAt}, 'YYYY-MM') = ${month}`);
+    const invoiceRows = await db
       .select({
         id: invoices.id,
         number: invoices.number,
@@ -69,18 +74,65 @@ reportsRoute.get(
         totalCents: invoices.totalCents,
         validPaidCents: invoices.validPaidCents,
         salesName: invoices.salesName,
+        supervisorName: invoices.supervisorName,
+        team: invoices.team,
         createdAt: invoices.createdAt,
         customerName: customers.name,
         customerPhone: customers.phone,
       })
       .from(invoices)
       .innerJoin(customers, eq(invoices.customerId, customers.id))
+      .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(desc(invoices.createdAt))
-      .limit(200);
-    return c.json(rows);
+      .limit(500);
+    const orderRows = await db
+      .select({ id: workOrders.id, invoiceId: workOrders.invoiceId, number: workOrders.number, status: workOrders.status })
+      .from(workOrders);
+    const assignmentRows = await db
+      .select({ workOrderId: workOrderAssignments.workOrderId, feeCents: workOrderAssignments.feeCents })
+      .from(workOrderAssignments);
+    const extraRows = await db
+      .select({ workOrderId: workOrderExtraWorks.workOrderId, priceCents: workOrderExtraWorks.priceCents })
+      .from(workOrderExtraWorks);
+    const orderByInvoice = new Map(orderRows.map((order) => [order.invoiceId, order]));
+    const expenseByOrder = new Map<string, number>();
+    for (const assignment of assignmentRows) {
+      expenseByOrder.set(assignment.workOrderId, (expenseByOrder.get(assignment.workOrderId) ?? 0) + assignment.feeCents);
+    }
+    for (const extra of extraRows) {
+      expenseByOrder.set(extra.workOrderId, (expenseByOrder.get(extra.workOrderId) ?? 0) + extra.priceCents);
+    }
+    const rows = invoiceRows.map((invoice) => {
+      const order = orderByInvoice.get(invoice.id);
+      const expensesCents = order ? expenseByOrder.get(order.id) ?? 0 : 0;
+      const voided = ["voided", "refunded"].includes(invoice.status);
+      const completed = order?.status === "completed";
+      return {
+        id: invoice.id,
+        invoiceNumber: invoice.number,
+        orderNumber: order?.number ?? null,
+        createdAt: invoice.createdAt,
+        customerName: invoice.customerName,
+        customerPhone: invoice.customerPhone,
+        salesName: invoice.salesName,
+        category: invoice.categories.includes("grant-80k") ? "8萬資助" : invoice.categories.includes("group-buy") ? "團購" : "自費",
+        totalCents: invoice.totalCents,
+        validPaidCents: invoice.validPaidCents,
+        expensesCents,
+        grossProfitCents: invoice.totalCents - expensesCents,
+        margin: invoice.totalCents ? Number((((invoice.totalCents - expensesCents) / invoice.totalCents) * 100).toFixed(1)) : 0,
+        commissionCents:
+          Math.round(invoice.totalCents * 0.08) +
+          (invoice.supervisorName ? Math.round(invoice.totalCents * (invoice.team === "B" ? 0.03 : 0.04)) : 0),
+        voided,
+        completed,
+        status: voided ? "voided" : completed ? "completed" : "ongoing",
+      };
+    });
+    const filtered = statusFilter === "all" ? rows : rows.filter((row) => row.status === statusFilter);
+    return c.json(filtered);
   },
 );
-
 
 reportsRoute.get(
   "/accounting",

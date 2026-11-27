@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { apiRequest, ApiError } from "../api/client";
-import { Badge, Button, Empty, PageHead } from "../components/ui";
+import { Badge, Button, Empty, PageHead, Search } from "../components/ui";
 import { money } from "../domain/types";
 
 type AccountingData = {
@@ -62,25 +62,58 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "已完成工程", voided: "已退訂", refunded: "已退款",
 };
 
-type BusinessRow = { id: string; number: string; status: string; categories: string[]; totalCents: number; validPaidCents: number; salesName: string | null; createdAt: string; customerName: string; customerPhone: string };
+type BusinessRow = {
+  id: string; invoiceNumber: string; orderNumber: string | null; createdAt: string; customerName: string; customerPhone: string;
+  salesName: string | null; category: string; totalCents: number; validPaidCents: number; expensesCents: number;
+  grossProfitCents: number; margin: number; commissionCents: number; status: "ongoing" | "completed" | "voided";
+};
 
 export function LiveBusinessOrders() {
   const { accessToken } = useAuth();
   const nav = useNavigate();
+  const now = new Date();
+  const [year, setYear] = useState(String(now.getFullYear()));
+  const [month, setMonth] = useState(String(now.getMonth() + 1).padStart(2, "0"));
+  const [status, setStatus] = useState<"all" | "ongoing" | "completed" | "voided">("all");
+  const [sales, setSales] = useState("all");
+  const [category, setCategory] = useState("all");
+  const [search, setSearch] = useState("");
   const [rows, setRows] = useState<BusinessRow[]>([]);
   const [error, setError] = useState("");
   useEffect(() => {
-    apiRequest<BusinessRow[]>("/reports/business-orders", accessToken)
+    const params = new URLSearchParams({ month: `${year}-${month}` });
+    if (status !== "all") params.set("status", status);
+    apiRequest<BusinessRow[]>(`/reports/business-orders?${params}`, accessToken)
       .then(setRows)
       .catch((e) => setError(e instanceof ApiError ? e.message : "未能讀取營業單。"));
-  }, [accessToken]);
+  }, [accessToken, year, month, status]);
   if (error) return <Empty title="未能讀取營業單" description={error} />;
+  const salesOptions = Array.from(new Set(rows.map((row) => row.salesName).filter((value): value is string => Boolean(value)))).sort();
+  const categories = Array.from(new Set(rows.map((row) => row.category))).sort();
+  const filtered = rows
+    .filter((row) => sales === "all" || row.salesName === sales)
+    .filter((row) => category === "all" || row.category === category)
+    .filter((row) => `${row.invoiceNumber} ${row.orderNumber ?? ""} ${row.customerName}`.toLowerCase().includes(search.toLowerCase()));
+  const sum = (key: "totalCents" | "validPaidCents" | "expensesCents") => filtered.reduce((total, row) => total + row[key], 0);
   return (
     <>
-      <PageHead title="營業單" />
-      <div className="list-panel">
-        <div className="table-scroll"><table className="invoice-list-table live-work-table"><thead><tr><th>Invoice</th><th>日期</th><th>客戶</th><th>Sales</th><th>總額</th><th>已收</th><th>狀態</th></tr></thead><tbody>{rows.map((row) => <tr key={row.id} className="invoice-clickable-row" onClick={() => nav(`/invoices/${row.id}`)}><td><strong>{row.number}</strong></td><td>{row.createdAt.slice(0, 10)}</td><td>{row.customerName}<small>{row.customerPhone}</small></td><td>{row.salesName || "—"}</td><td>{money(row.totalCents / 100)}</td><td>{money(row.validPaidCents / 100)}</td><td><Badge>{STATUS_LABELS[row.status] ?? row.status}</Badge></td></tr>)}</tbody></table></div>
-        {rows.length === 0 && <p className="muted">暫無營業單。</p>}
+      <PageHead title="營業單" eyebrow="會計主管 · 營業單列表" />
+      <div className="list-panel business-order-panel">
+        <div className="business-order-toolbar">
+          <Search value={search} onChange={setSearch} placeholder="搜尋 Invoice、工程單或客戶" />
+          <select aria-label="營業單年份" value={year} onChange={(e) => setYear(e.target.value)}>{["2024","2025","2026","2027","2028"].map((value) => <option key={value} value={value}>{value}</option>)}</select>
+          <select aria-label="營業單月份" value={month} onChange={(e) => setMonth(e.target.value)}>{Array.from({length:12},(_,index)=>String(index+1).padStart(2,"0")).map((value) => <option key={value} value={value}>{value} 月</option>)}</select>
+          <select aria-label="營業單Sales" value={sales} onChange={(e) => setSales(e.target.value)}><option value="all">全部 Sales</option>{salesOptions.map((name) => <option key={name} value={name}>{name}</option>)}</select>
+          <select aria-label="營業單分類" value={category} onChange={(e) => setCategory(e.target.value)}><option value="all">全部分類</option>{categories.map((value) => <option key={value} value={value}>{value}</option>)}</select>
+        </div>
+        <div className="business-order-status-tabs" role="tablist">
+          {([["all","全部"],["ongoing","進行中"],["completed","完成單"],["voided","退單"]] as const).map(([value,label]) => <button key={value} role="tab" aria-selected={status===value} className={status===value?"active":""} onClick={() => setStatus(value)}>{label}</button>)}
+          <span className="business-order-count">{filtered.length} 張單</span>
+        </div>
+        <div className="business-order-summary"><div><span>營業額</span><strong>{money(sum("totalCents") / 100)}</strong></div><div><span>工程支出</span><strong>{money(sum("expensesCents") / 100)}</strong></div><div><span>毛利</span><strong>{money((sum("totalCents") - sum("expensesCents")) / 100)}</strong></div><div><span>已收款</span><strong>{money(sum("validPaidCents") / 100)}</strong></div></div>
+        {filtered.length === 0 ? <Empty title={status === "voided" ? "本月未有退單" : status === "completed" ? "本月未有完成單" : "找不到營業單"} /> : (
+          <div className="table-scroll"><table className="accounting-job-table business-order-table"><thead><tr><th>Invoice／工程單</th><th>開單日期</th><th>客戶</th><th>Sales</th><th>分類</th><th className="numeric">收入</th><th className="numeric">支出</th><th className="numeric">毛利</th><th className="numeric">已收款</th><th>狀態</th></tr></thead><tbody>{filtered.map((row) => <tr key={row.id}><td><button type="button" className="text-button" onClick={() => nav(`/invoices/${row.id}`)}><strong>{row.invoiceNumber}</strong><small>{row.orderNumber || "未出工程單"}</small></button></td><td>{row.createdAt.slice(0,10)}</td><td>{row.customerName}</td><td>{row.salesName || "—"}</td><td>{row.category}</td><td className="numeric">{money(row.totalCents/100)}</td><td className="numeric">{money(row.expensesCents/100)}</td><td className="numeric"><strong>{money(row.grossProfitCents/100)}</strong><small>{row.margin.toFixed(1)}%</small></td><td className="numeric">{money(row.validPaidCents/100)}</td><td><Badge strong={row.status !== "ongoing"}>{row.status === "voided" ? "退單" : row.status === "completed" ? "完成單" : "進行中"}</Badge></td></tr>)}</tbody></table></div>
+        )}
       </div>
     </>
   );

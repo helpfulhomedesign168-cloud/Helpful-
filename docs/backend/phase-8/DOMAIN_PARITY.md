@@ -51,6 +51,7 @@ self-pay:   30 / 20 / 30 / 20
 - Work order released at 50% valid paid
 
 | AccountingDashboard | `/reports/accounting` | ✅ KPI + jobs + 6-month trend + commission + expenses; MYOB remains not connected |
+| BusinessOrders | `/reports/business-orders` | ✅ month/year/sales/category/status + revenue/expense/margin/commission columns |
 
 ## Remaining parity work
 
