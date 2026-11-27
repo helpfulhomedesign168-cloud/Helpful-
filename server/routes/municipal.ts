@@ -20,13 +20,19 @@ const updateSchema = z.object({
   lines: z
     .array(
       z.object({
+        sourceLineId: z.string().uuid().nullable().optional(),
         name: z.string().trim().min(1).max(200),
-        description: z.string().trim().max(500).optional(),
-        position: z.string().trim().max(120).optional(),
+        description: z.string().trim().max(500).nullable().optional(),
+        position: z.string().trim().max(120).nullable().optional(),
+        measure: z.enum(["area", "length", "quantity", "fixed"]).nullable().optional(),
+        length: z.number().nonnegative().nullable().optional(),
+        width: z.number().nonnegative().nullable().optional(),
+        dimensionUnit: z.enum(["呎", "寸"]).nullable().optional(),
         quantity: z.number().positive().max(100000),
         unit: z.string().trim().min(1).max(40),
         unitPriceCents: z.number().int().nonnegative(),
         amountCents: z.number().int().nonnegative(),
+        productStyleText: z.string().trim().max(500).nullable().optional(),
       }),
     )
     .min(1)
@@ -115,12 +121,19 @@ municipalRoute.get(
       .where(eq(municipalOrderLines.municipalOrderId, order.id));
     let lines: {
       id: string;
+      sourceLineId?: string | null;
       name: string;
+      description?: string | null;
       position: string | null;
+      measure?: string | null;
+      length?: string | null;
+      width?: string | null;
+      dimensionUnit?: string | null;
       quantity: string;
       unit: string;
       unitPriceCents: number;
       amountCents: number;
+      productStyleText?: string | null;
     }[];
     if (currentMunicipalLines.length) {
       lines = currentMunicipalLines;
@@ -146,12 +159,19 @@ municipalRoute.get(
       ...order,
       lines: lines.map((line) => ({
         id: line.id,
+        sourceLineId: line.sourceLineId,
         name: line.name,
+        description: line.description,
         position: line.position,
+        measure: line.measure,
+        length: line.length,
+        width: line.width,
+        dimensionUnit: line.dimensionUnit,
         quantity: line.quantity,
         unit: line.unit,
         unitPriceCents: line.unitPriceCents,
         amountCents: line.amountCents,
+        productStyleText: line.productStyleText,
       })),
     });
   },
@@ -190,13 +210,19 @@ municipalRoute.patch(
       await tx.insert(municipalOrderLines).values(
         parsed.data.lines.map((line) => ({
           municipalOrderId: order.id,
+          sourceLineId: line.sourceLineId,
           name: line.name,
           description: line.description,
           position: line.position,
+          measure: line.measure,
+          length: line.length === null || line.length === undefined ? null : String(line.length),
+          width: line.width === null || line.width === undefined ? null : String(line.width),
+          dimensionUnit: line.dimensionUnit,
           quantity: String(line.quantity),
           unit: line.unit,
           unitPriceCents: line.unitPriceCents,
           amountCents: line.amountCents,
+          productStyleText: line.productStyleText,
         })),
       );
       await tx

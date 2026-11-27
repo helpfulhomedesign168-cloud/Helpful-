@@ -141,6 +141,13 @@
       "when": 1795767976244,
       "tag": "0019_tranquil_ghost_rider",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795768272049,
+      "tag": "0020_good_devos",
+      "breakpoints": true
     }
   ]
 }

@@ -25,7 +25,7 @@ Rule: backend entities, fields, state transitions and live UI must match the pro
 | Receipt | `receipts` | ✅ |
 | WorkOrder | `work_orders` + assignments/deductions/extra works | 🟡 line-level cost + contractor assignment picker + extra/date history + handoff filters done; detail polish pending |
 | ProductStyleSeries | `product_style_series` + images | ✅ |
-| MunicipalOrder | `municipal_orders` + lines | 🟡 editor parity pending |
+| MunicipalOrder | `municipal_orders` + lines | 🟡 line measure/dimensions/product-style/sourceLine fields + editor added; A/B/C/detail parity pending |
 | CancellationCase | `cancellation_cases` | 🟡 full credit-note/transfer/commission flow missing |
 | CustomWorkRequest | `custom_work_requests` | ✅ invoice/invoice-line domain + work-order compatibility |
 | Notification | `notifications` | ✅ |

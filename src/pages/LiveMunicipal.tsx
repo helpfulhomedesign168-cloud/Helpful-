@@ -35,7 +35,7 @@ type MunicipalDetail = Omit<MunicipalRow, "invoiceId" | "invoiceNumber" | "princ
   };
   principal: { id: string; number: string; status: string };
   customer: { name: string; phone: string; address: string | null; district: string | null };
-  lines: { id: string; name: string; position: string | null; quantity: string; unit: string; unitPriceCents: number; amountCents: number }[];
+  lines: { id: string; sourceLineId: string | null; name: string; description: string | null; position: string | null; measure: string | null; length: string | null; width: string | null; dimensionUnit: string | null; quantity: string; unit: string; unitPriceCents: number; amountCents: number; productStyleText: string | null }[];
 };
 
 export function LiveMunicipalOrders() {
@@ -120,12 +120,19 @@ export function LiveMunicipalOrderDetail() {
         method: "PATCH",
         body: JSON.stringify({
           lines: lines.map((line) => ({
+            sourceLineId: line.sourceLineId || undefined,
             name: line.name,
+            description: line.description || undefined,
             position: line.position || undefined,
+            measure: line.measure || undefined,
+            length: line.length === null || line.length === "" ? undefined : Number(line.length),
+            width: line.width === null || line.width === "" ? undefined : Number(line.width),
+            dimensionUnit: line.dimensionUnit || undefined,
             quantity: Number(line.quantity) || 0,
             unit: line.unit,
             unitPriceCents: Math.round((line.unitPriceCents / 100) * 100),
             amountCents: Math.round((Number(line.quantity) || 0) * line.unitPriceCents),
+            productStyleText: line.productStyleText || undefined,
           })),
         }),
       });
@@ -166,7 +173,7 @@ export function LiveMunicipalOrderDetail() {
         <h2 className="section-title">工程項目</h2>
         <div className="table-scroll">
           <table className="invoice-list-table live-work-table live-line-table">
-            <thead><tr><th>項目</th><th>位置</th><th>數量</th><th>單位</th><th>單價</th><th>金額</th>{canEdit && <th />}</tr></thead>
+            <thead><tr><th>項目</th><th>位置</th><th>尺寸</th><th>產品款式</th><th>數量</th><th>單位</th><th>單價</th><th>金額</th>{canEdit && <th />}</tr></thead>
             <tbody>
               {lines.map((line) => {
                 const amount = Math.round((Number(line.quantity) || 0) * line.unitPriceCents);
@@ -174,6 +181,8 @@ export function LiveMunicipalOrderDetail() {
                   <tr key={line.id}>
                     <td>{canEdit ? <input value={line.name} onChange={(e) => updateLine(line.id, { name: e.target.value })} /> : line.name}</td>
                     <td>{canEdit ? <input value={line.position ?? ""} onChange={(e) => updateLine(line.id, { position: e.target.value })} /> : (line.position || "—")}</td>
+                    <td>{canEdit ? <div className="inline-form"><input type="number" min="0" step="0.01" value={line.length ?? ""} onChange={(e) => updateLine(line.id, { length: e.target.value })} placeholder="長" /><input type="number" min="0" step="0.01" value={line.width ?? ""} onChange={(e) => updateLine(line.id, { width: e.target.value })} placeholder="闊" /><select value={line.dimensionUnit ?? "呎"} onChange={(e) => updateLine(line.id, { dimensionUnit: e.target.value })}><option value="呎">呎</option><option value="寸">寸</option></select></div> : (line.length ? `${line.length} × ${line.width ?? 0} ${line.dimensionUnit ?? "呎"}` : "—")}</td>
+                    <td>{canEdit ? <input value={line.productStyleText ?? ""} onChange={(e) => updateLine(line.id, { productStyleText: e.target.value })} placeholder="款式" /> : (line.productStyleText || "—")}</td>
                     <td>{canEdit ? <input type="number" min="0.01" step="0.01" value={line.quantity} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} /> : line.quantity}</td>
                     <td>{canEdit ? <input value={line.unit} onChange={(e) => updateLine(line.id, { unit: e.target.value })} /> : line.unit}</td>
                     <td>{canEdit ? <input type="number" min="0" step="0.01" value={line.unitPriceCents / 100} onChange={(e) => updateLine(line.id, { unitPriceCents: Math.round((Number(e.target.value) || 0) * 100) })} /> : money(line.unitPriceCents / 100)}</td>
@@ -187,7 +196,7 @@ export function LiveMunicipalOrderDetail() {
         </div>
         {canEdit && (
           <div className="dialog-actions live-form-actions">
-            <Button type="button" onClick={() => setLines((current) => [...current, { id: crypto.randomUUID(), name: "", position: "", quantity: "1", unit: "項", unitPriceCents: 0, amountCents: 0 }])}>新增項目</Button>
+            <Button type="button" onClick={() => setLines((current) => [...current, { id: crypto.randomUUID(), sourceLineId: null, name: "", description: null, position: "", measure: null, length: null, width: null, dimensionUnit: "呎", quantity: "1", unit: "項", unitPriceCents: 0, amountCents: 0, productStyleText: null }])}>新增項目</Button>
             <Button type="button" variant="primary" disabled={saving} onClick={save}>{saving ? "儲存中…" : "儲存市政單"}</Button>
           </div>
         )}

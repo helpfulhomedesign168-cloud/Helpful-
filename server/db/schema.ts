@@ -383,13 +383,19 @@ export const municipalOrderLines = pgTable("municipal_order_lines", {
   municipalOrderId: uuid("municipal_order_id")
     .notNull()
     .references(() => municipalOrders.id, { onDelete: "cascade" }),
+  sourceLineId: uuid("source_line_id"),
   name: text("name").notNull(),
   description: text("description"),
   position: text("position"),
+  measure: text("measure"),
+  length: numeric("length", { precision: 12, scale: 2 }),
+  width: numeric("width", { precision: 12, scale: 2 }),
+  dimensionUnit: text("dimension_unit"),
   quantity: numeric("quantity", { precision: 12, scale: 2 }).notNull(),
   unit: text("unit").notNull(),
   unitPriceCents: integer("unit_price_cents").notNull(),
   amountCents: integer("amount_cents").notNull(),
+  productStyleText: text("product_style_text"),
 });
 
 export const cancellationCases = pgTable("cancellation_cases", {
