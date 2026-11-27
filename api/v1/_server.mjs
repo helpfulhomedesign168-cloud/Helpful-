@@ -37883,8 +37883,21 @@ systemRoute.get(
 var seriesSchema = external_exports.object({ name: external_exports.string().trim().min(1).max(160) });
 var productStylesRoute = new Hono3();
 productStylesRoute.get("/suppliers", requireAuth, async (c2) => {
+  const rows = await getDb().select({ supplier: suppliers, file: files }).from(suppliers).leftJoin(files, eq(suppliers.logoFileId, files.id)).where(and(eq(suppliers.hasProductStyles, true), eq(suppliers.active, true))).orderBy(asc(suppliers.name));
   return c2.json(
-    await getDb().select({ id: suppliers.id, name: suppliers.name, active: suppliers.active }).from(suppliers).orderBy(asc(suppliers.name))
+    await Promise.all(
+      rows.map(async ({ supplier, file: file2 }) => ({
+        id: supplier.id,
+        name: supplier.name,
+        address: supplier.address,
+        contact: supplier.contact,
+        phone: supplier.phone,
+        contact2: supplier.contact2,
+        phone2: supplier.phone2,
+        categories: supplier.categories,
+        logoUrl: file2 ? await signedSupplierLogo(file2.storageKey).catch(() => null) : null
+      }))
+    )
   );
 });
 productStylesRoute.get("/suppliers/:id/series", requireAuth, async (c2) => {

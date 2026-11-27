@@ -1,8 +1,9 @@
 import { Hono } from "hono";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "../db/client";
 import {
+  files,
   productStyleImages,
   productStyleSeries,
   suppliers,
@@ -13,6 +14,7 @@ import { requireCapability } from "../guards";
 import {
   deleteProductStyleImage,
   signedProductStyleImage,
+  signedSupplierLogo,
   uploadProductStyleImage,
 } from "../storage";
 
@@ -21,11 +23,28 @@ const seriesSchema = z.object({ name: z.string().trim().min(1).max(160) });
 export const productStylesRoute = new Hono<AppEnv>();
 
 productStylesRoute.get("/suppliers", requireAuth, async (c) => {
+  const rows = await getDb()
+    .select({ supplier: suppliers, file: files })
+    .from(suppliers)
+    .leftJoin(files, eq(suppliers.logoFileId, files.id))
+    .where(and(eq(suppliers.hasProductStyles, true), eq(suppliers.active, true)))
+    .orderBy(asc(suppliers.name));
   return c.json(
-    await getDb()
-      .select({ id: suppliers.id, name: suppliers.name, active: suppliers.active })
-      .from(suppliers)
-      .orderBy(asc(suppliers.name)),
+    await Promise.all(
+      rows.map(async ({ supplier, file }) => ({
+        id: supplier.id,
+        name: supplier.name,
+        address: supplier.address,
+        contact: supplier.contact,
+        phone: supplier.phone,
+        contact2: supplier.contact2,
+        phone2: supplier.phone2,
+        categories: supplier.categories,
+        logoUrl: file
+          ? await signedSupplierLogo(file.storageKey).catch(() => null)
+          : null,
+      })),
+    ),
   );
 });
 

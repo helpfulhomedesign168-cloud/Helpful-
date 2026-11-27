@@ -22,7 +22,7 @@
 ## Next
 
 - Cancellation / refund live ✅
-- Product styles live ✅
+- Product styles live ✅ (prototype parity: category tabs/supplier cards/series gallery)
 - Custom work live ✅
 - Cancellation live ✅
 - Further optimistic UI / prefetch
