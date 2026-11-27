@@ -31,9 +31,13 @@ type Assignment = {
   id: string;
   workerName: string;
   trade: string | null;
+  lineIds: string[];
   startDate: string | null;
   endDate: string | null;
+  time: string | null;
   feeCents: number;
+  materialDeductionItem: string | null;
+  materialDeductionAmountCents: number;
   notes: string | null;
 };
 
@@ -267,6 +271,10 @@ export function LiveWorkOrderDetail() {
   const [trade, setTrade] = useState("");
   const [assignmentStart, setAssignmentStart] = useState("");
   const [assignmentEnd, setAssignmentEnd] = useState("");
+  const [assignmentTime, setAssignmentTime] = useState("");
+  const [assignmentLineIds, setAssignmentLineIds] = useState<string[]>([]);
+  const [materialItem, setMaterialItem] = useState("");
+  const [materialAmount, setMaterialAmount] = useState("");
   const [fee, setFee] = useState("");
   const [assignmentSaving, setAssignmentSaving] = useState(false);
   const [deductions, setDeductions] = useState<Deduction[]>([]);
@@ -382,7 +390,11 @@ export function LiveWorkOrderDetail() {
           trade: trade.trim() || undefined,
           startDate: assignmentStart || undefined,
           endDate: assignmentEnd || undefined,
+          time: assignmentTime || undefined,
+          lineIds: assignmentLineIds,
           feeCents: Math.round((Number(fee) || 0) * 100),
+          materialDeductionItem: materialItem || undefined,
+          materialDeductionAmountCents: Math.round((Number(materialAmount) || 0) * 100),
         }),
       });
       setWorkerName("");
@@ -609,14 +621,14 @@ export function LiveWorkOrderDetail() {
         {assignments.length === 0 ? <p className="muted">尚未安排施工人員。</p> : (
           <div className="table-scroll">
             <table className="invoice-list-table live-work-table">
-              <thead><tr><th>施工人員</th><th>工種</th><th>日期</th><th>成本</th><th /></tr></thead>
+              <thead><tr><th>施工人員</th><th>工種／項目</th><th>日期</th><th>成本／扣減</th><th /></tr></thead>
               <tbody>
                 {assignments.map((assignment) => (
                   <tr key={assignment.id}>
                     <td><strong>{assignment.workerName}</strong><small>{assignment.notes}</small></td>
-                    <td>{assignment.trade || "—"}</td>
-                    <td>{assignment.startDate || "—"}{assignment.endDate ? ` → ${assignment.endDate}` : ""}</td>
-                    <td>{money(assignment.feeCents / 100)}</td>
+                    <td>{assignment.trade || "—"}{assignment.materialDeductionItem && <small>材料：{assignment.materialDeductionItem}</small>}</td>
+                    <td>{assignment.startDate || "—"}{assignment.endDate ? ` → ${assignment.endDate}` : ""}{assignment.time ? ` · ${assignment.time}` : ""}{assignment.lineIds?.length ? <small>項目：{assignment.lineIds.map((lineId) => order.lines.find((line) => line.id === lineId)?.name).filter(Boolean).join("、")}</small> : null}</td>
+                    <td>{money(assignment.feeCents / 100)}{assignment.materialDeductionAmountCents > 0 && <small>扣減 {money(assignment.materialDeductionAmountCents / 100)}</small>}</td>
                     <td>
                       <button type="button" className="icon-button" aria-label={`移除${assignment.workerName}`} onClick={() => void removeAssignment(assignment.id)}>×</button>
                     </td>
@@ -634,6 +646,10 @@ export function LiveWorkOrderDetail() {
               <Field label="成本"><input type="number" min="0" step="0.01" value={fee} onChange={(e) => setFee(e.target.value)} /></Field>
               <Field label="開始日"><input type="date" value={assignmentStart} onChange={(e) => setAssignmentStart(e.target.value)} /></Field>
               <Field label="完成日"><input type="date" value={assignmentEnd} onChange={(e) => setAssignmentEnd(e.target.value)} /></Field>
+              <Field label="時間"><input value={assignmentTime} onChange={(e) => setAssignmentTime(e.target.value)} placeholder="例如：09:00" /></Field>
+              <Field label="施工項目"><select multiple value={assignmentLineIds} onChange={(e) => setAssignmentLineIds(Array.from(e.target.selectedOptions).map((option) => option.value))}>{order.lines.map((line) => <option key={line.id} value={line.id}>{line.name}</option>)}</select></Field>
+              <Field label="材料扣減項目"><input value={materialItem} onChange={(e) => setMaterialItem(e.target.value)} /></Field>
+              <Field label="材料扣減金額"><input type="number" min="0" step="0.01" value={materialAmount} onChange={(e) => setMaterialAmount(e.target.value)} /></Field>
             </div>
             <div className="dialog-actions live-form-actions">
               <Button type="submit" variant="secondary" disabled={assignmentSaving}>{assignmentSaving ? "新增中…" : "新增施工安排"}</Button>

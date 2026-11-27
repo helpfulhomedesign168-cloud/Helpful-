@@ -39,6 +39,9 @@ const extraWorkSchema = z.object({
   time: z.string().trim().max(40).optional(),
   notes: z.string().trim().max(1000).optional(),
   priceCents: z.number().int().nonnegative().default(0),
+  resourceId: z.string().uuid().optional(),
+  supplierId: z.string().uuid().optional(),
+  category: z.string().trim().max(80).optional(),
 });
 
 const deductionSchema = z.object({
@@ -54,6 +57,10 @@ const assignmentSchema = z.object({
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   feeCents: z.number().int().nonnegative().default(0),
   notes: z.string().trim().max(1000).optional(),
+  lineIds: z.array(z.string().uuid()).max(300).optional(),
+  time: z.string().trim().max(40).optional(),
+  materialDeductionItem: z.string().trim().max(200).optional(),
+  materialDeductionAmountCents: z.number().int().nonnegative().optional(),
 });
 
 const error = (code: string, message: string) => ({
@@ -451,7 +458,11 @@ workOrdersRoute.post(
         trade: parsed.data.trade,
         startDate: parsed.data.startDate,
         endDate: parsed.data.endDate,
+        time: parsed.data.time,
+        lineIds: parsed.data.lineIds ?? [],
         feeCents: parsed.data.feeCents,
+        materialDeductionItem: parsed.data.materialDeductionItem,
+        materialDeductionAmountCents: parsed.data.materialDeductionAmountCents ?? 0,
         notes: parsed.data.notes,
         createdBy: c.get("user").id,
       })
@@ -656,6 +667,9 @@ workOrdersRoute.post(
         workOrderId: order.id,
         kind: parsed.data.kind,
         name: parsed.data.name,
+        resourceId: parsed.data.resourceId,
+        supplierId: parsed.data.supplierId,
+        category: parsed.data.category,
         startDate: parsed.data.startDate,
         endDate: parsed.data.endDate,
         time: parsed.data.time,

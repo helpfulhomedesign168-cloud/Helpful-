@@ -134,6 +134,13 @@
       "when": 1795767902276,
       "tag": "0018_moaning_mother_askani",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795767976244,
+      "tag": "0019_tranquil_ghost_rider",
+      "breakpoints": true
     }
   ]
 }
