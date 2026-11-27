@@ -8,6 +8,7 @@
 - Admin system health dashboard
 - Admin feature-flag settings UI
 - Customer detail with Invoice history
+- Finance prototype parity: pending/all tabs, proof review, validate/reject with notes
 - Hover/focus prefetch for Invoice and work order detail
 - Live Invoice Excel export
   - uses current API Invoice data

@@ -36610,6 +36610,35 @@ paymentsRoute.post(
   }
 );
 paymentsRoute.post(
+  "/:invoiceId/payments/:paymentId/reject",
+  requireAuth,
+  requireCapability("payment.validate"),
+  async (c2) => {
+    const invoiceId = c2.req.param("invoiceId");
+    const paymentId = c2.req.param("paymentId");
+    const body = await c2.req.json().catch(() => null);
+    const notes = typeof body?.notes === "string" ? body.notes.trim() : "";
+    if (!notes) {
+      return c2.json(error64("VALIDATION_ERROR", "\u8ACB\u586B\u5BEB\u9000\u56DE\u539F\u56E0\u3002"), 400);
+    }
+    const [payment] = await getDb().select().from(payments).where(and(eq(payments.id, paymentId), eq(payments.invoiceId, invoiceId))).limit(1);
+    if (!payment) return c2.json(error64("NOT_FOUND", "\u627E\u4E0D\u5230\u4ED8\u6B3E\u3002"), 404);
+    if (payment.status !== "pending") {
+      return c2.json(error64("INVALID_PAYMENT_STATE", "\u6B64\u4ED8\u6B3E\u4E0D\u662F\u5F85\u6838\u5C0D\u72C0\u614B\u3002"), 409);
+    }
+    const [updated] = await getDb().update(payments).set({ status: "rejected", notes, validatedBy: c2.get("user").id, validatedAt: /* @__PURE__ */ new Date() }).where(eq(payments.id, paymentId)).returning();
+    await getDb().insert(auditLogs).values({
+      actorId: c2.get("user").id,
+      action: "payment_rejected",
+      entityType: "payment",
+      entityId: paymentId,
+      after: { notes },
+      requestId: c2.get("requestId")
+    });
+    return c2.json(updated);
+  }
+);
+paymentsRoute.post(
   "/:invoiceId/payments/:paymentId/receipt",
   requireAuth,
   requireCapability("receipt.issue"),
@@ -37288,6 +37317,36 @@ staffRoute.get("/", requireAuth, async (c2) => {
 
 // server/routes/finance.ts
 var financeRoute = new Hono3();
+financeRoute.get(
+  "/all",
+  requireAuth,
+  requireCapability("payment.validate"),
+  async (c2) => {
+    const rows = await getDb().select({
+      payment: payments,
+      proof: files,
+      invoiceNumber: invoices.number,
+      invoiceTotalCents: invoices.totalCents,
+      validPaidCents: invoices.validPaidCents,
+      customerName: customers.name,
+      customerPhone: customers.phone
+    }).from(payments).innerJoin(invoices, eq(payments.invoiceId, invoices.id)).innerJoin(customers, eq(invoices.customerId, customers.id)).leftJoin(files, eq(payments.proofFileId, files.id)).orderBy(desc(payments.createdAt));
+    return c2.json(
+      await Promise.all(
+        rows.map(async ({ payment, proof, invoiceNumber, invoiceTotalCents, validPaidCents, customerName, customerPhone }) => ({
+          ...payment,
+          invoiceNumber,
+          invoiceTotalCents,
+          validPaidCents,
+          customerName,
+          customerPhone,
+          proofFilename: proof?.filename ?? null,
+          proofUrl: proof ? await signedPaymentProof(proof.storageKey).catch(() => null) : null
+        }))
+      )
+    );
+  }
+);
 financeRoute.get(
   "/pending",
   requireAuth,

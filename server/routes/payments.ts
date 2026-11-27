@@ -355,6 +355,44 @@ paymentsRoute.post(
 );
 
 paymentsRoute.post(
+  "/:invoiceId/payments/:paymentId/reject",
+  requireAuth,
+  requireCapability("payment.validate"),
+  async (c) => {
+    const invoiceId = c.req.param("invoiceId");
+    const paymentId = c.req.param("paymentId");
+    const body = await c.req.json().catch(() => null);
+    const notes = typeof body?.notes === "string" ? body.notes.trim() : "";
+    if (!notes) {
+      return c.json(error("VALIDATION_ERROR", "請填寫退回原因。"), 400);
+    }
+    const [payment] = await getDb()
+      .select()
+      .from(payments)
+      .where(and(eq(payments.id, paymentId), eq(payments.invoiceId, invoiceId)))
+      .limit(1);
+    if (!payment) return c.json(error("NOT_FOUND", "找不到付款。"), 404);
+    if (payment.status !== "pending") {
+      return c.json(error("INVALID_PAYMENT_STATE", "此付款不是待核對狀態。"), 409);
+    }
+    const [updated] = await getDb()
+      .update(payments)
+      .set({ status: "rejected", notes, validatedBy: c.get("user").id, validatedAt: new Date() })
+      .where(eq(payments.id, paymentId))
+      .returning();
+    await getDb().insert(auditLogs).values({
+      actorId: c.get("user").id,
+      action: "payment_rejected",
+      entityType: "payment",
+      entityId: paymentId,
+      after: { notes },
+      requestId: c.get("requestId"),
+    });
+    return c.json(updated);
+  },
+);
+
+paymentsRoute.post(
   "/:invoiceId/payments/:paymentId/receipt",
   requireAuth,
   requireCapability("receipt.issue"),
