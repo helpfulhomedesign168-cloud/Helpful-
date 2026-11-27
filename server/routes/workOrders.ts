@@ -25,6 +25,7 @@ const updateSchema = z.object({
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
   status: z.enum(["in_progress"]).optional(),
+  dateReason: z.string().trim().max(500).optional(),
 });
 
 const assignSchema = z.object({
@@ -93,6 +94,8 @@ async function orderDetail(id: string) {
       startDate: workOrders.startDate,
       endDate: workOrders.endDate,
       notes: workOrders.notes,
+      groupId: workOrders.groupId,
+      dateChanges: workOrders.dateChanges,
       releasedAt: workOrders.releasedAt,
       completedAt: workOrders.completedAt,
       invoice: {
@@ -320,9 +323,32 @@ workOrdersRoute.patch(
     if (Object.keys(changes).length === 0) {
       return c.json(error("VALIDATION_ERROR", "沒有可更新欄位。"), 400);
     }
+    const dateChanged =
+      (parsed.data.startDate !== undefined && parsed.data.startDate !== order.startDate) ||
+      (parsed.data.endDate !== undefined && parsed.data.endDate !== order.endDate);
+    if (dateChanged && !parsed.data.dateReason) {
+      return c.json(error("DATE_REASON_REQUIRED", "更改工程日期必須填寫原因。"), 422);
+    }
+    const updates: Record<string, unknown> = { ...parsed.data };
+    delete updates.dateReason;
+    if (dateChanged) {
+      const history = Array.isArray(order.dateChanges) ? order.dateChanges : [];
+      updates.dateChanges = [
+        ...history,
+        {
+          start: order.startDate,
+          end: order.endDate,
+          newStart: parsed.data.startDate ?? order.startDate,
+          newEnd: parsed.data.endDate ?? order.endDate,
+          reason: parsed.data.dateReason,
+          actorId: c.get("user").id,
+          at: new Date().toISOString(),
+        },
+      ] as never;
+    }
     await getDb()
       .update(workOrders)
-      .set({ ...changes, updatedAt: new Date() })
+      .set({ ...updates, updatedAt: new Date() })
       .where(eq(workOrders.id, order.id));
     await getDb().insert(auditLogs).values({
       actorId: c.get("user").id,

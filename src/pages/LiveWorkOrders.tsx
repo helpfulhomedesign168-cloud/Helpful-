@@ -73,6 +73,7 @@ type Deduction = {
 
 type WorkOrderDetailData = WorkOrderRow & {
   notes: string | null;
+  dateChanges: Array<{ start: string | null; end: string | null; newStart?: string | null; newEnd?: string | null; reason?: string; at: string }>;
   completedAt: string | null;
   invoice: {
     id: string;
@@ -269,6 +270,7 @@ export function LiveWorkOrderDetail() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [dateReason, setDateReason] = useState("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [workerName, setWorkerName] = useState("");
   const [trade, setTrade] = useState("");
@@ -385,10 +387,12 @@ export function LiveWorkOrderDetail() {
           startDate: startDate || null,
           endDate: endDate || null,
           notes: notes || null,
+          dateReason: dateReason.trim() || undefined,
           status: order?.status === "assigned" ? "in_progress" : undefined,
         }),
       });
       setOrder(updated);
+      setDateReason("");
       await load();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "未能儲存工程。");
@@ -642,6 +646,7 @@ export function LiveWorkOrderDetail() {
             {photoSaving ? "上載中…" : "上載工程相片（JPG／PNG／WebP，最多 4MB）"}
           </label>
         )}
+        {order.dateChanges?.length ? <><h2 className="section-title">改期紀錄</h2><div className="table-scroll"><table className="invoice-list-table live-work-table"><thead><tr><th>舊日期</th><th>新日期</th><th>原因</th><th>時間</th></tr></thead><tbody>{order.dateChanges.map((change, index) => <tr key={index}><td>{change.start || "—"} → {change.end || "—"}</td><td>{change.newStart || change.start || "—"} → {change.newEnd || change.end || "—"}</td><td>{change.reason || "—"}</td><td>{change.at.slice(0, 16).replace("T", " ")}</td></tr>)}</tbody></table></div></> : null}
         <h2 className="section-title">施工人員及成本</h2>
         {assignments.length === 0 ? <p className="muted">尚未安排施工人員。</p> : (
           <div className="table-scroll">
