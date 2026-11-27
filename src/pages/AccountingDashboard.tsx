@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useAuth } from "../auth";
+import { LiveAccountingDashboard } from "./LiveAccounting";
 import { Link } from "react-router-dom";
 import {
   Badge,
@@ -16,6 +18,11 @@ import {
 } from "../domain/types";
 
 export function AccountingDashboard() {
+  const { live } = useAuth();
+  return live ? <LiveAccountingDashboard /> : <DemoAccountingDashboard />;
+}
+
+function DemoAccountingDashboard() {
   const { actor, engine } = useApp();
   const [month, setMonth] = useState(DEMO_TODAY.slice(0, 7));
   const [period, setPeriod] = useState<AccountingTrendPeriod>("month");

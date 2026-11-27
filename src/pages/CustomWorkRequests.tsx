@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useAuth } from "../auth";
+import { LiveCustomWork } from "./LiveCustomWork";
 import {
   Badge,
   Button,
@@ -13,6 +15,11 @@ import { money } from "../domain/types";
 type Filter = "pending" | "answered" | "all";
 
 export function CustomWorkRequests() {
+  const { live } = useAuth();
+  return live ? <LiveCustomWork /> : <DemoCustomWorkRequests />;
+}
+
+function DemoCustomWorkRequests() {
   const { actor, engine, run } = useApp();
   const requests = engine.listCustomWorkRequests(actor);
   const [filter, setFilter] = useState<Filter>("pending");

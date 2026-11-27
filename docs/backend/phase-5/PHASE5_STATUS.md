@@ -1,0 +1,150 @@
+# Phase 5 — Frontend Live Invoice Integration
+
+**Status:** In progress — auth + live Invoice list/detail connected  
+**Date:** 2026-11-26  
+**Branch:** `feat/backend-phase-1`
+
+## Completed
+
+- Frontend API client (`src/api/client.ts`)
+- Auth token exposed from AuthProvider
+- Live Invoice list:
+  - reads `/api/v1/invoices`
+  - search / status filter
+  - row click to detail
+- Live Invoice create:
+  - live mode uses text fields for Sales / Sales supervisor
+  - no demo actors (文文／Don／嘉嘉) appear in production
+  - existing direct invoice wizard
+  - live mode submits to `POST /api/v1/invoices`
+  - discount-adjusted line amounts
+  - grant fields mapped to cents
+  - returns to live list
+- Live Invoice edit/amend:
+  - live list pencil entry
+  - `/invoices/:id/edit`
+  - edit categories, grant fields, customer, lines, reason
+  - saves via `POST /api/v1/invoices/:id/amendments`
+  - locked invoices return API error
+- Live extra works:
+  - `GET/POST/DELETE /work-orders/:id/extra-works`
+  - measure/delivery/transport/fabrication
+  - dates, price, notes
+  - add/remove in live detail
+- Live site photos:
+  - Supabase Storage private bucket `work-order-photos`
+  - multipart upload API
+  - signed URL display
+  - delete photo
+  - live工程 detail upload/gallery
+- Live material deductions:
+  - `GET/POST/DELETE /work-orders/:id/deductions`
+  - add/remove materials and amounts in live detail
+- Live contractor assignments / costs:
+  - `GET/POST/DELETE /work-orders/:id/assignments`
+  - worker, trade, dates, fee
+  - add/remove in live工程 detail
+- Direct invoice service picker:
+  - live mode loads `/api/v1/services`
+  - 38 backend catalogue items
+  - picker no longer uses local service seed in production
+- Live topbar notifications:
+  - unread count from API
+  - dialog list from API
+  - mark read + deep-link
+- Live notifications:
+  - `GET /api/v1/notifications`
+  - mark one/all read
+  - deep-link Invoice / work order
+- Live Invoice document:
+  - `/documents/invoice/:id` reads API
+  - printable invoice with customer, lines, totals, grant
+  - link from live Invoice detail
+- Live municipal orders:
+  - `GET /api/v1/municipal-orders`
+  - `GET /api/v1/municipal-orders/:id`
+  - live list/detail with principal, Invoice, grant data and lines
+  - `PATCH /api/v1/municipal-orders/:id` edits lines
+  - live detail editable for invoice_clerk/admin
+- Live services catalogue:
+  - backend seeded with 38 current catalogue items
+  - `/services` live list/search/category
+  - admin create/edit service
+  - direct invoice picker still uses local seed (next)
+- Live customers:
+  - `/customers` live list/search
+  - create/edit customer via API
+- Live admin users:
+  - `POST /api/v1/users` creates Supabase Auth + public user
+  - `/users` live list / create / activate-deactivate
+  - production role labels
+- Live payment proof:
+  - multipart upload to private `payment-proofs` bucket
+  - signed proof URL in payment records
+  - proof attached to payment
+- Live finance pending validation:
+  - `GET /api/v1/payments/pending`
+  - `/finance` live list
+  - validate pending payment
+  - validation triggers 50% release rules
+  - live payment dialog can save pending
+- Live CS work orders:
+  - `/handoff` live list
+  - assign CS via `/staff`
+  - `/orders` live list/detail
+  - dates/notes/in_progress save
+  - complete work order
+  - 8萬 grant card on detail
+- Live receipt document:
+  - `GET /api/v1/receipts/:id`
+  - `/documents/receipt/:id` live branch
+  - printable receipt with invoice/payment/customer data
+  - payment row links to receipt
+- Live Invoice payment:
+  - register payment from live detail
+  - confirm one-step payment
+  - reload Invoice and payment list
+  - issue receipt button
+- Live Invoice detail:
+  - reads `/api/v1/invoices/:id`
+  - reads `/api/v1/invoices/:id/payments`
+  - customer, lines, payment records
+- Demo/E2E mode remains localStorage:
+  - `VITE_LIVE_AUTH` off in Vite dev
+  - existing E2E unaffected
+- Production/Preview build uses live mode by default
+
+## Verified
+
+- Temp `invoice_clerk` login
+- Live create through existing wizard
+- Created real API invoice `DINV26110006`
+- Live list showed API invoice `DINV26110005`
+- Row click opened `/invoices/:id`
+- Detail amount `HK$1,234.00` displayed
+- No browser page errors
+- Test data cleaned up (0 QA invoices remain)
+
+## Not yet done
+
+- Live payment pending validation for finance ✅
+- CS work order frontend ✅ (core flow)
+- Remove local demo data path in production
+- Optimistic refresh / cache invalidation
+- API error handling for expired token
+- Vercel preview deployment verification
+
+## Next
+
+1. CS work order UI
+2. Live finance pending validation
+3. Staging E2E
+4. Production cutover checklist
+
+## Cutover
+
+- [Phase 6 checklist](../phase-6/CUTOVER_CHECKLIST.md)
+
+## Phase 7
+
+- [Phase 7 status](../phase-7/PHASE7_STATUS.md)

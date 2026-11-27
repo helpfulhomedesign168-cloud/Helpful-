@@ -5,6 +5,8 @@ import {
   saveAttachment,
   useApp,
 } from "../context";
+import { useAuth } from "../auth";
+import { LiveSuppliers } from "./LiveSuppliers";
 import {
   Button,
   Dialog,
@@ -120,6 +122,11 @@ function newSupplier(): Supplier {
 }
 
 export function Suppliers() {
+  const { live } = useAuth();
+  return live ? <LiveSuppliers /> : <DemoSuppliers />;
+}
+
+function DemoSuppliers() {
   const { actor, engine, run } = useApp();
   const [tab, setTab] = useState("all");
   const [editing, setEditing] = useState<Supplier | null>(null);

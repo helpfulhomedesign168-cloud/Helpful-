@@ -1,0 +1,166 @@
+# Phase 1 Foundation — Status
+
+**Status:** Backend foundation verified on staging DB; frontend/Vercel env pending  
+**Date:** 2026-11-25  
+**Baseline:** PRD v1.0 / Phase 0 approved D1–D8
+
+## Completed
+
+- Backend dependencies installed:
+  - Hono, Vercel adapter, Node server
+  - Drizzle ORM, postgres.js
+  - Supabase JWT verification (`jose`)
+  - Zod
+- 19-table PostgreSQL schema:
+  - users / roles / grants
+  - customers / services
+  - invoices / versions / lines
+  - payments / receipts
+  - work orders / municipal orders
+  - files / notifications / audit
+  - number sequences / feature flags
+- Initial migration generated:
+  - `server/db/migrations/0000_black_jigsaw.sql`
+- API foundation:
+  - `GET /api/v1/health`
+  - `GET /api/v1/health/ready`
+  - `GET /api/v1/me` (Supabase JWT)
+  - `GET/POST /api/v1/customers`
+  - `GET /api/v1/services`
+  - `GET /api/v1/users` + `PATCH /api/v1/users/:id` (admin)
+  - `GET /api/v1/feature-flags` + `PATCH /api/v1/feature-flags` (admin)
+- Server-side permission matrix:
+  - invoice_clerk / finance / finance_supervisor
+  - CS / CS supervisor
+  - admin / admin_staff
+  - hidden Sales/clerk roles
+- Local API verified:
+  - `GET /api/v1/health` returns 200
+  - `/me` returns 401 without token
+- Tests:
+  - Unit 33 passed
+  - Typecheck passed
+  - Production frontend build passed
+
+## Not yet done / blocked
+
+| Item | Blocker |
+|---|---|
+| Apply migration to real Postgres | ✅ Applied to Supabase `fijjpbkrsooltxkgrxvf` |
+| Seed admin / flags | ✅ Flags seeded; admin public user created |
+| End-to-end `/me` | Need a real Supabase session / service role test |
+| Admin users / feature flags endpoints | ✅ scaffolded; need authenticated e2e test |
+| File upload presign | Need Supabase Storage project |
+| Frontend login integration | Need Supabase URL + anon key |
+| Staging deploy | Need Vercel env + Supabase access |
+
+## Required credentials
+
+Do not send passwords in chat. Add to local `.env` / Vercel environment:
+
+```text
+DATABASE_URL=postgres://...
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_JWKS_URL=https://xxxx.supabase.co/auth/v1/.well-known/jwks.json
+```
+
+## Commands
+
+```bash
+pnpm api:dev          # local API on :8787
+pnpm typecheck
+pnpm test
+pnpm db:generate
+pnpm db:migrate
+```
+
+Local check:
+
+```bash
+curl http://127.0.0.1:8787/api/v1/health
+```
+
+## Files
+
+- `server/app.ts`
+- `server/auth.ts`
+- `server/guards.ts`
+- `server/permissions.ts`
+- `server/roles.ts`
+- `server/db/schema.ts`
+- `server/db/client.ts`
+- `server/routes/*`
+- `api/[...route].ts`
+- `drizzle.config.ts`
+- `.env.example`
+
+## Provisioning update (2026-11-25)
+
+- Supabase project: `Helpful-home-staging` (Singapore, Healthy)
+- 19 tables applied
+- Feature flags seeded:
+  - `direct_invoice = true`
+  - `sales_workspace = false`
+  - `legacy_clerk = false`
+- First admin user created in `auth.users` and `public.users`
+- DB connection verified with `select 1`
+- `/me` verified with a real Supabase JWT (200)
+- Server-side permission verified:
+  - CS `/users` = 403
+  - Admin `/users` = 200
+  - Admin `/feature-flags` = 200
+- Temporary QA auth user deleted
+- Vercel environment variables added to Production + Preview via CLI
+- Frontend AuthGate added:
+  - production build requires login by default
+  - local Vite demo/E2E bypasses auth unless `VITE_LIVE_AUTH=1`
+  - login calls server-side `/auth/login` BFF (service key never reaches browser)
+  - session refresh, logout and role mapping implemented
+- Preview API routing verified:
+  - `/api/v1/health` = 200
+  - `/api/v1/health/ready` = 200 (DB connected)
+  - `/api/v1/me` = 401 without token
+- Frontend login verified in Chromium:
+  - login page → `/services` for Admin
+  - topbar shows authenticated user
+  - logout control present
+  - screenshots saved in `docs/design/screens/global/`
+
+## Verified endpoints (2026-11-25)
+
+| Check | Result |
+|---|---|
+| `select 1` via pooler | ✅ |
+| Migration / 19 tables | ✅ |
+| Real Supabase login | ✅ |
+| `GET /me` as CS | ✅ 200, CS permissions |
+| `GET /users` as CS | ✅ 403 |
+| `GET /users` as Admin | ✅ 200 |
+| `GET /feature-flags` as Admin | ✅ 200 |
+| QA auth user cleanup | ✅ 0 remaining |
+
+## API routing note
+
+Vercel's catch-all API route did not match nested paths reliably. The API is deployed as:
+
+- `api/v1/index.ts` concrete function
+- `vercel.json` rewrites `/api/v1/(.*)` to `/api/v1?path=$1`
+- Server app is bundled to `api/v1/_server.mjs` to avoid Vercel module tracing issues
+
+## Known Phase 1 limitations
+
+- `/auth/login` uses the server-side service key as the Supabase Auth gateway; rate limiting / lockout is not yet implemented.
+- Logout clears the client session; server-side token revocation is not yet implemented.
+- Frontend still reads demo/local domain data; API data integration starts in Phase 2.
+- Production is not deployed until PR #80 is merged.
+
+## Next gate
+
+Phase 1 is **not complete** until:
+
+1. Migration applied to staging. ✅
+2. A real Supabase user can log in and call `/me`. ✅
+3. Server-side permission test passes for at least invoice_clerk, CS, finance and admin. ✅ (CS/Admin verified; invoice_clerk/finance matrix unit-tested)
+4. Staging deployment uses Vercel env. ✅ (preview verified)
+5. Frontend has a login/session foundation. ✅ (local Chromium verified; Vercel preview pending)

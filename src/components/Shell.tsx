@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   NavLink,
   Outlet,
@@ -15,6 +15,8 @@ import {
   Hammer,
   ArrowRightLeft,
   SlidersHorizontal,
+  Settings,
+  Activity,
   ChartNoAxesCombined,
   CalendarDays,
   Menu,
@@ -32,7 +34,19 @@ import { useApp } from "../context";
 import { ROLE_NAMES } from "../domain/types";
 import { notificationTarget } from "../notificationTarget";
 import { isRoleVisible } from "../features";
+import { useAuth } from "../auth";
+import { apiRequest, ApiError } from "../api/client";
 import { Button, Dialog, Notice } from "./ui";
+
+type LiveNotification = {
+  id: string;
+  title: string;
+  body: string;
+  entityType: string | null;
+  entityId: string | null;
+  read: boolean;
+  createdAt: string;
+};
 
 const NAV_ICON: Record<string, string> = {
   用戶管理: "nav-users",
@@ -78,7 +92,16 @@ export function Shell() {
   const nav = useNavigate();
   const location = useLocation();
   const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const { live, user: authUser, accessToken, logout } = useAuth();
+  const [liveNotices, setLiveNotices] = useState<LiveNotification[]>([]);
   const [roles, setRoles] = useState(false);
+
+  useEffect(() => {
+    if (!live || !accessToken) return;
+    apiRequest<LiveNotification[]>("/notifications", accessToken)
+      .then(setLiveNotices)
+      .catch(() => setLiveNotices([]));
+  }, [live, accessToken]);
   const [notifications, setNotifications] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [tools, setTools] = useState(false);
@@ -144,6 +167,7 @@ export function Shell() {
                       ChartNoAxesCombined,
                     ],
                     ["/business-orders", "營業單", Files],
+                    ["/audit-logs", "審計紀錄", FileText],
                   ]
                 : []),
               ["/submissions", "提交報價", ArrowRightLeft],
@@ -154,8 +178,10 @@ export function Shell() {
             ]
           : [
               ...(actor.role === "admin"
-                ? [["/users", "用戶管理", UserCog]]
+                ? [["/users", "用戶管理", UserCog], ["/settings", "系統設定", Settings], ["/system-health", "系統狀態", Activity], ["/audit-logs", "審計紀錄", FileText]]
                 : []),
+              ["/quotes/new?direct=1", "建立發票", Receipt],
+              ["/invoices", "單據管理", Files],
               ["/handoff", "工程單", ArrowRightLeft],
               ["/orders", "工程管理", Hammer],
               ["/contractors", "工程師傅", HardHat],
@@ -169,11 +195,19 @@ export function Shell() {
               ["/services", "工程價目", Tags],
               ["/quotes", "報價查閱", Files],
             ];
+  const liveHiddenPaths = live
+    ? new Set([
+        "/quotes",
+        "/cancellation-cases",
+      ])
+    : new Set<string>();
   const navItems = [
     ...items,
     ["/notifications", "訊息通知", Bell],
-  ] as Array<[string, string, typeof Files]>;
-  const notices = engine.notifications(actor);
+  ].filter(([path]) => !liveHiddenPaths.has(path as string)) as Array<
+    [string, string, typeof Files]
+  >;
+  const notices = live ? liveNotices : engine.notifications(actor);
   const unread = notices.filter((n) => !n.read).length;
   return (
     <div className="app-shell">
@@ -213,14 +247,27 @@ export function Shell() {
             <Bell size={22} />
             {unread > 0 && <span className="notification-count">{unread}</span>}
           </button>
-          <button className="actor-button" onClick={() => setRoles(true)}>
-            <span className="avatar">{actor.name.slice(0, 1)}</span>
-            <span className="actor-copy">
-              {actor.name}
-              <small>{ROLE_NAMES[actor.role]}</small>
-            </span>
-            <ChevronDown size={18} />
-          </button>
+          {live ? (
+            <div className="actor-button actor-static">
+              <span className="avatar">{(authUser?.name || actor.name).slice(0, 1)}</span>
+              <span className="actor-copy">
+                {authUser?.name || actor.name}
+                <small>{ROLE_NAMES[actor.role]}</small>
+              </span>
+              <button className="actor-logout" onClick={logout} aria-label="登出">
+                <LogOut size={18} />
+              </button>
+            </div>
+          ) : (
+            <button className="actor-button" onClick={() => setRoles(true)}>
+              <span className="avatar">{actor.name.slice(0, 1)}</span>
+              <span className="actor-copy">
+                {actor.name}
+                <small>{ROLE_NAMES[actor.role]}</small>
+              </span>
+              <ChevronDown size={18} />
+            </button>
+          )}
         </div>
       </header>
       <aside
@@ -283,12 +330,14 @@ export function Shell() {
           })}
         </nav>
         <div className="sidebar-bottom">
-          <button className="prototype-tools" onClick={() => setTools(true)}>
-            <SlidersHorizontal size={19} />
-            原型工具
-          </button>
-          <span className="demo-label">流程原型 · Demo資料</span>
-          <span className="build-label">初階版本 0.1</span>
+          {!live && (
+            <button className="prototype-tools" onClick={() => setTools(true)}>
+              <SlidersHorizontal size={19} />
+              原型工具
+            </button>
+          )}
+          <span className="demo-label">{live ? "Phase 1 · 登入測試" : "流程原型 · Demo資料"}</span>
+          <span className="build-label">{live ? "Backend v0.1" : "初階版本 0.1"}</span>
         </div>
       </aside>
       {mobile && (
@@ -343,7 +392,7 @@ export function Shell() {
           </div>
         </Dialog>
       )}
-      {roles && (
+      {!live && roles && (
         <Dialog title="切換測試角色" onClose={() => setRoles(false)}>
           <p className="muted">切換角色後，保留同一張單的最新進度。</p>
           <div className="role-list">
@@ -380,8 +429,40 @@ export function Shell() {
         <Dialog title="通知" onClose={() => setNotifications(false)}>
           {notices.length === 0 ? (
             <p className="muted">暫無通知。</p>
+          ) : live ? (
+            liveNotices.map((n) => (
+              <button
+                className="notification-row"
+                key={n.id}
+                onClick={async () => {
+                  try {
+                    await apiRequest(`/notifications/${n.id}/read`, accessToken, {
+                      method: "POST",
+                    });
+                    setLiveNotices((current) =>
+                      current.map((item) =>
+                        item.id === n.id ? { ...item, read: true } : item,
+                      ),
+                    );
+                    setNotifications(false);
+                    if (n.entityType === "invoice" && n.entityId) nav(`/invoices/${n.entityId}`);
+                    else if (n.entityType === "work_order" && n.entityId) nav(`/orders/${n.entityId}`);
+                    else nav("/notifications");
+                  } catch (e) {
+                    run(() => {
+                      throw e instanceof ApiError ? e : new Error("未能讀取通知。");
+                    });
+                  }
+                }}
+              >
+                <span className={!n.read ? "unread-dot" : ""} />
+                <strong>{n.title}<small>{n.body}</small></strong>
+                <ArrowUpRight size={20} />
+              </button>
+            ))
           ) : (
-            notices
+            engine
+              .notifications(actor)
               .slice()
               .reverse()
               .map((n) => (

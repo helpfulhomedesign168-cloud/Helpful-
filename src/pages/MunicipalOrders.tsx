@@ -9,6 +9,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useApp } from "../context";
+import { useAuth } from "../auth";
+import { LiveMunicipalOrderDetail, LiveMunicipalOrders } from "./LiveMunicipal";
 import {
   Button,
   Empty,
@@ -21,6 +23,11 @@ import {
 import { MunicipalOrderLine, money } from "../domain/types";
 
 export function MunicipalOrders() {
+  const { live } = useAuth();
+  return live ? <LiveMunicipalOrders /> : <DemoMunicipalOrders />;
+}
+
+function DemoMunicipalOrders() {
   const { actor, engine } = useApp();
   const nav = useNavigate();
   const [monthFilter, setMonthFilter] = useState("all");
@@ -172,6 +179,11 @@ export function MunicipalOrders() {
 }
 
 export function MunicipalOrderDetail() {
+  const { live } = useAuth();
+  return live ? <LiveMunicipalOrderDetail /> : <DemoMunicipalOrderDetail />;
+}
+
+function DemoMunicipalOrderDetail() {
   const { id = "" } = useParams();
   const { actor, engine, run } = useApp();
   const nav = useNavigate();

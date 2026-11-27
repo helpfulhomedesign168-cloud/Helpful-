@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useAuth } from "../auth";
+import { LiveBusinessOrders } from "./LiveAccounting";
 import { ChevronDown } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -26,6 +28,11 @@ function monthParts(month: string) {
 }
 
 export function BusinessOrders() {
+  const { live } = useAuth();
+  return live ? <LiveBusinessOrders /> : <DemoBusinessOrders />;
+}
+
+function DemoBusinessOrders() {
   const { actor, engine } = useApp();
   const [params] = useSearchParams();
   const initialMonth = params.get("month") || DEMO_TODAY.slice(0, 7);

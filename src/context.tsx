@@ -7,6 +7,7 @@ import React, {
 import { Engine } from "./domain/engine";
 import { Actor, Attachment } from "./domain/types";
 import { isRoleVisible } from "./features";
+import { useAuth } from "./auth";
 export const engine = new Engine(window.localStorage);
 interface Notice {
   text: string;
@@ -31,11 +32,17 @@ export function Provider({ children }: { children: React.ReactNode }) {
   const [actorId, setId] = useState(
     localStorage.getItem("homeflow-actor") || "invoice-clerk",
   );
+  const { user: authUser, live } = useAuth();
   const allActors = engine.listActors();
   const visibleActors = allActors.filter((candidate) =>
     isRoleVisible(candidate.role),
   );
+  const authActor =
+    live && authUser
+      ? visibleActors.find((candidate) => candidate.role === authUser.role)
+      : undefined;
   const actor =
+    authActor ||
     visibleActors.find((candidate) => candidate.id === actorId) ||
     visibleActors.find((candidate) => candidate.id === "invoice-clerk") ||
     visibleActors[0] ||

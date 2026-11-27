@@ -26,7 +26,7 @@ test("CS可讀已發工程部的Invoice與工程；開單員不可再直入工�
   ).toContainText("實際範圍");
   await expect(
     page.locator(".invoice-sheet .quotation-footer"),
-  ).toContainText("工程 Invoice");
+  ).toHaveCount(0);
   await page.goto("/orders/workorder-issued");
   await expect(
     page.getByRole("heading", { name: "D2600001", exact: true }),

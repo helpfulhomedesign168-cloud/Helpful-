@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, PenLine, ArrowUpRight, Check, Trash2, X } from "lucide-react";
 import { useApp } from "../context";
+import { useAuth } from "../auth";
+import { LiveCustomers } from "./LiveCustomers";
+import { LiveServices } from "./LiveServices";
 import {
   Badge,
   Button,
@@ -31,6 +34,11 @@ const MEASURE_OPTIONS: Array<{ value: ServiceItem["measure"]; label: string }> =
 ];
 
 export function Services() {
+  const { live } = useAuth();
+  return live ? <LiveServices /> : <DemoServices />;
+}
+
+function DemoServices() {
   const { actor, engine, run } = useApp();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("打拆");
@@ -592,6 +600,11 @@ export function Services() {
   );
 }
 export function Customers() {
+  const { live } = useAuth();
+  return live ? <LiveCustomers /> : <DemoCustomers />;
+}
+
+function DemoCustomers() {
   const { actor, engine, run } = useApp();
   const [search, setSearch] = useState("");
   const [salesFilter, setSalesFilter] = useState("all");

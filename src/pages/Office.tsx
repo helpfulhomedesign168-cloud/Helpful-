@@ -20,6 +20,10 @@ import {
   getAttachmentBlob,
   saveAttachment,
 } from "../context";
+import { useAuth } from "../auth";
+import { LiveInvoiceDetail, LiveInvoices } from "./LiveInvoices";
+import { LiveWorkOrderDetail, LiveWorkOrders } from "./LiveWorkOrders";
+import { LiveFinance } from "./LiveFinance";
 import {
   Badge,
   Button,
@@ -171,6 +175,11 @@ function ProofThumb({ attachment }: { attachment: Attachment }) {
   );
 }
 export function Finance() {
+  const { live } = useAuth();
+  return live ? <LiveFinance /> : <DemoFinance />;
+}
+
+function DemoFinance() {
   const { actor, engine, run } = useApp();
   const [tab, setTab] = useState("pending");
   const [search, setSearch] = useState("");
@@ -729,6 +738,11 @@ export function Submissions() {
 }
 
 export function Invoices() {
+  const { live } = useAuth();
+  return live ? <LiveInvoices /> : <DemoInvoices />;
+}
+
+function DemoInvoices() {
   const { actor, engine } = useApp();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
@@ -1037,6 +1051,11 @@ export function Invoices() {
 }
 
 export function InvoiceDetail() {
+  const { live } = useAuth();
+  return live ? <LiveInvoiceDetail /> : <DemoInvoiceDetail />;
+}
+
+function DemoInvoiceDetail() {
   const { id = "" } = useParams();
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
@@ -1506,6 +1525,11 @@ export function InvoiceDetail() {
 }
 
 export function Handoff() {
+  const { live } = useAuth();
+  return live ? <LiveWorkOrders mode="handoff" /> : <DemoHandoff />;
+}
+
+function DemoHandoff() {
   const { actor, engine, run } = useApp();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
@@ -3458,6 +3482,11 @@ function OrderPanel({ order }: { order: WorkOrder }) {
 }
 
 export function Orders() {
+  const { live } = useAuth();
+  return live ? <LiveWorkOrders mode="orders" /> : <DemoOrders />;
+}
+
+function DemoOrders() {
   const { actor, engine } = useApp();
   const [filters, setFilters] = useState<OrderFilters>(() => {
     let month = DEMO_TODAY.slice(0, 7);
@@ -3494,6 +3523,11 @@ export function Orders() {
 }
 
 export function OrderDetail() {
+  const { live } = useAuth();
+  return live ? <LiveWorkOrderDetail /> : <DemoOrderDetail />;
+}
+
+function DemoOrderDetail() {
   const { id = "" } = useParams();
   const { actor, engine, run } = useApp();
   const nav = useNavigate();

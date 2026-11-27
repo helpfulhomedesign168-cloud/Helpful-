@@ -23,6 +23,8 @@ import {
   Search as SearchIcon,
 } from "lucide-react";
 import { getAttachmentBlob, useApp } from "../context";
+import { useAuth } from "../auth";
+import { apiRequest, type InvoiceDetailData } from "../api/client";
 import { exportDirectInvoiceExcel } from "../exportDirectInvoiceExcel";
 import {
   Customer,
@@ -688,6 +690,7 @@ export function QuoteWizardProgress({
 
 export function QuoteEditor() {
   const { actor, engine, run, setQuoteDraftGuard } = useApp();
+  const { live, accessToken } = useAuth();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const nav = useNavigate();
@@ -774,7 +777,10 @@ export function QuoteEditor() {
       supervisorOptions[0]?.id ??
       "",
   );
+  const [liveSalesName, setLiveSalesName] = useState("");
+  const [liveSupervisorName, setLiveSupervisorName] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [liveSaving, setLiveSaving] = useState(false);
   const [directCategories, setDirectCategories] = useState<InvoiceCategory[]>(
     existingInvoice?.categories?.length
       ? existingInvoice.categories
@@ -800,7 +806,51 @@ export function QuoteEditor() {
   const [styleLineIndex, setStyleLineIndex] = useState<number | null>(null);
   const [styleCategory, setStyleCategory] = useState("all");
   const [styleFactoryId, setStyleFactoryId] = useState("");
-  const services = engine.listServices(actor).filter((s) => s.published);
+  const [liveServices, setLiveServices] = useState<ServiceItem[]>([]);
+  useEffect(() => {
+    if (!live || !accessToken) return;
+    apiRequest<
+      {
+        id: string;
+        code: string;
+        name: string;
+        category: string;
+        unit: string;
+        priceCents: number;
+        measure: string;
+        published: boolean;
+        metadata: Partial<ServiceItem> | null;
+      }[]
+    >("/services", accessToken)
+      .then((rows) =>
+        setLiveServices(
+          rows.map((row) => ({
+            ...(row.metadata ?? {}),
+            id: row.metadata?.id ?? row.id,
+            code: row.code,
+            name: row.name,
+            category: row.category,
+            unit: row.unit,
+            price: row.priceCents / 100,
+            measure: row.measure as ServiceItem["measure"],
+            published: row.published,
+            minQty: row.metadata?.minQty ?? 1,
+            minAmount: row.metadata?.minAmount ?? 0,
+            increment: row.metadata?.increment ?? 0,
+            minScope: row.metadata?.minScope ?? "line",
+            execution: row.metadata?.execution ?? "contractor",
+            costMode: row.metadata?.costMode ?? "ratio",
+            options: row.metadata?.options ?? [],
+            allowPending: row.metadata?.allowPending ?? false,
+            notes: row.metadata?.notes ?? "",
+          })),
+        ),
+      )
+      .catch(() => setLiveServices([]));
+  }, [live, accessToken]);
+  const services = live
+    ? liveServices
+    : engine.listServices(actor).filter((s) => s.published);
   let styleSuppliers: ProductStyleSupplier[] = [];
   try {
     styleSuppliers = engine.listProductStyleSuppliers(actor);
@@ -852,6 +902,12 @@ export function QuoteEditor() {
   const directPaymentPlan = directInvoice
     ? engine.previewInstallmentPlan(directCategory, pricing.total)
     : [];
+  const displaySalesName = live
+    ? liveSalesName
+    : salesOptions.find((item) => item.id === salesId)?.name || "—";
+  const displaySupervisorName = live
+    ? liveSupervisorName
+    : supervisorOptions.find((item) => item.id === supervisorId)?.name || "—";
   const invoiceDateDisplay = invoiceDate
     ? invoiceDate.split("-").reverse().join(" / ")
     : "—";
@@ -951,26 +1007,107 @@ export function QuoteEditor() {
     );
     if (updated) nav("/invoices");
   }
-  function createDirectInvoice() {
-    const invoice = run(
-      () =>
-        engine.createDirectInvoiceFromLines(actor, {
-          customer,
-          lines,
-          discount,
-          category: directCategory,
-          categories: directCategories,
-          salesId,
-          supervisorId,
+  async function createDirectInvoice() {
+    if (!live) {
+      const invoice = run(
+        () =>
+          engine.createDirectInvoiceFromLines(actor, {
+            customer,
+            lines,
+            discount,
+            category: directCategory,
+            categories: directCategories,
+            salesId,
+            supervisorId,
+            date: invoiceDate,
+            grantApplicationNumber,
+            grantApprovedAmount: Number(grantApprovedAmount) || undefined,
+          }),
+        undefined,
+      );
+      if (!invoice) return;
+      run(() => invoice, `發票${invoice.number}已建立`);
+      nav("/invoices");
+      return;
+    }
+    if (!accessToken) {
+      run(() => {
+        throw new Error("登入 session 已失效，請重新登入。");
+      });
+      return;
+    }
+    if (pricing.blocked) {
+      run(() => {
+        throw new Error("工程項目有問題，未能建立發票。");
+      });
+      return;
+    }
+    setLiveSaving(true);
+    try {
+      const byLine = new Map(
+        pricing.lineAmounts.map((entry) => [entry.id, entry.amount]),
+      );
+      const amounts = lines.map((line) =>
+        Math.round(
+          (byLine.get(line.id) ?? line.quantity * line.itemSnapshot.price) *
+            discount *
+            100,
+        ),
+      );
+      const target = Math.round(pricing.total * 100);
+      const difference =
+        target - amounts.reduce((sum, amount) => sum + amount, 0);
+      if (amounts.length) amounts[amounts.length - 1] += difference;
+      if (amounts.some((amount) => amount < 0)) {
+        throw new Error("折扣後金額不正確。");
+      }
+      const salesName = displaySalesName === "—" ? "" : displaySalesName;
+      const supervisorName =
+        displaySupervisorName === "—" ? "" : displaySupervisorName;
+      const hasGrant = directCategories.includes("grant-80k");
+      const created = await apiRequest<InvoiceDetailData>("/invoices", accessToken, {
+        method: "POST",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+        body: JSON.stringify({
           date: invoiceDate,
-          grantApplicationNumber,
-          grantApprovedAmount: Number(grantApprovedAmount) || undefined,
+          salesName,
+          supervisorName,
+          categories: directCategories,
+          grant: hasGrant
+            ? {
+                applicationNumber: grantApplicationNumber || undefined,
+                approvedAmountCents:
+                  Number(grantApprovedAmount) > 0
+                    ? Math.round(Number(grantApprovedAmount) * 100)
+                    : undefined,
+              }
+            : undefined,
+          customer: {
+            name: customer.name,
+            phone: customer.phone,
+            whatsapp: customer.whatsapp || undefined,
+            address: customer.address || undefined,
+            district: customer.district || undefined,
+          },
+          lines: lines.map((line, index) => ({
+            name: line.itemSnapshot.name,
+            position: line.position,
+            quantity: line.quantity,
+            unit: line.itemSnapshot.unit,
+            unitPriceCents: Math.round(line.itemSnapshot.price * 100),
+            amountCents: amounts[index],
+          })),
         }),
-      undefined,
-    );
-    if (!invoice) return;
-    run(() => invoice, `發票${invoice.number}已建立`);
-    nav("/invoices");
+      });
+      run(() => created, `發票${created.number}已建立`);
+      nav("/invoices");
+    } catch (error) {
+      run(() => {
+        throw error;
+      });
+    } finally {
+      setLiveSaving(false);
+    }
   }
   async function exportExcel() {
     setExporting(true);
@@ -1294,31 +1431,51 @@ export function QuoteEditor() {
                     onChange={(event) => setInvoiceDate(event.target.value)}
                   />
                 </Field>
-                <Field label="銷售員" required>
-                  <select
-                    aria-label="銷售員"
-                    value={salesId}
-                    onChange={(event) => setSalesId(event.target.value)}
-                  >
-                    {salesOptions.map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.name}（{candidate.code}）
-                      </option>
-                    ))}
-                  </select>
+                <Field label="銷售員" required={!live}>
+                  {live ? (
+                    <input
+                      aria-label="銷售員"
+                      value={liveSalesName}
+                      onChange={(event) => setLiveSalesName(event.target.value)}
+                      placeholder="輸入 Sales 姓名"
+                    />
+                  ) : (
+                    <select
+                      aria-label="銷售員"
+                      value={salesId}
+                      onChange={(event) => setSalesId(event.target.value)}
+                    >
+                      {salesOptions.map((candidate) => (
+                        <option key={candidate.id} value={candidate.id}>
+                          {candidate.name}（{candidate.code}）
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </Field>
-                <Field label="Sales主管" required>
-                  <select
-                    aria-label="Sales主管"
-                    value={supervisorId}
-                    onChange={(event) => setSupervisorId(event.target.value)}
-                  >
-                    {supervisorOptions.map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.name}（{candidate.code}）
-                      </option>
-                    ))}
-                  </select>
+                <Field label="Sales主管" required={!live}>
+                  {live ? (
+                    <input
+                      aria-label="Sales主管"
+                      value={liveSupervisorName}
+                      onChange={(event) =>
+                        setLiveSupervisorName(event.target.value)
+                      }
+                      placeholder="輸入 Sales主管姓名"
+                    />
+                  ) : (
+                    <select
+                      aria-label="Sales主管"
+                      value={supervisorId}
+                      onChange={(event) => setSupervisorId(event.target.value)}
+                    >
+                      {supervisorOptions.map((candidate) => (
+                        <option key={candidate.id} value={candidate.id}>
+                          {candidate.name}（{candidate.code}）
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </Field>
               </div>
               {editingInvoice && (
@@ -1795,20 +1952,13 @@ export function QuoteEditor() {
                   </Field>
                   <Field label="銷售員">
                     <input
-                      value={
-                        salesOptions.find((item) => item.id === salesId)?.name ||
-                        "—"
-                      }
+                      value={displaySalesName}
                       readOnly
                     />
                   </Field>
                   <Field label="Sales主管">
                     <input
-                      value={
-                        supervisorOptions.find(
-                          (item) => item.id === supervisorId,
-                        )?.name || "—"
-                      }
+                      value={displaySupervisorName}
                       readOnly
                     />
                   </Field>
@@ -1877,14 +2027,11 @@ export function QuoteEditor() {
                     <strong>{invoiceDate}</strong>
                     <span>銷售員</span>
                     <strong>
-                      {salesOptions.find((item) => item.id === salesId)?.name ||
-                        "—"}
+                      {displaySalesName}
                     </strong>
                     <span>Sales主管</span>
                     <strong>
-                      {supervisorOptions.find(
-                        (item) => item.id === supervisorId,
-                      )?.name || "—"}
+                      {displaySupervisorName}
                     </strong>
                   </div>
                   <p className="handoff-note">
@@ -2043,10 +2190,6 @@ export function QuoteEditor() {
                       </p>
                       <p>本報價單不等同收據；收款後將另行發出收據。</p>
                     </div>
-                    <footer className="quotation-footer">
-                      <span>好幫手家居裝修設計有限公司</span>
-                      <span>工程 Invoice · 待建立</span>
-                    </footer>
                   </article>
                 </div>
               </div>
@@ -2214,8 +2357,13 @@ export function QuoteEditor() {
               </Button>
             )
           ) : wizardStep === 3 && directInvoice ? (
-            <Button variant="primary" onClick={createDirectInvoice}>
-              確定建立發票 <ArrowRight size={18} />
+            <Button
+              variant="primary"
+              onClick={createDirectInvoice}
+              disabled={live && liveSaving}
+            >
+              {live && liveSaving ? "建立中…" : "確定建立發票"}{" "}
+              <ArrowRight size={18} />
             </Button>
           ) : (
             <Button

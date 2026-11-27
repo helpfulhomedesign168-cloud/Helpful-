@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Provider, useApp } from "./context";
+import { AuthGate, AuthProvider, useAuth } from "./auth";
 import { Shell, roleHome } from "./components/Shell";
 import { QuoteEditor, Quotes } from "./pages/Quotes";
 import { QuoteView } from "./pages/SubmittedQuote";
@@ -27,7 +28,12 @@ import {
 import { Documents } from "./pages/Documents";
 import { UserProfile, Users } from "./pages/Users";
 import { Notifications } from "./pages/Notifications";
+import { LiveAudit } from "./pages/LiveAudit";
+import { LiveCustomerDetail } from "./pages/LiveCustomerDetail";
+import { LiveSettings } from "./pages/LiveSettings";
+import { LiveSystemHealth } from "./pages/LiveSystemHealth";
 import { DirectInvoices } from "./pages/DirectInvoices";
+import { LiveInvoiceEdit } from "./pages/LiveInvoiceEdit";
 import { AccountingDashboard } from "./pages/AccountingDashboard";
 import { BusinessOrders } from "./pages/BusinessOrders";
 import { CustomWorkRequests } from "./pages/CustomWorkRequests";
@@ -41,6 +47,25 @@ function Home() {
   const { actor } = useApp();
   return <Navigate replace to={roleHome(actor.role)} />;
 }
+function LiveBlocked({ children }: { children: React.ReactNode }) {
+  const { live } = useAuth();
+  const { actor } = useApp();
+  if (!live) return <>{children}</>;
+  return (
+    <div className="fatal-error">
+      <Empty
+        title="此模組尚未接通 production"
+        description="此頁仍然使用舊 demo 資料，為避免誤用，live 模式暫時不開放。"
+        action={
+          <Button onClick={() => location.assign(roleHome(actor.role))}>
+            返回工作台
+          </Button>
+        }
+      />
+    </div>
+  );
+}
+
 function Guard({
   roles,
   children,
@@ -82,8 +107,10 @@ class Boundary extends React.Component<
 const sales = ["sales", "head", "supervisor"];
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <Boundary>
-    <Provider>
-      <BrowserRouter>
+    <AuthProvider>
+      <AuthGate>
+        <Provider>
+          <BrowserRouter>
         <Routes>
           <Route path="/documents/:kind/:id" element={<Documents />} />
           <Route element={<Shell />}>
@@ -92,14 +119,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/quotes"
               element={
                 <Guard roles={[...sales, "clerk", "finance_supervisor", "admin", "admin_staff", "finance"]}>
-                  <Quotes />
+                  <LiveBlocked><Quotes /></LiveBlocked>
                 </Guard>
               }
             />
             <Route
               path="/quotes/new"
               element={
-                <Guard roles={[...sales, "invoice_clerk"]}>
+                <Guard roles={[...sales, "invoice_clerk", "admin", "admin_staff"]}>
                   <QuoteEditor />
                 </Guard>
               }
@@ -108,7 +135,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/quotes/:id/handoff"
               element={
                 <Guard roles={[...sales, "admin", "admin_staff"]}>
-                  <QuoteHandoff />
+                  <LiveBlocked><QuoteHandoff /></LiveBlocked>
                 </Guard>
               }
             />
@@ -116,7 +143,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/quotes/:id/edit"
               element={
                 <Guard roles={[...sales, "clerk", "invoice_clerk", "finance_supervisor", "admin", "admin_staff"]}>
-                  <QuoteEditor />
+                  <LiveBlocked><QuoteEditor /></LiveBlocked>
                 </Guard>
               }
             />
@@ -133,7 +160,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                     "finance",
                   ]}
                 >
-                  <QuoteView />
+                  <LiveBlocked><QuoteView /></LiveBlocked>
                 </Guard>
               }
             />
@@ -194,7 +221,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route
               path="/custom-work-requests"
               element={
-                <Guard roles={["cs_supervisor", "admin"]}>
+                <Guard roles={["cs", "cs_supervisor", "admin"]}>
                   <CustomWorkRequests />
                 </Guard>
               }
@@ -203,7 +230,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/submissions"
               element={
                 <Guard roles={["clerk", "finance_supervisor", "admin", "admin_staff"]}>
-                  <Submissions />
+                  <LiveBlocked><Submissions /></LiveBlocked>
                 </Guard>
               }
             />
@@ -228,6 +255,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <Guard roles={["clerk", "invoice_clerk", "finance", "finance_supervisor", "admin", "admin_staff"]}>
                   <InvoiceDetail />
+                </Guard>
+              }
+            />
+            <Route
+              path="/invoices/:id/edit"
+              element={
+                <Guard roles={["invoice_clerk", "admin", "admin_staff"]}>
+                  <LiveInvoiceEdit />
                 </Guard>
               }
             />
@@ -299,7 +334,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               path="/sales-schedule"
               element={
                 <Guard roles={sales}>
-                  <SalesSchedule />
+                  <LiveBlocked><SalesSchedule /></LiveBlocked>
                 </Guard>
               }
             />
@@ -328,20 +363,47 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               }
             />
             <Route path="/customers" element={<Customers />} />
+            <Route path="/customers/:id" element={<LiveCustomerDetail />} />
+            <Route
+              path="/system-health"
+              element={
+                <Guard roles={["finance_supervisor", "admin"]}>
+                  <LiveSystemHealth />
+                </Guard>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <Guard roles={["admin"]}>
+                  <LiveSettings />
+                </Guard>
+              }
+            />
+            <Route
+              path="/audit-logs"
+              element={
+                <Guard roles={["finance_supervisor", "admin"]}>
+                  <LiveAudit />
+                </Guard>
+              }
+            />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/services" element={<Services />} />
             <Route
               path="/performance"
               element={
                 <Guard roles={sales}>
-                  <Performance />
+                  <LiveBlocked><Performance /></LiveBlocked>
                 </Guard>
               }
             />
             <Route path="*" element={<Home />} />
           </Route>
         </Routes>
-      </BrowserRouter>
-    </Provider>
+          </BrowserRouter>
+        </Provider>
+      </AuthGate>
+    </AuthProvider>
   </Boundary>,
 );

@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Check, PenLine, Plus, Trash2 } from "lucide-react";
 import { useApp } from "../context";
+import { useAuth } from "../auth";
+import { LiveContractors } from "./LiveContractors";
 import {
   Button,
   Dialog,
@@ -85,6 +87,11 @@ function newResource(kind: ResourceKind = "foreman"): Resource {
 }
 
 export function Contractors() {
+  const { live } = useAuth();
+  return live ? <LiveContractors /> : <DemoContractors />;
+}
+
+function DemoContractors() {
   const { actor, engine, run } = useApp();
   const [tab, setTab] = useState<"all" | ResourceKind>("all");
   const [editing, setEditing] = useState<Resource | null>(null);
