@@ -37515,6 +37515,36 @@ cancellationsRoute.patch(
   }
 );
 
+// server/routes/audit.ts
+var auditRoute = new Hono3();
+auditRoute.get(
+  "/",
+  requireAuth,
+  requireCapability("audit.read"),
+  async (c2) => {
+    const q = c2.req.query("q")?.trim();
+    const limit3 = Math.min(Number(c2.req.query("limit") ?? 100) || 100, 200);
+    const rows = await getDb().select({
+      id: auditLogs.id,
+      action: auditLogs.action,
+      entityType: auditLogs.entityType,
+      entityId: auditLogs.entityId,
+      before: auditLogs.before,
+      after: auditLogs.after,
+      requestId: auditLogs.requestId,
+      createdAt: auditLogs.createdAt,
+      actorName: users.name
+    }).from(auditLogs).leftJoin(users, eq(auditLogs.actorId, users.id)).where(
+      q ? or(
+        ilike(auditLogs.action, `%${q}%`),
+        ilike(auditLogs.entityType, `%${q}%`),
+        ilike(users.name, `%${q}%`)
+      ) : void 0
+    ).orderBy(desc(auditLogs.createdAt)).limit(limit3);
+    return c2.json(rows);
+  }
+);
+
 // server/app.ts
 var app = new Hono3().basePath("/api/v1");
 app.use("*", logger());
@@ -37534,6 +37564,7 @@ app.route("/invoices", invoicesRoute);
 app.route("/invoices", paymentsRoute);
 app.route("/invoices", paymentProofsRoute);
 app.route("/cancellation-cases", cancellationsRoute);
+app.route("/audit-logs", auditRoute);
 app.route("/work-orders", workOrdersRoute);
 app.route("/work-orders", photosRoute);
 app.route("/municipal-orders", municipalRoute);

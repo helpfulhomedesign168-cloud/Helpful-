@@ -165,6 +165,7 @@ export function Shell() {
                       ChartNoAxesCombined,
                     ],
                     ["/business-orders", "營業單", Files],
+                    ["/audit-logs", "審計紀錄", FileText],
                   ]
                 : []),
               ["/submissions", "提交報價", ArrowRightLeft],
@@ -175,7 +176,7 @@ export function Shell() {
             ]
           : [
               ...(actor.role === "admin"
-                ? [["/users", "用戶管理", UserCog]]
+                ? [["/users", "用戶管理", UserCog], ["/audit-logs", "審計紀錄", FileText]]
                 : []),
               ["/quotes/new?direct=1", "建立發票", Receipt],
               ["/invoices", "單據管理", Files],

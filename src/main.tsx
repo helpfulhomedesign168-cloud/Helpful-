@@ -28,6 +28,7 @@ import {
 import { Documents } from "./pages/Documents";
 import { UserProfile, Users } from "./pages/Users";
 import { Notifications } from "./pages/Notifications";
+import { LiveAudit } from "./pages/LiveAudit";
 import { DirectInvoices } from "./pages/DirectInvoices";
 import { LiveInvoiceEdit } from "./pages/LiveInvoiceEdit";
 import { AccountingDashboard } from "./pages/AccountingDashboard";
@@ -359,6 +360,14 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               }
             />
             <Route path="/customers" element={<Customers />} />
+            <Route
+              path="/audit-logs"
+              element={
+                <Guard roles={["finance_supervisor", "admin"]}>
+                  <LiveAudit />
+                </Guard>
+              }
+            />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/services" element={<Services />} />
             <Route

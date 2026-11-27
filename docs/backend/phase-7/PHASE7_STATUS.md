@@ -2,6 +2,7 @@
 
 ## Completed
 
+- Audit log viewer for admin/finance supervisor
 - Live Invoice Excel export
   - uses current API Invoice data
   - client-side ExcelJS workbook
