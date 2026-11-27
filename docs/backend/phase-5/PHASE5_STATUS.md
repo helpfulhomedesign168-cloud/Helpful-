@@ -144,3 +144,7 @@
 ## Cutover
 
 - [Phase 6 checklist](../phase-6/CUTOVER_CHECKLIST.md)
+
+## Phase 7
+
+- [Phase 7 status](../phase-7/PHASE7_STATUS.md)

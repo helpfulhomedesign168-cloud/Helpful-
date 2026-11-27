@@ -15,6 +15,7 @@ import {
   Section,
 } from "../components/ui";
 import { METHOD_NAMES, money } from "../domain/types";
+import { exportLiveInvoiceExcel } from "../exportLiveInvoiceExcel";
 
 function todayLocal() {
   const now = new Date();
@@ -183,6 +184,7 @@ export function LiveInvoiceDetail() {
   const [proofUploading, setProofUploading] = useState(false);
   const [paymentNotice, setPaymentNotice] = useState("");
   const [receipts, setReceipts] = useState<Record<string, { id: string; number: string }>>({});
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -281,6 +283,19 @@ export function LiveInvoiceDetail() {
         </div>
         <div className="page-actions">
           <Button onClick={() => nav(`/documents/invoice/${id}`)}>列印 Invoice</Button>
+          <Button
+            disabled={exporting}
+            onClick={async () => {
+              setExporting(true);
+              try {
+                await exportLiveInvoiceExcel(invoice);
+              } finally {
+                setExporting(false);
+              }
+            }}
+          >
+            {exporting ? "匯出中…" : "匯出 Excel"}
+          </Button>
           <Badge strong={invoice.status === "completed"}>{statusLabel(invoice.status)}</Badge>
         </div>
       </div>

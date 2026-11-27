@@ -7,6 +7,13 @@ export function clearApiCache() {
   responseCache.clear();
 }
 
+type RefreshHandler = () => Promise<string | null>;
+let refreshHandler: RefreshHandler | null = null;
+
+export function setAuthRefreshHandler(handler: RefreshHandler | null) {
+  refreshHandler = handler;
+}
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -21,6 +28,7 @@ export async function apiRequest<T>(
   path: string,
   token: string | null,
   init?: RequestInit,
+  retry = true,
 ): Promise<T> {
   const method = (init?.method ?? "GET").toUpperCase();
   const cacheKey = `${token ?? ""}|${path}`;
@@ -38,6 +46,12 @@ export async function apiRequest<T>(
       ...(init?.headers ?? {}),
     },
   });
+  if (response.status === 401 && retry && refreshHandler) {
+    const refreshed = await refreshHandler().catch(() => null);
+    if (refreshed) {
+      return apiRequest<T>(path, refreshed, init, false);
+    }
+  }
   const body = (await response.json().catch(() => null)) as
     | { error?: { code?: string; message?: string } }
     | null;
@@ -112,12 +126,17 @@ export async function apiUpload<T>(
   path: string,
   token: string | null,
   formData: FormData,
+  retry = true,
 ): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body: formData,
   });
+  if (response.status === 401 && retry && refreshHandler) {
+    const refreshed = await refreshHandler().catch(() => null);
+    if (refreshed) return apiUpload<T>(path, refreshed, formData, false);
+  }
   const body = (await response.json().catch(() => null)) as
     | { error?: { code?: string; message?: string } }
     | null;

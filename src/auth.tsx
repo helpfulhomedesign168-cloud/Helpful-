@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react";
 
-import { clearApiCache } from "./api/client";
+import { clearApiCache, setAuthRefreshHandler } from "./api/client";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 export const LIVE_AUTH = import.meta.env.PROD
@@ -87,11 +87,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(LIVE_AUTH);
   const refreshTimer = useRef<number | undefined>(undefined);
+  const refreshPromise = useRef<Promise<string | null> | null>(null);
 
-  function scheduleRefresh(next: Session) {
-    if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
-    const delay = Math.max(next.expires_at - Date.now() - 60_000, 10_000);
-    refreshTimer.current = window.setTimeout(async () => {
+  async function refreshAccessToken(): Promise<string | null> {
+    if (refreshPromise.current) return refreshPromise.current;
+    const current = readSession();
+    if (!current) return null;
+    refreshPromise.current = (async () => {
       try {
         const refreshed = await api<{
           access_token: string;
@@ -99,25 +101,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           expires_in: number;
         }>("/auth/refresh", {
           method: "POST",
-          body: JSON.stringify({ refresh_token: next.refresh_token }),
+          body: JSON.stringify({ refresh_token: current.refresh_token }),
         });
+        const me = await fetchMe(refreshed.access_token);
         const updated: Session = {
-          ...next,
+          ...current,
           access_token: refreshed.access_token,
           refresh_token: refreshed.refresh_token,
           expires_in: refreshed.expires_in,
           expires_at: Date.now() + refreshed.expires_in * 1000,
+          user: me,
         };
         writeSession(updated);
         setSession(updated);
+        setUser(me);
         scheduleRefresh(updated);
+        return updated.access_token;
       } catch {
+        clearApiCache();
         writeSession(null);
         setSession(null);
         setUser(null);
+        return null;
+      } finally {
+        refreshPromise.current = null;
       }
+    })();
+    return refreshPromise.current;
+  }
+
+  function scheduleRefresh(next: Session) {
+    if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
+    const delay = Math.max(next.expires_at - Date.now() - 60_000, 10_000);
+    refreshTimer.current = window.setTimeout(() => {
+      void refreshAccessToken();
     }, delay);
   }
+
+  useEffect(() => {
+    setAuthRefreshHandler(refreshAccessToken);
+    return () => setAuthRefreshHandler(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!LIVE_AUTH) {
@@ -140,31 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         scheduleRefresh(updated);
       })
       .catch(async () => {
-        try {
-          const refreshed = await api<{
-            access_token: string;
-            refresh_token: string;
-            expires_in: number;
-          }>("/auth/refresh", {
-            method: "POST",
-            body: JSON.stringify({ refresh_token: stored.refresh_token }),
-          });
-          const me = await fetchMe(refreshed.access_token);
-          const updated: Session = {
-            ...stored,
-            ...refreshed,
-            expires_at: Date.now() + refreshed.expires_in * 1000,
-            user: me,
-          };
-          writeSession(updated);
-          setSession(updated);
-          setUser(me);
-          scheduleRefresh(updated);
-        } catch {
-          writeSession(null);
-          setSession(null);
-          setUser(null);
-        }
+        await refreshAccessToken();
       })
       .finally(() => setLoading(false));
 
