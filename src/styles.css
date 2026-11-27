@@ -11036,10 +11036,9 @@ textarea::placeholder {
   font-size: 22px;
 }
 .quotation-sheet .document-terms {
-  margin: 0 42px;
+  margin: 18px 42px 0;
   padding: 18px 16px;
   border: 1px solid #2f3337;
-  border-top: 0;
 }
 .quotation-sheet .document-terms h3 {
   margin: 0 0 8px;

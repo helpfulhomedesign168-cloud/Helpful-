@@ -2190,10 +2190,6 @@ export function QuoteEditor() {
                       </p>
                       <p>本報價單不等同收據；收款後將另行發出收據。</p>
                     </div>
-                    <footer className="quotation-footer">
-                      <span>好幫手家居裝修設計有限公司</span>
-                      <span>工程 Invoice · 待建立</span>
-                    </footer>
                   </article>
                 </div>
               </div>

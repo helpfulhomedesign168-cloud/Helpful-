@@ -489,7 +489,7 @@ export function Documents() {
               </div>
             )
           )}
-          {quote || inv || municipal ? (
+          {(quote || inv || municipal) && !invoiceDocument ? (
             <footer className="quotation-footer">
               <span>好幫手家居裝修設計有限公司</span>
               <span>
@@ -497,13 +497,11 @@ export function Documents() {
                   ? "市政單"
                   : receipt
                     ? "正式收據"
-                    : invoiceDocument
-                      ? "工程 Invoice"
-                      : "工程報價單"}{" "}
+                    : "工程報價單"}{" "}
                 · {displayNumber}
               </span>
             </footer>
-          ) : (
+          ) : invoiceDocument ? null : (
             <footer>
               <strong>好幫手工程管理系統</strong>
               <span>好幫手家居裝修設計有限公司</span>
