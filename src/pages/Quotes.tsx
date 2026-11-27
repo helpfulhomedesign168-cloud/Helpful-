@@ -78,8 +78,9 @@ function QuoteStylePicture({
   attachment: ProductStyleSnapshot["attachment"];
   alt: string;
 }) {
-  const [url, setUrl] = useState<string>();
+  const [url, setUrl] = useState<string>(attachment.url ?? "");
   useEffect(() => {
+    if (attachment.url) { setUrl(attachment.url); return; }
     let cancelled = false;
     let objectUrl: string | undefined;
     getAttachmentBlob(attachment).then((blob) => {
@@ -91,7 +92,7 @@ function QuoteStylePicture({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [attachment.id]);
+  }, [attachment.id, attachment.url]);
   return url ? (
     <img src={url} alt={alt} />
   ) : (
@@ -100,8 +101,9 @@ function QuoteStylePicture({
 }
 
 function QuoteStyleThumb({ snapshot }: { snapshot: ProductStyleSnapshot }) {
-  const [url, setUrl] = useState<string>();
+  const [url, setUrl] = useState<string>(snapshot.attachment.url ?? "");
   useEffect(() => {
+    if (snapshot.attachment.url) { setUrl(snapshot.attachment.url); return; }
     let cancelled = false;
     let objectUrl: string | undefined;
     getAttachmentBlob(snapshot.attachment).then((blob) => {
@@ -113,7 +115,7 @@ function QuoteStyleThumb({ snapshot }: { snapshot: ProductStyleSnapshot }) {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [snapshot.attachment.id]);
+  }, [snapshot.attachment.id, snapshot.attachment.url]);
   return url ? (
     <img className="quote-style-thumb" src={url} alt={snapshot.productCode} />
   ) : (
@@ -811,6 +813,8 @@ export function QuoteEditor() {
   const [styleCategory, setStyleCategory] = useState("all");
   const [styleFactoryId, setStyleFactoryId] = useState("");
   const [liveServices, setLiveServices] = useState<ServiceItem[]>([]);
+  const [liveStyleSuppliers, setLiveStyleSuppliers] = useState<ProductStyleSupplier[]>([]);
+  const [liveStyleSeries, setLiveStyleSeries] = useState<ProductStyleSeries[]>([]);
   useEffect(() => {
     if (!live || !accessToken) return;
     apiRequest<
@@ -862,22 +866,46 @@ export function QuoteEditor() {
       .catch(() => setParentInvoices([]));
   }, [live, accessToken, directInvoice]);
 
+  useEffect(() => {
+    if (!live || !accessToken) return;
+    apiRequest<Array<{ id: string; name: string; categories: string[] }>>("/product-styles/suppliers", accessToken)
+      .then((rows) => setLiveStyleSuppliers(rows.map((row) => ({ id: row.id, name: row.name, categories: row.categories ?? [] }))))
+      .catch(() => setLiveStyleSuppliers([]));
+  }, [live, accessToken]);
+
+  useEffect(() => {
+    if (!live || !accessToken || !styleFactoryId) { setLiveStyleSeries([]); return; }
+    apiRequest<Array<{ id: string; supplierId: string; name: string; images: Array<{ id: string; filename: string; mime: string; sizeBytes: number; url: string | null }> }>>(`/product-styles/suppliers/${styleFactoryId}/series`, accessToken)
+      .then((rows) => setLiveStyleSeries(rows.map((row) => ({
+        id: row.id, supplierId: row.supplierId, name: row.name, createdAt: "",
+        images: row.images.map((image) => ({
+          id: image.id,
+          productCode: image.filename.replace(/\.[^.]+$/, ""),
+          attachment: { id: image.id, name: image.filename, mime: image.mime, size: image.sizeBytes, url: image.url ?? undefined },
+          createdAt: "",
+        })),
+      }))))
+      .catch(() => setLiveStyleSeries([]));
+  }, [live, accessToken, styleFactoryId]);
+
   const services = live
     ? liveServices
     : engine.listServices(actor).filter((s) => s.published);
-  let styleSuppliers: ProductStyleSupplier[] = [];
-  try {
-    styleSuppliers = engine.listProductStyleSuppliers(actor);
-  } catch {}
+  let styleSuppliers: ProductStyleSupplier[] = live ? liveStyleSuppliers : [];
+  if (!live) {
+    try {
+      styleSuppliers = engine.listProductStyleSuppliers(actor);
+    } catch {}
+  }
   const styleFactory = styleSuppliers.find(
     (supplier) => supplier.id === styleFactoryId,
   );
-  let styleSeries: ProductStyleSeries[] = [];
-  try {
-    if (styleFactory) {
+  let styleSeries: ProductStyleSeries[] = live ? liveStyleSeries : [];
+  if (!live && styleFactory) {
+    try {
       styleSeries = engine.listProductStyles(actor, styleFactory.id);
-    }
-  } catch {}
+    } catch {}
+  }
   const filteredStyleSuppliers = styleSuppliers.filter(
     (supplier) =>
       styleCategory === "all" ||
@@ -1113,6 +1141,9 @@ export function QuoteEditor() {
             unit: line.itemSnapshot.unit,
             unitPriceCents: Math.round(line.itemSnapshot.price * 100),
             amountCents: amounts[index],
+            productStyleText: line.productStyle
+              ? `${line.productStyle.factoryName} · ${line.productStyle.seriesName} · ${line.productStyle.productCode}`
+              : undefined,
           })),
         }),
       });

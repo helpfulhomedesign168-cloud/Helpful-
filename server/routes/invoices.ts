@@ -29,6 +29,7 @@ const lineSchema = z.object({
   unit: z.string().trim().min(1).max(40),
   unitPriceCents: z.number().int().nonnegative(),
   amountCents: z.number().int().nonnegative().optional(),
+  productStyleText: z.string().trim().max(500).optional(),
 });
 
 const createSchema = z.object({
@@ -237,6 +238,7 @@ async function invoiceDetail(id: string) {
       unit: line.unit,
       unitPriceCents: line.unitPriceCents,
       amountCents: line.amountCents,
+      productStyleText: line.productStyleText,
     })),
     paymentStatus: {
       validPaidCents,
@@ -472,6 +474,7 @@ invoicesRoute.post(
           unit: line.unit,
           unitPriceCents: line.unitPriceCents,
           amountCents: line.amountCents,
+          productStyleText: line.productStyleText ?? null,
         })),
       );
       await tx
@@ -667,6 +670,7 @@ invoicesRoute.post(
           unit: line.unit,
           unitPriceCents: line.unitPriceCents,
           amountCents: line.amountCents,
+          productStyleText: line.productStyleText ?? null,
         })),
       );
 

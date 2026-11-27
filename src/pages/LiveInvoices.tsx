@@ -357,7 +357,7 @@ export function LiveInvoiceDetail() {
             <tbody>
               {invoice.lines.map((line) => (
                 <tr key={line.id}>
-                  <td><strong>{line.name}</strong></td>
+                  <td><strong>{line.name}</strong>{line.productStyleText && <small>{line.productStyleText}</small>}</td>
                   <td>{line.position || "—"}</td>
                   <td>{line.quantity} {line.unit}</td>
                   <td>{money(line.unitPriceCents / 100)}</td>

@@ -1,0 +1,1 @@
+ALTER TABLE "invoice_lines" ADD COLUMN "product_style_text" text;

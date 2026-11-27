@@ -17,6 +17,7 @@ const CATEGORY_OPTIONS = [
 ] as const;
 
 type EditLine = {
+  productStyleText?: string | null;
   key: string;
   name: string;
   position: string;
@@ -84,6 +85,7 @@ export function LiveInvoiceEdit() {
             key: line.id,
             name: line.name,
             position: line.position ?? "",
+            productStyleText: line.productStyleText ?? null,
             quantity: line.quantity,
             unit: line.unit,
             unitPrice: String(line.unitPriceCents / 100),
@@ -183,6 +185,7 @@ export function LiveInvoiceEdit() {
             lines: lines.map((line) => ({
               name: line.name.trim(),
               position: line.position.trim() || undefined,
+              productStyleText: line.productStyleText || undefined,
               quantity: Number(line.quantity) || 0,
               unit: line.unit.trim() || "項",
               unitPriceCents: Math.round((Number(line.unitPrice) || 0) * 100),

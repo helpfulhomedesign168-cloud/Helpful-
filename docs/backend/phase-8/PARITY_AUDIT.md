@@ -28,10 +28,9 @@ Reference: prototype commit `e54d5b9`
 
 ### High
 
-1. **Direct invoice product-style picker still reads demo engine**
-   - `Quotes.tsx` uses `engine.listProductStyleSuppliers/listProductStyles`
-   - Live Product Styles API exists but picker not adapted
-   - Domain: product style snapshot/attachment mapping still demo
+1. ✅ Direct invoice product-style picker now reads live `/product-styles` API
+   - API images mapped to product-style snapshots with signed URLs
+   - Selected style text persists on invoice_lines.product_style_text
 
 2. **Cancellation commission attribution incomplete**
    - Live invoice has salesName/supervisorName/team but no actor IDs/discount

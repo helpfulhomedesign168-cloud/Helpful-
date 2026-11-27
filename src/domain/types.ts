@@ -39,6 +39,8 @@ export interface Attachment {
   mime?: string;
   size?: number;
   createdAt?: string;
+  /** Remote signed URL for live product-style images. */
+  url?: string;
 }
 export interface Customer {
   id?: string;

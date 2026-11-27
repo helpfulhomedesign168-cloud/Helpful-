@@ -155,6 +155,13 @@
       "when": 1795768379444,
       "tag": "0021_friendly_firelord",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795768698536,
+      "tag": "0022_small_mandrill",
+      "breakpoints": true
     }
   ]
 }

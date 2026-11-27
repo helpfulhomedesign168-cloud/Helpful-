@@ -213,6 +213,7 @@ export const invoiceLines = pgTable("invoice_lines", {
   unit: text("unit").notNull(),
   unitPriceCents: integer("unit_price_cents").notNull(),
   amountCents: integer("amount_cents").notNull(),
+  productStyleText: text("product_style_text"),
   costSnapshot: jsonb("cost_snapshot").$type<Record<string, unknown>>(),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
 });

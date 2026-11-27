@@ -113,6 +113,7 @@ export type InvoiceDetailData = InvoiceSummary & {
     unit: string;
     unitPriceCents: number;
     amountCents: number;
+    productStyleText?: string | null;
   }[];
   version: { id: string; versionNo: number; reason: string | null; createdAt: string };
   paymentStatus?: {
