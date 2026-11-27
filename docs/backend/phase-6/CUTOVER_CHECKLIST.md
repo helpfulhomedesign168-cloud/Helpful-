@@ -27,9 +27,9 @@ See [Production Supabase Setup](./PRODUCTION_SUPABASE_SETUP.md).
   - SUPABASE_SERVICE_ROLE_KEY
 - [x] Storage bucket `work-order-photos`
 - [x] Admin user mapped to `public.users`
-- [ ] Merge PR to `main`
-- [ ] Production deployment green
-- [ ] Confirm `main` env points to production DB (currently staging DB)
+- [x] Merge PR to `main` (2026-11-27)
+- [x] Production deployment green
+- [x] Production temporarily uses staging DB (approved)
 - [x] Co-locate API functions with DB: Vercel `sin1` (Singapore)
 - [x] 15s client GET cache; clears on write/login/logout
 
@@ -134,3 +134,21 @@ unit: 34 passed
 e2e: 67 passed (final regression 2026-11-27)
 build: passed
 ```
+
+
+## Production status (2026-11-27)
+
+```text
+URL: https://helpful-chi.vercel.app
+Deployment: success
+Health: {"status":"ok","service":"helpful-home-api","version":"0.1.0"}
+Protected API: 401 without auth
+Users: 1
+Invoices: 0
+Customers: 0
+Work orders: 0
+Services: 38
+```
+
+> Warning: Production currently shares the staging Supabase DB.
+> Do not run write tests on preview deployments after cutover.
