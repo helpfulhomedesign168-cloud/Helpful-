@@ -73,6 +73,17 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   role: roleEnum("role").notNull(),
   active: boolean("active").default(true).notNull(),
+  code: text("code"),
+  surname: text("surname"),
+  salutation: text("salutation"),
+  phone: text("phone"),
+  companyPhone: text("company_phone"),
+  address: text("address"),
+  emergencyName: text("emergency_name"),
+  emergencyPhone: text("emergency_phone"),
+  bio: text("bio"),
+  team: text("team"),
+  avatarFileId: uuid("avatar_file_id"),
   ...timestamps,
 });
 

@@ -3,6 +3,7 @@
 ## Completed
 
 - Audit log viewer for admin/finance supervisor
+- User management prototype parity: department tabs, user list, full profile page, avatar upload
 - Admin password reset with one-time temporary password
 - Admin system health dashboard
 - Admin feature-flag settings UI

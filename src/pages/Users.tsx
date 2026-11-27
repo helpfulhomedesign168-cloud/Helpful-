@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { LiveUserProfile } from "./LiveUserProfile";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -282,6 +283,11 @@ const EMPTY_USER: UserDraft = {
 };
 
 export function UserProfile() {
+  const { live } = useAuth();
+  return live ? <LiveUserProfile /> : <DemoUserProfile />;
+}
+
+function DemoUserProfile() {
   const { id } = useParams();
   const nav = useNavigate();
   const { actor, engine, run } = useApp();

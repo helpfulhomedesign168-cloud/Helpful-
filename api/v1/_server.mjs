@@ -33840,6 +33840,17 @@ var users = pgTable("users", {
   name: text("name").notNull(),
   role: roleEnum("role").notNull(),
   active: boolean("active").default(true).notNull(),
+  code: text("code"),
+  surname: text("surname"),
+  salutation: text("salutation"),
+  phone: text("phone"),
+  companyPhone: text("company_phone"),
+  address: text("address"),
+  emergencyName: text("emergency_name"),
+  emergencyPhone: text("emergency_phone"),
+  bio: text("bio"),
+  team: text("team"),
+  avatarFileId: uuid("avatar_file_id"),
   ...timestamps
 });
 var userGrants = pgTable(
@@ -35222,17 +35233,272 @@ servicesRoute.patch(
   }
 );
 
+// server/storage.ts
+var BUCKET = "work-order-photos";
+function storageConfig() {
+  const env = getEnv();
+  const key2 = getOptionalEnv().serviceRoleKey;
+  if (!key2) throw new Error("STORAGE_NOT_CONFIGURED");
+  return {
+    base: `${env.SUPABASE_URL}/storage/v1`,
+    key: key2,
+    bucket: BUCKET
+  };
+}
+async function uploadWorkOrderPhoto(path, bytes2, mime) {
+  const { base, key: key2, bucket } = storageConfig();
+  const res = await fetch(`${base}/object/${bucket}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": mime,
+      "x-upsert": "false"
+    },
+    body: bytes2,
+    signal: AbortSignal.timeout(3e4)
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+async function signedWorkOrderPhoto(path) {
+  const { base, key: key2, bucket } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${bucket}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = await res.json();
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}
+async function deleteWorkOrderPhoto(path) {
+  const { base, key: key2, bucket } = storageConfig();
+  const res = await fetch(`${base}/object/${bucket}/${path}`, {
+    method: "DELETE",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`
+    },
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Storage delete failed (${res.status})`);
+  }
+}
+var PAYMENT_BUCKET = "payment-proofs";
+async function uploadPaymentProof(path, bytes2, mime) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${PAYMENT_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": mime,
+      "x-upsert": "false"
+    },
+    body: bytes2,
+    signal: AbortSignal.timeout(3e4)
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+async function signedPaymentProof(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${PAYMENT_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = await res.json();
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}
+async function deletePaymentProof(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${PAYMENT_BUCKET}/${path}`, {
+    method: "DELETE",
+    headers: { apikey: key2, Authorization: `Bearer ${key2}` },
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Storage delete failed (${res.status})`);
+  }
+}
+var PRODUCT_STYLE_BUCKET = "product-style-images";
+async function uploadProductStyleImage(path, bytes2, mime) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${PRODUCT_STYLE_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": mime,
+      "x-upsert": "false"
+    },
+    body: bytes2,
+    signal: AbortSignal.timeout(3e4)
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+async function signedProductStyleImage(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${PRODUCT_STYLE_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = await res.json();
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}
+async function deleteProductStyleImage(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${PRODUCT_STYLE_BUCKET}/${path}`, {
+    method: "DELETE",
+    headers: { apikey: key2, Authorization: `Bearer ${key2}` },
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Storage delete failed (${res.status})`);
+  }
+}
+var SUPPLIER_LOGO_BUCKET = "supplier-logos";
+async function uploadSupplierLogo(path, bytes2, mime) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${SUPPLIER_LOGO_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": mime,
+      "x-upsert": "false"
+    },
+    body: bytes2,
+    signal: AbortSignal.timeout(3e4)
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+async function signedSupplierLogo(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${SUPPLIER_LOGO_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = await res.json();
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}
+async function deleteSupplierLogo(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${SUPPLIER_LOGO_BUCKET}/${path}`, {
+    method: "DELETE",
+    headers: { apikey: key2, Authorization: `Bearer ${key2}` },
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Storage delete failed (${res.status})`);
+  }
+}
+var USER_AVATAR_BUCKET = "user-avatars";
+async function uploadUserAvatar(path, bytes2, mime) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${USER_AVATAR_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": mime,
+      "x-upsert": "false"
+    },
+    body: bytes2,
+    signal: AbortSignal.timeout(3e4)
+  });
+  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
+}
+async function signedUserAvatar(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/sign/${USER_AVATAR_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: key2,
+      Authorization: `Bearer ${key2}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ expiresIn: 3600 }),
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
+  const body = await res.json();
+  if (!body.signedURL) throw new Error("Storage sign returned no URL");
+  return `${base}${body.signedURL}`;
+}
+async function deleteUserAvatar(path) {
+  const { base, key: key2 } = storageConfig();
+  const res = await fetch(`${base}/object/${USER_AVATAR_BUCKET}/${path}`, {
+    method: "DELETE",
+    headers: { apikey: key2, Authorization: `Bearer ${key2}` },
+    signal: AbortSignal.timeout(15e3)
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Storage delete failed (${res.status})`);
+  }
+}
+
 // server/routes/users.ts
 var patchSchema = external_exports.object({
   name: external_exports.string().trim().min(1).max(120).optional(),
   role: external_exports.enum(ROLES).optional(),
-  active: external_exports.boolean().optional()
+  active: external_exports.boolean().optional(),
+  code: external_exports.string().trim().max(20).nullable().optional(),
+  surname: external_exports.string().trim().max(40).nullable().optional(),
+  salutation: external_exports.string().trim().max(60).nullable().optional(),
+  phone: external_exports.string().trim().max(40).nullable().optional(),
+  companyPhone: external_exports.string().trim().max(40).nullable().optional(),
+  address: external_exports.string().trim().max(300).nullable().optional(),
+  emergencyName: external_exports.string().trim().max(120).nullable().optional(),
+  emergencyPhone: external_exports.string().trim().max(40).nullable().optional(),
+  bio: external_exports.string().trim().max(1e3).nullable().optional(),
+  team: external_exports.string().trim().max(20).nullable().optional()
 });
 var createSchema2 = external_exports.object({
   name: external_exports.string().trim().min(1).max(120),
   email: external_exports.string().trim().email(),
   password: external_exports.string().min(8).max(200),
-  role: external_exports.enum(ROLES)
+  role: external_exports.enum(ROLES),
+  code: external_exports.string().trim().max(20).optional(),
+  surname: external_exports.string().trim().max(40).optional(),
+  salutation: external_exports.string().trim().max(60).optional(),
+  phone: external_exports.string().trim().max(40).optional(),
+  companyPhone: external_exports.string().trim().max(40).optional(),
+  address: external_exports.string().trim().max(300).optional(),
+  emergencyName: external_exports.string().trim().max(120).optional(),
+  emergencyPhone: external_exports.string().trim().max(40).optional(),
+  bio: external_exports.string().trim().max(1e3).optional(),
+  team: external_exports.string().trim().max(20).optional()
 });
 var usersRoute = new Hono3();
 usersRoute.post(
@@ -35301,7 +35567,17 @@ usersRoute.post(
         email: parsed.data.email.toLowerCase(),
         name: parsed.data.name,
         role: parsed.data.role,
-        active: true
+        active: true,
+        code: parsed.data.code,
+        surname: parsed.data.surname,
+        salutation: parsed.data.salutation,
+        phone: parsed.data.phone,
+        companyPhone: parsed.data.companyPhone,
+        address: parsed.data.address,
+        emergencyName: parsed.data.emergencyName,
+        emergencyPhone: parsed.data.emergencyPhone,
+        bio: parsed.data.bio,
+        team: parsed.data.team
       }).returning({
         id: users.id,
         email: users.email,
@@ -35334,14 +35610,17 @@ usersRoute.get(
   requireCapability("user.manage"),
   async (c2) => {
     const rows = await getDb().select({
-      id: users.id,
-      email: users.email,
-      name: users.name,
-      role: users.role,
-      active: users.active,
-      createdAt: users.createdAt
-    }).from(users).orderBy(asc(users.name));
-    return c2.json(rows);
+      user: users,
+      file: files
+    }).from(users).leftJoin(files, eq(users.avatarFileId, files.id)).orderBy(asc(users.name));
+    return c2.json(
+      await Promise.all(
+        rows.map(async ({ user, file: file2 }) => ({
+          ...user,
+          avatarUrl: file2 ? await signedUserAvatar(file2.storageKey).catch(() => null) : null
+        }))
+      )
+    );
   }
 );
 usersRoute.patch(
@@ -35436,6 +35715,54 @@ usersRoute.post(
       requestId: c2.get("requestId")
     });
     return c2.json({ ok: true, password: password2 });
+  }
+);
+usersRoute.post(
+  "/:id/avatar",
+  requireAuth,
+  requireCapability("user.manage"),
+  async (c2) => {
+    const [target] = await getDb().select().from(users).where(eq(users.id, c2.req.param("id"))).limit(1);
+    if (!target) return c2.json({ error: { code: "NOT_FOUND", message: "\u627E\u4E0D\u5230\u7528\u6236\u3002" } }, 404);
+    const body = await c2.req.parseBody();
+    const file2 = body.file;
+    if (!(file2 instanceof File)) {
+      return c2.json({ error: { code: "VALIDATION_ERROR", message: "\u8ACB\u9078\u64C7\u76F8\u7247\u3002" } }, 400);
+    }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file2.type)) {
+      return c2.json({ error: { code: "UNSUPPORTED_FILE", message: "\u53EA\u652F\u63F4 JPG\uFF0FPNG\uFF0FWebP\u3002" } }, 415);
+    }
+    if (file2.size > 5 * 1024 * 1024) {
+      return c2.json({ error: { code: "FILE_TOO_LARGE", message: "\u76F8\u7247\u4E0A\u9650 5MB\u3002" } }, 413);
+    }
+    const safeName = file2.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
+    const storageKey = `users/${target.id}/${crypto.randomUUID()}-${safeName}`;
+    await uploadUserAvatar(storageKey, await file2.arrayBuffer(), file2.type);
+    let inserted;
+    try {
+      [inserted] = await getDb().insert(files).values({
+        ownerType: "user",
+        ownerId: target.id,
+        storageKey,
+        filename: file2.name.slice(0, 200),
+        mime: file2.type,
+        sizeBytes: file2.size,
+        createdBy: c2.get("user").id
+      }).returning();
+      await getDb().update(users).set({ avatarFileId: inserted.id }).where(eq(users.id, target.id));
+    } catch (error68) {
+      await deleteUserAvatar(storageKey).catch(() => {
+      });
+      throw error68;
+    }
+    return c2.json(
+      {
+        id: inserted.id,
+        filename: inserted.filename,
+        url: await signedUserAvatar(storageKey).catch(() => null)
+      },
+      201
+    );
   }
 );
 
@@ -35964,197 +36291,6 @@ invoicesRoute.post(
     return c2.json(detail, 201);
   }
 );
-
-// server/storage.ts
-var BUCKET = "work-order-photos";
-function storageConfig() {
-  const env = getEnv();
-  const key2 = getOptionalEnv().serviceRoleKey;
-  if (!key2) throw new Error("STORAGE_NOT_CONFIGURED");
-  return {
-    base: `${env.SUPABASE_URL}/storage/v1`,
-    key: key2,
-    bucket: BUCKET
-  };
-}
-async function uploadWorkOrderPhoto(path, bytes2, mime) {
-  const { base, key: key2, bucket } = storageConfig();
-  const res = await fetch(`${base}/object/${bucket}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`,
-      "Content-Type": mime,
-      "x-upsert": "false"
-    },
-    body: bytes2,
-    signal: AbortSignal.timeout(3e4)
-  });
-  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
-}
-async function signedWorkOrderPhoto(path) {
-  const { base, key: key2, bucket } = storageConfig();
-  const res = await fetch(`${base}/object/sign/${bucket}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ expiresIn: 3600 }),
-    signal: AbortSignal.timeout(15e3)
-  });
-  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
-  const body = await res.json();
-  if (!body.signedURL) throw new Error("Storage sign returned no URL");
-  return `${base}${body.signedURL}`;
-}
-async function deleteWorkOrderPhoto(path) {
-  const { base, key: key2, bucket } = storageConfig();
-  const res = await fetch(`${base}/object/${bucket}/${path}`, {
-    method: "DELETE",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`
-    },
-    signal: AbortSignal.timeout(15e3)
-  });
-  if (!res.ok && res.status !== 404) {
-    throw new Error(`Storage delete failed (${res.status})`);
-  }
-}
-var PAYMENT_BUCKET = "payment-proofs";
-async function uploadPaymentProof(path, bytes2, mime) {
-  const { base, key: key2 } = storageConfig();
-  const res = await fetch(`${base}/object/${PAYMENT_BUCKET}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`,
-      "Content-Type": mime,
-      "x-upsert": "false"
-    },
-    body: bytes2,
-    signal: AbortSignal.timeout(3e4)
-  });
-  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
-}
-async function signedPaymentProof(path) {
-  const { base, key: key2 } = storageConfig();
-  const res = await fetch(`${base}/object/sign/${PAYMENT_BUCKET}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ expiresIn: 3600 }),
-    signal: AbortSignal.timeout(15e3)
-  });
-  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
-  const body = await res.json();
-  if (!body.signedURL) throw new Error("Storage sign returned no URL");
-  return `${base}${body.signedURL}`;
-}
-async function deletePaymentProof(path) {
-  const { base, key: key2 } = storageConfig();
-  const res = await fetch(`${base}/object/${PAYMENT_BUCKET}/${path}`, {
-    method: "DELETE",
-    headers: { apikey: key2, Authorization: `Bearer ${key2}` },
-    signal: AbortSignal.timeout(15e3)
-  });
-  if (!res.ok && res.status !== 404) {
-    throw new Error(`Storage delete failed (${res.status})`);
-  }
-}
-var PRODUCT_STYLE_BUCKET = "product-style-images";
-async function uploadProductStyleImage(path, bytes2, mime) {
-  const { base, key: key2 } = storageConfig();
-  const res = await fetch(`${base}/object/${PRODUCT_STYLE_BUCKET}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`,
-      "Content-Type": mime,
-      "x-upsert": "false"
-    },
-    body: bytes2,
-    signal: AbortSignal.timeout(3e4)
-  });
-  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
-}
-async function signedProductStyleImage(path) {
-  const { base, key: key2 } = storageConfig();
-  const res = await fetch(`${base}/object/sign/${PRODUCT_STYLE_BUCKET}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ expiresIn: 3600 }),
-    signal: AbortSignal.timeout(15e3)
-  });
-  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
-  const body = await res.json();
-  if (!body.signedURL) throw new Error("Storage sign returned no URL");
-  return `${base}${body.signedURL}`;
-}
-async function deleteProductStyleImage(path) {
-  const { base, key: key2 } = storageConfig();
-  const res = await fetch(`${base}/object/${PRODUCT_STYLE_BUCKET}/${path}`, {
-    method: "DELETE",
-    headers: { apikey: key2, Authorization: `Bearer ${key2}` },
-    signal: AbortSignal.timeout(15e3)
-  });
-  if (!res.ok && res.status !== 404) {
-    throw new Error(`Storage delete failed (${res.status})`);
-  }
-}
-var SUPPLIER_LOGO_BUCKET = "supplier-logos";
-async function uploadSupplierLogo(path, bytes2, mime) {
-  const { base, key: key2 } = storageConfig();
-  const res = await fetch(`${base}/object/${SUPPLIER_LOGO_BUCKET}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`,
-      "Content-Type": mime,
-      "x-upsert": "false"
-    },
-    body: bytes2,
-    signal: AbortSignal.timeout(3e4)
-  });
-  if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
-}
-async function signedSupplierLogo(path) {
-  const { base, key: key2 } = storageConfig();
-  const res = await fetch(`${base}/object/sign/${SUPPLIER_LOGO_BUCKET}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: key2,
-      Authorization: `Bearer ${key2}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ expiresIn: 3600 }),
-    signal: AbortSignal.timeout(15e3)
-  });
-  if (!res.ok) throw new Error(`Storage sign failed (${res.status})`);
-  const body = await res.json();
-  if (!body.signedURL) throw new Error("Storage sign returned no URL");
-  return `${base}${body.signedURL}`;
-}
-async function deleteSupplierLogo(path) {
-  const { base, key: key2 } = storageConfig();
-  const res = await fetch(`${base}/object/${SUPPLIER_LOGO_BUCKET}/${path}`, {
-    method: "DELETE",
-    headers: { apikey: key2, Authorization: `Bearer ${key2}` },
-    signal: AbortSignal.timeout(15e3)
-  });
-  if (!res.ok && res.status !== 404) {
-    throw new Error(`Storage delete failed (${res.status})`);
-  }
-}
 
 // server/routes/payments.ts
 var paymentSchema = external_exports.object({
